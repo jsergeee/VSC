@@ -1,0 +1,13 @@
+{
+  "scan_info": {
+    "target": "172.30.96.0/20",
+    "scan_type": "smb",
+    "timestamp": "2026-02-06T10:41:25.573025",
+    "date": "2026-02-06"
+  },
+  "hosts": [],
+  "summary": {
+    "total_hosts": 0,
+    "scan_duration": "N/A"
+  }
+}

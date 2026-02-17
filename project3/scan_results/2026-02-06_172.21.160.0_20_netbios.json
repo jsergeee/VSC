@@ -1,0 +1,13 @@
+{
+  "scan_info": {
+    "target": "172.21.160.0/20",
+    "scan_type": "netbios",
+    "timestamp": "2026-02-06T10:39:16.394795",
+    "date": "2026-02-06"
+  },
+  "hosts": [],
+  "summary": {
+    "total_hosts": 0,
+    "scan_duration": "N/A"
+  }
+}
