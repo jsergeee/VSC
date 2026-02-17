@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<!-- books/templates/books/book_list.html -->
+{% extends "books/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="display-4 mb-4">📚 Мои книги</h1>
+    
+    <div class="row">
+        {% for book in books %}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 {% if book.is_read %}border-success{% endif %}">
+                <div class="card-body">
+                    <h5 class="card-title">{{ book.title }}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">{{ book.author }}</h6>
+                    
+                    <p class="card-text">
+                        <strong>Год:</strong> {{ book.year }}<br>
+                        <strong>Статус:</strong>
+                        {% if book.is_read %}
+                            <span class="badge bg-success">Прочитана ✅</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">Не прочитана 📖</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <small class="text-muted">Добавлена: {{ book.created_at|date:"d.m.Y" }}</small>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                В библиотеке пока нет книг. 
+                <a href="/admin/books/book/add/" class="alert-link">Добавить первую книгу</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="mt-4">
+        <p class="lead">Всего книг: {{ books|length }}</p>
+    </div>
+</div>
+{% endblock %}
