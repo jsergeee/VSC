@@ -1,46 +1,98 @@
 <!DOCTYPE html>
-<!-- books/templates/books/book_list.html -->
-{% extends "books/base.html" %}
+{% extends 'books/base.html' %}
+
+{% block title %}Моя библиотека{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="display-4 mb-4">📚 Мои книги</h1>
+    <h1 class="mb-4">Моя библиотека</h1>
     
+    <!-- Форма фильтрации -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Фильтры</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="author" class="form-label">Автор</label>
+                    <select name="author" id="author" class="form-select">
+                        <option value="">Все авторы</option>
+                        {% for author in authors %}
+                            <option value="{{ author }}" {% if author == current_author %}selected{% endif %}>
+                                {{ author }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="year" class="form-label">Год</label>
+                    <select name="year" id="year" class="form-select">
+                        <option value="">Все года</option>
+                        {% for year in years %}
+                            <option value="{{ year }}" {% if year|stringformat:"s" == current_year %}selected{% endif %}>
+                                {{ year }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="read" class="form-label">Статус</label>
+                    <select name="read" id="read" class="form-select">
+                        <option value="">Все книги</option>
+                        <option value="read" {% if current_read == 'read' %}selected{% endif %}>Прочитанные</option>
+                        <option value="unread" {% if current_read == 'unread' %}selected{% endif %}>Непрочитанные</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">Применить</button>
+                    <a href="{% url 'book_list' %}" class="btn btn-secondary">Сбросить</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Список книг -->
     <div class="row">
         {% for book in books %}
-        <div class="col-md-6 mb-4">
-            <div class="card h-100 {% if book.is_read %}border-success{% endif %}">
-                <div class="card-body">
-                    <h5 class="card-title">{{ book.title }}</h5>
-                    <h6 class="card-subtitle mb-2 text-muted">{{ book.author }}</h6>
-                    
-                    <p class="card-text">
-                        <strong>Год:</strong> {{ book.year }}<br>
-                        <strong>Статус:</strong>
-                        {% if book.is_read %}
-                            <span class="badge bg-success">Прочитана ✅</span>
-                        {% else %}
-                            <span class="badge bg-warning text-dark">Не прочитана 📖</span>
-                        {% endif %}
-                    </p>
-                </div>
-                <div class="card-footer bg-transparent">
-                    <small class="text-muted">Добавлена: {{ book.created_at|date:"d.m.Y" }}</small>
+            <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a href="{% url 'book_detail' book.id %}" class="text-decoration-none">
+                                {{ book.title }}
+                            </a>
+                        </h5>
+                        <p class="card-text">
+                            <strong>Автор:</strong> {{ book.author }}<br>
+                            <strong>Год:</strong> {{ book.year }}<br>
+                            <strong>Статус:</strong>
+                            {% if book.is_read %}
+                                <span class="badge bg-success">Прочитано</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">Не прочитано</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="card-footer text-muted">
+                        <small>Добавлено: {{ book.created_at|date:"d.m.Y" }}</small>
+                    </div>
                 </div>
             </div>
-        </div>
         {% empty %}
-        <div class="col-12">
-            <div class="alert alert-info">
-                В библиотеке пока нет книг. 
-                <a href="/admin/books/book/add/" class="alert-link">Добавить первую книгу</a>
+            <div class="col-12">
+                <div class="alert alert-info">
+                    Книг пока нет. Добавьте первую книгу через <a href="/admin/">админку</a>!
+                </div>
             </div>
-        </div>
         {% endfor %}
     </div>
     
+    <!-- Статистика -->
     <div class="mt-4">
-        <p class="lead">Всего книг: {{ books|length }}</p>
+        <p class="text-muted">
+            Всего книг: {{ books|length }}
+        </p>
     </div>
 </div>
 {% endblock %}
