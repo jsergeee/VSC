@@ -1,0 +1,234 @@
+<!-- templates/school/home.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<!-- Home Section -->
+<section class="home-section" id="home">
+    <div class="home-section-overlay"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6 margin-top-20">
+                <h1>Английский онлайн</h1>
+                <div style="display: inline-flex; margin-top: 10px">
+                    <div style="width: 50%">
+                        <p class="hero-text">Взрослым:
+                        <ul style="margin-top: -20px; margin-left: 2px; color: black">
+                            <li>бизнес английский</li>
+                            <li>подготовка к экзаменам (IELTS, TOEFL и др.)</li>
+                            <li>подготовка к собеседованию</li>
+                            <li>английский для путешествий</li>
+                            <li>общий английский</li>
+                            <li>разговорный английский</li>
+                        </ul>
+                        </p>
+                    </div>
+                    <div style="margin-left: 40px; width: 50%">
+                        <p class="hero-text">Детям и подросткам:
+                        <ul style="margin-top: -20px; margin-left: 2px; color: black">
+                            <li>курс чтения</li>
+                            <li>школьный английский</li>
+                            <li>подготовка к экзаменам (ОГЭ, ЕГЭ и др.)</li>
+                            <li>разговорный английский</li>
+                            <li>углубленное изучение английского</li>
+                            <li>английский для путешествий</li>
+                            <li>разбор трудных тем</li>
+                            <li>помощь в выполнении домашнего задания</li>
+                        </ul>
+                        </p>
+                    </div>
+                </div>
+                
+                <a href="#about" class="btn-red scrool">Узнать больше</a>
+            </div>
+            
+            <div class="col-md-5 offset-md-1 margin-top-70">
+                <div class="h3 register-form-home-wrapper" style="font-family: 'Roboto Slab'; color: #071e55">
+                    Оставить заявку
+                </div>
+                <div class="register-form-home-wrapper wow bounceIn" data-wow-delay="0.5s">
+                    <h3>Заявка на бесплатный пробный урок</h3>
+                    <p>Запишитесь на бесплатный пробный урок. Мы определим ваш уровень, покажем, как проходит урок,
+                        ответим на все ваши вопросы:</p>
+                    
+                    <div>
+                        <p class="register_success_box_home" style="display:none;">Мы успешно получили вашу заявку,
+                            Спасибо!</p>
+                        
+                        <form method="post" class="register-form-home register mt-3">
+                            {% csrf_token %}
+                            {{ trial_form.name }}
+                            {{ trial_form.email }}
+                            {{ trial_form.phone }}
+                            {{ trial_form.subject }}
+                            <input value="Отправить" class="register-submit-home" type="submit">
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Partners Section -->
+<div class="partners-section">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-10 mx-auto text-center partners">
+                <h5 class="partners-title">Наши сертификаты:</h5>
+                <a href="#" target="_blank">
+                    <img src="{% static 'images/certificates/tesol.png' %}" class="partners" alt="image">
+                </a>
+                <a href="#" target="_blank">
+                    <img src="{% static 'images/certificates/ihbelfast-logo.png' %}" class="partners" alt="image">
+                </a>
+                <a href="#" target="_blank">
+                    <img src="{% static 'images/certificates/coursera.png' %}" style="width: 150px" class="partners" alt="image">
+                </a>
+                <a href="#" target="_blank">
+                    <img src="{% static 'images/certificates/global-tefl-logo.png' %}" class="partners" alt="image">
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- About Section -->
+<section class="section-white" id="about">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12 text-center margin-bottom-10">
+                <h2 class="section-title">Почему выбирают нас</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="services-wrapper">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="main-services green">
+                        <i class="fa fa-thumbs-up"></i>
+                        <h4>С нами удобно</h4>
+                        <p>Можешь заниматься дома, а можешь в любимом парке или в уютном кафе.
+                            Единственное, что тебе нужно, это интернет. Не трать силы и время на дорогу, просто включи
+                            гаджет!</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="main-services yellow">
+                        <i class="fa fa-credit-card" aria-hidden="true"></i>
+                        <h4>Доступные цены без потери качества</h4>
+                        <p>У нас умеренные цены, и при этом НЕ нужно выкупать большой пакет занятий на 6-9 месяцев
+                            вперед. Цена действительна даже при оплате за 1 месяц.</p>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="main-services red">
+                        <i class="fa fa-university"></i>
+                        <h4>Наша методика</h4>
+                        <p>Применяемые методы личностно-ориентированного подхода повышают мотивацию к обучению, а
+                            принципы гуманной педагогики создают атмосферу комфорта и доброжелательности на занятиях и
+                            вселяют в наших студентов уверенность в собственные силы.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Testimonials Section -->
+<section class="section-grey" id="testimonials">
+    <div class="container">
+        <h2 class="section-title" style="text-align: center; margin-bottom: 25px">Отзывы клиентов</h2>
+        <div class="row">
+            <div class="col-md-12 mx-auto padding-bottom-40">
+                <div id="carouselIndicators2" class="carousel slide" data-ride="carousel">
+                    <ol class="carousel-indicators testimonials-indicators">
+                        <li data-target="#carouselIndicators2" data-slide-to="0" class="active"></li>
+                        <li data-target="#carouselIndicators2" data-slide-to="1"></li>
+                    </ol>
+                    <div class="carousel-inner">
+                        <div class="carousel-item active">
+                            <div class="row align-items-center testim-inner">
+                                <div class="col-md-10">
+                                    <i class="fa fa-quote-left" aria-hidden="true"></i>
+                                    <p>Добрый день! Сын с июня месяца занимается индивидуально онлайн обучением
+                                        английского языка у Гульмиры! Занимаясь онлайн занятиями, поняли что, это очень
+                                        удобно, нет проблем, ребенок сам подключается онлайн.</p>
+                                    <h6>Динара<span>, мама Таира (8 лет).</span></h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="carousel-item">
+                            <div class="row align-items-center testim-inner">
+                                <div class="col-md-10">
+                                    <i class="fa fa-quote-left" aria-hidden="true"></i>
+                                    <p>Гульмира Булатовна прекрасный преподаватель английского языка. Она помогала мне в
+                                        подготовке к ЕГЭ и я его успешно прошла и уехала в Санкт-Петербург.</p>
+                                    <h6>Анастасия<span>, 29 лет, г. Санкт-Петербург.</span></h6>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Pricing Section -->
+<section class="section-grey" id="pricing">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-12 col-sm-12" style="text-align: center">
+                <h2>Стоимость занятий</h2>
+                <p>Цена действительна БЕЗ выкупа большого пакета занятий</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Contact Section -->
+<section class="section-bg-2" id="contact">
+    <div class="section-bg-overlay"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-7 mx-auto text-center">
+                <h2 class="white-text">Хотите учиться у нас? <br>Всё ещё остались вопросы?</h2>
+                <p class="section-subtitle white">Заполните форму заявки на бесплатный пробный урок, либо позвоните нам: 
+                <a style="color: white; font-weight: bold" href="tel:79272418211">+7 927 241-82-11</a></p>
+                <a class="btn-white small scrool" href="#" data-toggle="modal" data-target="#exampleModal">Заполнить заявку</a>
+                <a href="tel:79272418211" class="btn-white-border small scrool">Позвонить</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Modal -->
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered mt-5">
+        <div class="modal-content">
+            <div class="register-form-home-wrapper">
+                <h3>Заявка на бесплатный пробный урок</h3>
+                <p>Запишитесь на бесплатный пробный урок. Мы определим ваш уровень, покажем, как проходит урок,
+                    ответим на все ваши вопросы:</p>
+                
+                <div>
+                    <form method="post" class="register-form-home register mt-3">
+                        {% csrf_token %}
+                        {{ trial_form.name }}
+                        {{ trial_form.email }}
+                        {{ trial_form.phone }}
+                        {{ trial_form.subject }}
+                        <input value="Отправить" class="register-submit-home" type="submit">
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

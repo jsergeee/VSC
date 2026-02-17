@@ -1,1 +1,14 @@
 requirements.txt
+# Виртуальное окружение
+venv/
+mylib_env/
+env/
+ENV/
+
+# Файлы базы данных
+*.sqlite3
+*.db
+
+# Кеши Python
+__pycache__/
+*.pyc
