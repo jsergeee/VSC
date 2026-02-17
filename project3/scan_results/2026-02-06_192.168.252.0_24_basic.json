@@ -1,0 +1,84 @@
+{
+  "scan_info": {
+    "target": "192.168.252.0/24",
+    "scan_type": "basic",
+    "timestamp": "2026-02-06T10:34:34.926947",
+    "date": "2026-02-06"
+  },
+  "hosts": [
+    {
+      "address": "192.168.252.1",
+      "hostname": null,
+      "status": "up"
+    },
+    {
+      "address": "192.168.252.104",
+      "hostname": null,
+      "status": "up"
+    },
+    {
+      "address": "w-kz-revizor.alkor.ru",
+      "hostname": "(192.168.252.126)",
+      "status": "up"
+    },
+    {
+      "address": "192.168.252.141",
+      "hostname": null,
+      "status": "up"
+    },
+    {
+      "address": "192.168.252.153",
+      "hostname": null,
+      "status": "up"
+    },
+    {
+      "address": "192.168.252.162",
+      "hostname": null,
+      "status": "up"
+    },
+    {
+      "address": "w-kz-litovchenko.alkor.ru",
+      "hostname": "(192.168.252.165)",
+      "status": "up"
+    },
+    {
+      "address": "w-kz-garipova.alkor.ru",
+      "hostname": "(192.168.252.172)",
+      "status": "up"
+    },
+    {
+      "address": "192.168.252.183",
+      "hostname": null,
+      "status": "up"
+    },
+    {
+      "address": "192.168.252.189",
+      "hostname": null,
+      "status": "up"
+    },
+    {
+      "address": "192.168.252.192",
+      "hostname": null,
+      "status": "up"
+    },
+    {
+      "address": "192.168.252.195",
+      "hostname": null,
+      "status": "up"
+    },
+    {
+      "address": "192.168.252.197",
+      "hostname": null,
+      "status": "up"
+    },
+    {
+      "address": "w-kz-yakovenkodb.alkor.ru",
+      "hostname": "(192.168.252.101)",
+      "status": "up"
+    }
+  ],
+  "summary": {
+    "total_hosts": 14,
+    "scan_duration": "N/A"
+  }
+}

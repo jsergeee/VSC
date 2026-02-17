@@ -1,0 +1,7 @@
+{
+  "smtp_server": "smtp.yandex.ru",
+  "smtp_port": 465,
+  "sender_email": "jserge@yandex.ru",
+  "receiver_email": "yakovenko@letoile.com",
+  "password": "fbbwcoxjkjfkovum"
+}

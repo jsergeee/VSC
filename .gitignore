@@ -1,0 +1,30 @@
+venv/
+ENV/
+env/
+mylib_env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Базы данных
+*.sqlite3
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+local_settings.py
+
+
+
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/

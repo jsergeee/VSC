@@ -1,0 +1,917 @@
+[
+  {
+    "title": "Pride and Prejudice",
+    "author": "Jane Austen",
+    "year": 1813
+  },
+  {
+    "title": "Alice's Adventures in Wonderland",
+    "author": "Lewis Carroll",
+    "year": 1865
+  },
+  {
+    "title": "A Christmas Carol",
+    "author": "Charles Dickens",
+    "year": 1843
+  },
+  {
+    "title": "The Picture of Dorian Gray",
+    "author": "Oscar Wilde",
+    "year": 1890
+  },
+  {
+    "title": "Wuthering Heights",
+    "author": "Emily Brontë",
+    "year": 1846
+  },
+  {
+    "title": "Adventures of Huckleberry Finn",
+    "author": "Mark Twain",
+    "year": 1876
+  },
+  {
+    "title": "Robinson Crusoe",
+    "author": "Daniel Defoe",
+    "year": 1686
+  },
+  {
+    "title": "Hamlet",
+    "author": "William Shakespeare",
+    "year": 1603
+  },
+  {
+    "title": "Emma",
+    "author": "Jane Austen",
+    "year": 1815
+  },
+  {
+    "title": "Oliver Twist",
+    "author": "Charles Dickens",
+    "year": 1822
+  },
+  {
+    "title": "Frankenstein or The Modern Prometheus",
+    "author": "Mary Shelley",
+    "year": 1818
+  },
+  {
+    "title": "A Tale of Two Cities",
+    "author": "Charles Dickens",
+    "year": 1800
+  },
+  {
+    "title": "The Wonderful Wizard of Oz",
+    "author": "L. Frank Baum",
+    "year": 1899
+  },
+  {
+    "title": "Sense and Sensibility",
+    "author": "Jane Austen",
+    "year": 1811
+  },
+  {
+    "title": "Treasure Island",
+    "author": "Robert Louis Stevenson",
+    "year": 1880
+  },
+  {
+    "title": "Little Women",
+    "author": "Louisa May Alcott",
+    "year": 1848
+  },
+  {
+    "title": "Macbeth",
+    "author": "William Shakespeare",
+    "year": 1508
+  },
+  {
+    "title": "Gulliver's Travels",
+    "author": "Jonathan Swift",
+    "year": 1726
+  },
+  {
+    "title": "The Call of the Wild",
+    "author": "Jack London",
+    "year": 1903
+  },
+  {
+    "title": "King Lear",
+    "author": "William Shakespeare",
+    "year": 1608
+  },
+  {
+    "title": "The Secret Garden",
+    "author": "Frances Hodgson Burnett",
+    "year": 1911
+  },
+  {
+    "title": "Don Quijote de la Mancha",
+    "author": "Miguel de Cervantes Saavedra",
+    "year": 1600
+  },
+  {
+    "title": "Madame Bovary",
+    "author": "Gustave Flaubert",
+    "year": 1856
+  },
+  {
+    "title": "Great Expectations",
+    "author": "Charles Dickens",
+    "year": 1861
+  },
+  {
+    "title": "A Midsummer Night's Dream",
+    "author": "William Shakespeare",
+    "year": 1600
+  },
+  {
+    "title": "A Study in Scarlet",
+    "author": "Arthur Conan Doyle",
+    "year": 1887
+  },
+  {
+    "title": "The Art of War",
+    "author": "孙武",
+    "year": 1900
+  },
+  {
+    "title": "The Prince",
+    "author": "Niccolò Machiavelli",
+    "year": 1515
+  },
+  {
+    "title": "Through the Looking-Glass",
+    "author": "Lewis Carroll",
+    "year": 1865
+  },
+  {
+    "title": "The Wind in the Willows",
+    "author": "Kenneth Grahame",
+    "year": 1908
+  },
+  {
+    "title": "La Divina Commedia",
+    "author": "Dante Alighieri",
+    "year": 1472
+  },
+  {
+    "title": "Анна Каренина",
+    "author": "Лев Толстой",
+    "year": 1876
+  },
+  {
+    "title": "The Hound of the Baskervilles",
+    "author": "Arthur Conan Doyle",
+    "year": 1900
+  },
+  {
+    "title": "Anne of Green Gables",
+    "author": "Lucy Maud Montgomery",
+    "year": 1908
+  },
+  {
+    "title": "Persuasion",
+    "author": "Jane Austen",
+    "year": 1789
+  },
+  {
+    "title": "Julius Caesar",
+    "author": "William Shakespeare",
+    "year": 1656
+  },
+  {
+    "title": "The Great Gatsby",
+    "author": "F. Scott Fitzgerald",
+    "year": 1920
+  },
+  {
+    "title": "Jane Eyre",
+    "author": "Charlotte Brontë",
+    "year": 1847
+  },
+  {
+    "title": "The Time Machine",
+    "author": "H. G. Wells",
+    "year": 1895
+  },
+  {
+    "title": "Walden",
+    "author": "Henry David Thoreau",
+    "year": 1854
+  },
+  {
+    "title": "Three Men in a Boat (to say nothing of the dog)",
+    "author": "Jerome Klapka Jérôme",
+    "year": 1889
+  },
+  {
+    "title": "The Adventures of Sherlock Holmes [12 stories]",
+    "author": "Arthur Conan Doyle",
+    "year": 1892
+  },
+  {
+    "title": "Moby Dick",
+    "author": "Herman Melville",
+    "year": 1851
+  },
+  {
+    "title": "Moll Flanders",
+    "author": "Daniel Defoe",
+    "year": 1722
+  },
+  {
+    "title": "Mansfield Park",
+    "author": "Jane Austen",
+    "year": 1814
+  },
+  {
+    "title": "The Man Who Was Thursday",
+    "author": "Gilbert Keith Chesterton",
+    "year": 1908
+  },
+  {
+    "title": "Les Trois Mousquetaires",
+    "author": "Alexandre Dumas",
+    "year": 1844
+  },
+  {
+    "title": "The Mysterious Affair at Styles",
+    "author": "Agatha Christie",
+    "year": 1920
+  },
+  {
+    "title": "King Solomon's Mines",
+    "author": "H. Rider Haggard",
+    "year": 1880
+  },
+  {
+    "title": "Ἰλιάς",
+    "author": "Όμηρος",
+    "year": 1505
+  },
+  {
+    "title": "Romeo and Juliet",
+    "author": "William Shakespeare",
+    "year": 1597
+  },
+  {
+    "title": "Brave New World",
+    "author": "Aldous Huxley",
+    "year": 1932
+  },
+  {
+    "title": "The Invisible Man",
+    "author": "H. G. Wells",
+    "year": 0
+  },
+  {
+    "title": "De rerum natura",
+    "author": "Titus Lucretius Carus",
+    "year": 1486
+  },
+  {
+    "title": "Le Tour du Monde en Quatre-Vingts Jours",
+    "author": "Jules Verne",
+    "year": 1872
+  },
+  {
+    "title": "Two years before the mast",
+    "author": "Richard Henry Dana",
+    "year": 1000
+  },
+  {
+    "title": "Houghton Mifflin Science California",
+    "author": "Houghton Mifflin Company Staff",
+    "year": 2006
+  },
+  {
+    "title": "The Island of Dr. Moreau",
+    "author": "H. G. Wells",
+    "year": 1896
+  },
+  {
+    "title": "History",
+    "author": "Herodotus",
+    "year": 1494
+  },
+  {
+    "title": "On the origin of species by means of natural selection",
+    "author": "Charles Darwin",
+    "year": 1859
+  },
+  {
+    "title": "Houghton Mifflin Science Leveled Readers",
+    "author": "Houghton Mifflin Company Staff",
+    "year": 2005
+  },
+  {
+    "title": "[William Wheeler Hubbell, authorized to apply for patents.]",
+    "author": "United States. Congress. Senate. Committee on Patents",
+    "year": 1858
+  },
+  {
+    "title": "The principall navigations, voiages, and discoveries of the English nations",
+    "author": "Richard Hakluyt",
+    "year": 1589
+  },
+  {
+    "title": "Principles of Anatomy and Physiology",
+    "author": "Gerard J. Tortora",
+    "year": 1975
+  },
+  {
+    "title": "Moralia",
+    "author": "Plutarch",
+    "year": 1500
+  },
+  {
+    "title": "Essays",
+    "author": "Francis Bacon",
+    "year": 1618
+  },
+  {
+    "title": "Histoire naturelle",
+    "author": "Georges-Louis Leclerc, comte de Buffon",
+    "year": 1749
+  },
+  {
+    "title": "Discours de la méthode",
+    "author": "René Descartes",
+    "year": 1644
+  },
+  {
+    "title": "Kokuritsu Kokkai Toshokan shozō Meijiki kankō tosho maikuro-ban shūsei",
+    "author": "Kokuritsu Kokkai Toshokan (Japan)",
+    "year": 1991
+  },
+  {
+    "title": "The book of the damned",
+    "author": "Charles Fort",
+    "year": 1919
+  },
+  {
+    "title": "Northern Lights",
+    "author": "Philip Pullman",
+    "year": 1995
+  },
+  {
+    "title": "1st Report [Session 1993-94]",
+    "author": "Rand McNally",
+    "year": 1983
+  },
+  {
+    "title": "L'Évolution créatrice",
+    "author": "Henri Bergson",
+    "year": 1907
+  },
+  {
+    "title": "A Brief History of Time",
+    "author": "Stephen Hawking",
+    "year": 1988
+  },
+  {
+    "title": "International review of cytology",
+    "author": "George Bourne",
+    "year": 1986
+  },
+  {
+    "title": "A System of Logic, Ratiocinative and Inductive",
+    "author": "John Stuart Mill",
+    "year": 1843
+  },
+  {
+    "title": "Goethe's Werke",
+    "author": "Johann Wolfgang von Goethe",
+    "year": 1800
+  },
+  {
+    "title": "The ABC of atoms",
+    "author": "Bertrand Russell",
+    "year": 1923
+  },
+  {
+    "title": "Über die spezielle und die allgemeine Relativitätstheorie",
+    "author": "Albert Einstein",
+    "year": 1917
+  },
+  {
+    "title": "NASA/DoD aerospace knowledge diffusion research project",
+    "author": "Thomas E. Pinelli",
+    "year": 1990
+  },
+  {
+    "title": "International Review of Cell and Molecular Biology",
+    "author": "Kwang W. Jeon",
+    "year": 2008
+  },
+  {
+    "title": "4th Report [Session 1993-94]",
+    "author": "Rand McNally",
+    "year": 1990
+  },
+  {
+    "title": "Introduction to genetic analysis",
+    "author": "Anthony J. F. Griffiths",
+    "year": 1993
+  },
+  {
+    "title": "Leonardo",
+    "author": "Leonardo da Vinci",
+    "year": 1946
+  },
+  {
+    "title": "Sapiens",
+    "author": "Yuval Noah Harari",
+    "year": 2011
+  },
+  {
+    "title": "Annual reports on NMR spectroscopy",
+    "author": "Graham A. Webb",
+    "year": 1979
+  },
+  {
+    "title": "Nova Atlantis",
+    "author": "Francis Bacon",
+    "year": 1627
+  },
+  {
+    "title": "Microbiology",
+    "author": "Gerard J. Tortora",
+    "year": 1982
+  },
+  {
+    "title": "Accounting Principles",
+    "author": "Jerry J. Weygandt",
+    "year": 1987
+  },
+  {
+    "title": "Advances in imaging and electron physics",
+    "author": "Peter W. Hawkes",
+    "year": 1995
+  },
+  {
+    "title": "The natural history of Selborne",
+    "author": "Gilbert White",
+    "year": 1789
+  },
+  {
+    "title": "A Canticle for Leibowitz",
+    "author": "Walter M. Miller Jr.",
+    "year": 1959
+  },
+  {
+    "title": "Differentiating Instruction With Menus",
+    "author": "Laurie E. Westphal",
+    "year": 2007
+  },
+  {
+    "title": "Pathways Through Science (Nuffield Modular Science)",
+    "author": "Nuffield-Chelsea Curriculum Trust",
+    "year": 1992
+  },
+  {
+    "title": "The Worst Journey in the World",
+    "author": "Apsley Cherry-Garrard",
+    "year": 1922
+  },
+  {
+    "title": "The economy of machinery and manufactures",
+    "author": "Charles Babbage",
+    "year": 1832
+  },
+  {
+    "title": "5th Report [Session 1995-96]",
+    "author": "Rand McNally",
+    "year": 1988
+  },
+  {
+    "title": "The advancement of learning",
+    "author": "Francis Bacon",
+    "year": 1605
+  },
+  {
+    "title": "Cosmos",
+    "author": "Alexander von Humboldt",
+    "year": 1845
+  },
+  {
+    "title": "Bible",
+    "author": "Bible",
+    "year": 1200
+  },
+  {
+    "title": "Candide",
+    "author": "Voltaire",
+    "year": 1746
+  },
+  {
+    "title": "Narrative of the life of Frederick Douglass",
+    "author": "Frederick Douglass",
+    "year": 1845
+  },
+  {
+    "title": "Twelve years a slave",
+    "author": "Solomon Northup",
+    "year": 1853
+  },
+  {
+    "title": "Hard Times",
+    "author": "Charles Dickens",
+    "year": 1854
+  },
+  {
+    "title": "The Legend of Sleepy Hollow",
+    "author": "Washington Irving",
+    "year": 1820
+  },
+  {
+    "title": "The Railway Children",
+    "author": "Edith Nesbit",
+    "year": 1900
+  },
+  {
+    "title": "Five Children and It",
+    "author": "Edith Nesbit",
+    "year": 1905
+  },
+  {
+    "title": "Kim",
+    "author": "Rudyard Kipling",
+    "year": 1901
+  },
+  {
+    "title": "The Moonstone",
+    "author": "Wilkie Collins",
+    "year": 1800
+  },
+  {
+    "title": "Antony and Cleopatra",
+    "author": "William Shakespeare",
+    "year": 1734
+  },
+  {
+    "title": "The Adventures of Tom Sawyer",
+    "author": "Mark Twain",
+    "year": 1817
+  },
+  {
+    "title": "The Last of the Mohicans",
+    "author": "James Fenimore Cooper",
+    "year": 1826
+  },
+  {
+    "title": "David Copperfield",
+    "author": "Charles Dickens",
+    "year": 1800
+  },
+  {
+    "title": "King Richard II",
+    "author": "William Shakespeare",
+    "year": 1597
+  },
+  {
+    "title": "My Ántonia",
+    "author": "Willa Cather",
+    "year": 1818
+  },
+  {
+    "title": "The Old Curiosity Shop",
+    "author": "Charles Dickens",
+    "year": 1800
+  },
+  {
+    "title": "Ὀδύσσεια",
+    "author": "Όμηρος",
+    "year": 1488
+  },
+  {
+    "title": "Dubliners",
+    "author": "James Joyce",
+    "year": 1914
+  },
+  {
+    "title": "The Tempest",
+    "author": "William Shakespeare",
+    "year": 1611
+  },
+  {
+    "title": "A Portrait of the Artist as a Young Man",
+    "author": "James Joyce",
+    "year": 1818
+  },
+  {
+    "title": "The Princess and the Goblin",
+    "author": "George MacDonald",
+    "year": 1872
+  },
+  {
+    "title": "Dracula",
+    "author": "Bram Stoker",
+    "year": 1897
+  },
+  {
+    "title": "A Room with a View",
+    "author": "E. M. Forster",
+    "year": 1905
+  },
+  {
+    "title": "The Scarlet Letter",
+    "author": "Nathaniel Hawthorne",
+    "year": 1850
+  },
+  {
+    "title": "War and Peace",
+    "author": "Лев Толстой",
+    "year": 1864
+  },
+  {
+    "title": "The Prisoner of Zenda",
+    "author": "Anthony Hope",
+    "year": 1800
+  },
+  {
+    "title": "Silas Marner",
+    "author": "George Eliot",
+    "year": 1800
+  },
+  {
+    "title": "The Complete Life and Adventures of Santa Claus",
+    "author": "L. Frank Baum",
+    "year": 1902
+  },
+  {
+    "title": "Women in Love",
+    "author": "D. H. Lawrence",
+    "year": 1877
+  },
+  {
+    "title": "Alice's Adventures in Wonderland / Through the Looking Glass",
+    "author": "Lewis Carroll",
+    "year": 1889
+  },
+  {
+    "title": "Nineteen Eighty-Four",
+    "author": "George Orwell",
+    "year": 1949
+  },
+  {
+    "title": "The Beautiful and Damned",
+    "author": "F. Scott Fitzgerald",
+    "year": 1920
+  },
+  {
+    "title": "Metamorphoses",
+    "author": "Ovid",
+    "year": 1479
+  },
+  {
+    "title": "The Princess and Curdie",
+    "author": "George MacDonald",
+    "year": 1832
+  },
+  {
+    "title": "Ivanhoe",
+    "author": "Sir Walter Scott",
+    "year": 1800
+  },
+  {
+    "title": "L’étranger",
+    "author": "Albert Camus",
+    "year": 1942
+  },
+  {
+    "title": "Barchester Towers",
+    "author": "Anthony Trollope",
+    "year": 1815
+  },
+  {
+    "title": "The Hobbit",
+    "author": "J.R.R. Tolkien",
+    "year": 1937
+  },
+  {
+    "title": "Confessions",
+    "author": "Augustine of Hippo",
+    "year": 1482
+  },
+  {
+    "title": "Inferno",
+    "author": "Dante Alighieri",
+    "year": 1767
+  },
+  {
+    "title": "Peter Pan",
+    "author": "J. M. Barrie",
+    "year": 1911
+  },
+  {
+    "title": "The Lost World",
+    "author": "Arthur Conan Doyle",
+    "year": 1900
+  },
+  {
+    "title": "The Marvelous Land of Oz",
+    "author": "L. Frank Baum",
+    "year": 1904
+  },
+  {
+    "title": "Ozma of Oz",
+    "author": "L. Frank Baum",
+    "year": 1907
+  },
+  {
+    "title": "Le petit prince",
+    "author": "Antoine de Saint-Exupéry",
+    "year": 1943
+  },
+  {
+    "title": "The Emerald City of Oz",
+    "author": "L. Frank Baum",
+    "year": 1910
+  },
+  {
+    "title": "Dorothy and the Wizard in Oz",
+    "author": "L. Frank Baum",
+    "year": 1908
+  },
+  {
+    "title": "The Lost Princess of Oz",
+    "author": "L. Frank Baum",
+    "year": 1917
+  },
+  {
+    "title": "The Story of the Amulet",
+    "author": "Edith Nesbit",
+    "year": 1905
+  },
+  {
+    "title": "The Road to Oz",
+    "author": "L. Frank Baum",
+    "year": 1909
+  },
+  {
+    "title": "The Sea Fairies",
+    "author": "L. Frank Baum",
+    "year": 1911
+  },
+  {
+    "title": "Baum's American Fairy Tales",
+    "author": "L. Frank Baum",
+    "year": 1901
+  },
+  {
+    "title": "Sky Island",
+    "author": "L. Frank Baum",
+    "year": 1912
+  },
+  {
+    "title": "The Scarecrow of Oz",
+    "author": "L. Frank Baum",
+    "year": 1915
+  },
+  {
+    "title": "The Patchwork Girl of Oz",
+    "author": "L. Frank Baum",
+    "year": 1913
+  },
+  {
+    "title": "The Magic of Oz",
+    "author": "L. Frank Baum",
+    "year": 1919
+  },
+  {
+    "title": "Tik-Tok of Oz",
+    "author": "L. Frank Baum",
+    "year": 1914
+  },
+  {
+    "title": "Rinkitink in Oz",
+    "author": "L. Frank Baum",
+    "year": 1916
+  },
+  {
+    "title": "The Enchanted Castle",
+    "author": "Edith Nesbit",
+    "year": 1907
+  },
+  {
+    "title": "Phantastes",
+    "author": "George MacDonald",
+    "year": 1850
+  },
+  {
+    "title": "The Tin Woodman of Oz",
+    "author": "L. Frank Baum",
+    "year": 1918
+  },
+  {
+    "title": "Glinda of Oz",
+    "author": "L. Frank Baum",
+    "year": 1920
+  },
+  {
+    "title": "The Magic City",
+    "author": "Edith Nesbit",
+    "year": 1910
+  },
+  {
+    "title": "The Phoenix and the Carpet",
+    "author": "Edith Nesbit",
+    "year": 1903
+  },
+  {
+    "title": "Le avventure di Pinocchio",
+    "author": "Carlo Collodi",
+    "year": 1883
+  },
+  {
+    "title": "Harry Potter and the Philosopher's Stone",
+    "author": "J. K. Rowling",
+    "year": 1997
+  },
+  {
+    "title": "News from nowhere, or, An epoch of rest, being some chapters from a utopian romance",
+    "author": "William Morris",
+    "year": 1890
+  },
+  {
+    "title": "À rebours",
+    "author": "Joris-Karl Huysmans",
+    "year": 1884
+  },
+  {
+    "title": "The Secret Agent",
+    "author": "Joseph Conrad",
+    "year": 1907
+  },
+  {
+    "title": "Puck of Pook's Hill",
+    "author": "Rudyard Kipling",
+    "year": 1900
+  },
+  {
+    "title": "Harry Potter and the Chamber of Secrets",
+    "author": "J. K. Rowling",
+    "year": 1998
+  },
+  {
+    "title": "The Fellowship of the Ring",
+    "author": "J.R.R. Tolkien",
+    "year": 1954
+  },
+  {
+    "title": "The Enchanted Island of Yew",
+    "author": "L. Frank Baum",
+    "year": 1903
+  },
+  {
+    "title": "After London",
+    "author": "Richard Jefferies",
+    "year": 1885
+  },
+  {
+    "title": "Harry Potter and the Prisoner of Azkaban",
+    "author": "J. K. Rowling",
+    "year": 1999
+  },
+  {
+    "title": "Война и мир",
+    "author": "Лев Толстой",
+    "year": 1869
+  },
+  {
+    "title": "Преступление и наказание",
+    "author": "Федор Достоевский",
+    "year": 1866
+  },
+  {
+    "title": "Идиот",
+    "author": "Федор Достоевский",
+    "year": 1869
+  },
+  {
+    "title": "Братья Карамазовы",
+    "author": "Федор Достоевский",
+    "year": 1880
+  },
+  {
+    "title": "Мастер и Маргарита",
+    "author": "Михаил Булгаков",
+    "year": 1967
+  },
+  {
+    "title": "1984",
+    "author": "George Orwell",
+    "year": 1949
+  },
+  {
+    "title": "Animal Farm",
+    "author": "George Orwell",
+    "year": 1945
+  },
+  {
+    "title": "To Kill a Mockingbird",
+    "author": "Harper Lee",
+    "year": 1960
+  }
+]
