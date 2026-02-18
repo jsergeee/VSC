@@ -6,3 +6,13 @@ class SchoolConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'school'
     verbose_name = 'Онлайн школа'
+    
+    
+    
+class SchoolConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'school'
+    verbose_name = 'Онлайн школа'
+    
+    def ready(self):
+        import school.signals

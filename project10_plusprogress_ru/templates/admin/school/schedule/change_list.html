@@ -1,0 +1,188 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" type="text/css" href="{% static " admin/css/changelists.css" %}">
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<style>
+    #calendar {
+        max-width: 110%;
+        margin: 20px auto;
+        padding: 0 10px;
+    }
+
+    .fc-event {
+        cursor: pointer;
+    }
+
+    .fc-event-title {
+        font-weight: bold;
+    }
+
+    .calendar-container {
+        background: white;
+        padding: 20px;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .view-toggle {
+        margin-bottom: 20px;
+        text-align: right;
+    }
+
+    .view-toggle button {
+        margin-left: 10px;
+        padding: 8px 16px;
+        border: 1px solid #79aec8;
+        border-radius: 4px;
+        background: white;
+        cursor: pointer;
+    }
+
+    .view-toggle button.default {
+        background: #79aec8;
+        color: white;
+    }
+
+    /* Скрываем стандартную кнопку добавления */
+    .object-tools {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <div class="module">
+        <div class="view-toggle">
+            <button id="list-view" class="button">Список</button>
+            <button id="calendar-view" class="button default">Календарь</button>
+        </div>
+
+        <div id="calendar-container" class="calendar-container">
+            <div id="calendar"></div>
+        </div>
+
+        <div id="list-container" style="display: none;">
+            {% include "admin/school/schedule/change_list_original.html" %}
+        </div>
+    </div>
+</div>
+
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/ru.js'></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var calendarEl = document.getElementById('calendar');
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            locale: 'ru',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            buttonText: {
+                today: 'Сегодня',
+                month: 'Месяц',
+                week: 'Неделя',
+                day: 'День'
+            },
+            slotMinTime: '08:00:00',
+            slotMaxTime: '22:00:00',
+            allDaySlot: false,
+            slotDuration: '00:30:00',
+
+            events: function (fetchInfo, successCallback, failureCallback) {
+                fetch('/admin/school/schedule/calendar-data/')
+                    .then(response => response.json())
+                    .then(data => {
+                        var events = data.map(item => ({
+                            id: item.id,
+                            title: `${item.teacher_name} - ${item.subject || 'Расписание'}`,
+                            start: item.start,
+                            end: item.end,
+                            backgroundColor: item.color || '#79aec8',
+                            borderColor: item.color || '#79aec8',
+                            extendedProps: {
+                                teacher: item.teacher_name,
+                                subject: item.subject,
+                                student: item.student_name,
+                                status: item.status,
+                                schedule_id: item.schedule_id,
+                                lesson_id: item.lesson_id  // ДОБАВЛЯЕМ lesson_id
+                            }
+                        }));
+                        successCallback(events);
+                    })
+                    .catch(error => {
+                        console.error('Error loading schedules:', error);
+                        failureCallback(error);
+                    });
+            },
+
+            eventClick: function (info) {
+                // СНАЧАЛА проверяем, есть ли занятие
+                if (info.event.extendedProps.lesson_id) {
+                    window.location.href = `/admin/school/lesson/${info.event.extendedProps.lesson_id}/change/`;
+                }
+                // ЕСЛИ нет занятия, но есть расписание
+                else if (info.event.extendedProps.schedule_id) {
+                    window.location.href = `/admin/school/schedule/${info.event.extendedProps.schedule_id}/change/`;
+                }
+            },
+
+            eventDidMount: function (info) {
+                // Добавляем цвета для всех статусов
+                const status = info.event.extendedProps.status;
+                if (status === 'completed' || status === 'Проведено') {
+                    info.el.style.backgroundColor = '#28a745';
+                    info.el.style.borderColor = '#28a745';
+                } else if (status === 'overdue' || status === 'Просрочено') {
+                    info.el.style.backgroundColor = '#dc3545';
+                    info.el.style.borderColor = '#dc3545';
+                } else if (status === 'scheduled' || status === 'Запланировано') {
+                    info.el.style.backgroundColor = '#007bff';
+                    info.el.style.borderColor = '#007bff';
+                } else if (status === 'cancelled' || status === 'Отменено') {
+                    info.el.style.backgroundColor = '#fd7e14';
+                    info.el.style.borderColor = '#fd7e14';
+                }
+
+                // Добавляем тултип
+                let tooltip = info.event.extendedProps.teacher;
+                if (info.event.extendedProps.subject) {
+                    tooltip += `\nПредмет: ${info.event.extendedProps.subject}`;
+                }
+                if (info.event.extendedProps.student) {
+                    tooltip += `\nУченик: ${info.event.extendedProps.student}`;
+                }
+                if (info.event.extendedProps.status) {
+                    tooltip += `\nСтатус: ${info.event.extendedProps.status}`;
+                }
+                info.el.setAttribute('title', tooltip);
+            }
+        });
+
+        calendar.render();
+
+        // Переключение между видами (ПОЛНОСТЬЮ как в рабочем коде)
+        document.getElementById('list-view').addEventListener('click', function () {
+            document.getElementById('calendar-container').style.display = 'none';
+            document.getElementById('list-container').style.display = 'block';
+            this.classList.add('default');
+            document.getElementById('calendar-view').classList.remove('default');
+        });
+
+        document.getElementById('calendar-view').addEventListener('click', function () {
+            document.getElementById('calendar-container').style.display = 'block';
+            document.getElementById('list-container').style.display = 'none';
+            this.classList.add('default');
+            document.getElementById('list-view').classList.remove('default');
+            calendar.render();
+        });
+    });
+</script>
+{% endblock %}

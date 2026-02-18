@@ -1,0 +1,54 @@
+{% load i18n admin_urls static admin_list %}
+
+{% block result_list %}
+{% if cl.result_list %}
+<div class="results">
+    <table id="result_list" style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr>
+                <th style="text-align: left; padding: 8px;">Учитель</th>
+                <th style="text-align: left; padding: 8px;">День недели</th>
+                <th style="text-align: left; padding: 8px;">Время начала</th>
+                <th style="text-align: left; padding: 8px;">Время окончания</th>
+                <th style="text-align: left; padding: 8px;">Активно</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for schedule in cl.result_list %}
+            <tr class="{% cycle 'row1' 'row2' %}">
+                <td style="padding: 8px;">
+                    <a href="{% url 'admin:school_schedule_change' schedule.pk %}">
+                        {{ schedule.teacher.user.get_full_name }}
+                    </a>
+                </td>
+                <td style="padding: 8px;">{{ schedule.get_day_of_week_display }}</td>
+                <td style="padding: 8px;">{{ schedule.start_time|time:"H:i" }}</td>
+                <td style="padding: 8px;">{{ schedule.end_time|time:"H:i" }}</td>
+                <td style="padding: 8px;">
+                    {% if schedule.is_active %}
+                    <span style="color: #28a745;">✓ Активно</span>
+                    {% else %}
+                    <span style="color: #dc3545;">✗ Неактивно</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if cl.paginator.num_pages > 1 %}
+<div class="paginator" style="margin-top: 20px; padding: 10px; background: #f8f8f8;">
+    {% for i in cl.paginator.page_range %}
+    {% if i == cl.page_num %}
+    <span style="padding: 5px 10px; background: #79aec8; color: white;">{{ i }}</span>
+    {% else %}
+    <a href="?p={{ i }}" style="padding: 5px 10px;">{{ i }}</a>
+    {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
+{% else %}
+<p style="margin: 20px; padding: 20px; background: #f8f8f8;">Нет расписаний</p>
+{% endif %}
+{% endblock %}

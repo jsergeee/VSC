@@ -19,4 +19,12 @@ urlpatterns = [
     
     # Lesson URLs
     path('lessons/<int:lesson_id>/', views.lesson_detail, name='lesson_detail'),
+    
+    path('api/schedules/', views.api_schedules, name='api_schedules'),
+    
+    path('reports/overdue/', views.overdue_report, name='overdue_report'),
+    
+    path('admin/school/schedule/calendar-data/', views.schedule_calendar_data, name='schedule-calendar-data'),
+    
+    path('admin/school/lesson/<int:lesson_id>/complete/', views.admin_complete_lesson, name='admin-complete-lesson'),
 ]

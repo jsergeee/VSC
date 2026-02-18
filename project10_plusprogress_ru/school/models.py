@@ -2,6 +2,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
+from datetime import timedelta, datetime
 
 
 class User(AbstractUser):
@@ -17,7 +18,28 @@ class User(AbstractUser):
     patronymic = models.CharField('Отчество', max_length=50, blank=True)
     balance = models.DecimalField('Баланс', max_digits=10, decimal_places=2, default=0)
     
-        # Добавьте этот метод
+    # Добавьте эти строки для решения конфликта
+    groups = models.ManyToManyField(
+        'auth.Group',
+        verbose_name='groups',
+        blank=True,
+        help_text='The groups this user belongs to.',
+        related_name='custom_user_set',
+        related_query_name='custom_user',
+    )
+    user_permissions = models.ManyToManyField(
+        'auth.Permission',
+        verbose_name='user permissions',
+        blank=True,
+        help_text='Specific permissions for this user.',
+        related_name='custom_user_set',
+        related_query_name='custom_user',
+    )
+    
+    class Meta:
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
+    
     def __str__(self):
         full_name = self.get_full_name().strip()
         if full_name:
@@ -34,33 +56,14 @@ class User(AbstractUser):
         if len(parts) >= 3:
             self.patronymic = ' '.join(parts[2:])
     
-    # Добавьте эти строки для решения конфликта
-    groups = models.ManyToManyField(
-        'auth.Group',
-        verbose_name='groups',
-        blank=True,
-        help_text='The groups this user belongs to.',
-        related_name='custom_user_set',  # Изменено с user_set
-        related_query_name='custom_user',
-    )
-    user_permissions = models.ManyToManyField(
-        'auth.Permission',
-        verbose_name='user permissions',
-        blank=True,
-        help_text='Specific permissions for this user.',
-        related_name='custom_user_set',  # Изменено с user_set
-        related_query_name='custom_user',
-    )
-    
-    class Meta:
-        verbose_name = 'Пользователь'
-        verbose_name_plural = 'Пользователи'
-    
-    def __str__(self):
-        return f"{self.last_name} {self.first_name}".strip() or self.username
+    def get_full_name(self):
+        """Возвращает полное имя с отчеством"""
+        full_name = super().get_full_name()
+        if self.patronymic:
+            return f"{full_name} {self.patronymic}".strip()
+        return full_name
 
 
-# Остальные модели остаются без изменений
 class Subject(models.Model):
     name = models.CharField('Название', max_length=100)
     description = models.TextField('Описание', blank=True)
@@ -88,8 +91,37 @@ class Teacher(models.Model):
         verbose_name_plural = 'Учителя'
     
     def __str__(self):
-        # Возвращаем полное имя пользователя
         return self.user.get_full_name() or self.user.username
+    
+    def get_available_slots(self, date):
+        """Возвращает доступные временные слоты учителя на указанную дату"""
+        day = date.weekday()
+        schedules = Schedule.objects.filter(
+            teacher=self,
+            day_of_week=day,
+            is_active=True
+        )
+        
+        available_slots = []
+        for schedule in schedules:
+            # Проверяем, не занято ли это время
+            existing_lessons = Lesson.objects.filter(
+                teacher=self,
+                date=date,
+                start_time__gte=schedule.start_time,
+                end_time__lte=schedule.end_time,
+                status__in=['scheduled', 'completed']
+            )
+            
+            if not existing_lessons.exists():
+                available_slots.append({
+                    'start': schedule.start_time,
+                    'end': schedule.end_time,
+                    'schedule_id': schedule.id
+                })
+        
+        return available_slots
+
 
 class Student(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student_profile')
@@ -118,18 +150,131 @@ class LessonFormat(models.Model):
         return self.name
 
 
+class Schedule(models.Model):
+    DAY_CHOICES = [
+        (0, 'Понедельник'), (1, 'Вторник'), (2, 'Среда'), (3, 'Четверг'),
+        (4, 'Пятница'), (5, 'Суббота'), (6, 'Воскресенье')
+    ]
+    
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='schedules', verbose_name='Учитель')
+    day_of_week = models.IntegerField('День недели', choices=DAY_CHOICES)
+    start_time = models.TimeField('Время начала')
+    end_time = models.TimeField('Время окончания')
+    is_active = models.BooleanField('Активно', default=True)
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлено', auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Расписание'
+        verbose_name_plural = 'Расписания'
+        ordering = ['day_of_week', 'start_time']
+        unique_together = ['teacher', 'day_of_week', 'start_time']  # Защита от дубликатов
+    
+    def __str__(self):
+        days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+        return f"{self.teacher} - {days[self.day_of_week]} {self.start_time}-{self.end_time}"
+    
+    def generate_lessons(self, start_date, end_date, student=None, subject=None, cost=None):
+        """
+        Генерирует занятия из расписания на указанный период
+        
+        Args:
+            start_date: дата начала периода
+            end_date: дата окончания периода
+            student: ученик (если None, то занятие создается без ученика)
+            subject: предмет (если None, берется первый предмет учителя)
+            cost: стоимость (если None, берется дефолтная)
+        
+        Returns:
+            list: список созданных занятий
+        """
+        from datetime import timedelta
+        
+        if isinstance(start_date, str):
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        if isinstance(end_date, str):
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        if not subject:
+            subject = self.teacher.subjects.first()
+        
+        lessons = []
+        current_date = start_date
+        
+        while current_date <= end_date:
+            if current_date.weekday() == self.day_of_week:
+                # Проверяем, нет ли уже занятия на это время
+                existing = Lesson.objects.filter(
+                    teacher=self.teacher,
+                    date=current_date,
+                    start_time=self.start_time,
+                    schedule=self
+                ).exists()
+                
+                if not existing:
+                    lesson = Lesson(
+                        teacher=self.teacher,
+                        student=student,
+                        subject=subject,
+                        format=LessonFormat.objects.first(),  # или нужный формат
+                        date=current_date,
+                        start_time=self.start_time,
+                        end_time=self.end_time,
+                        duration=self.get_duration_minutes(),
+                        cost=cost or self.get_default_cost(),
+                        teacher_payment=self.get_teacher_payment(cost),
+                        status='scheduled',
+                        schedule=self  # связываем с расписанием
+                    )
+                    lessons.append(lesson)
+            
+            current_date += timedelta(days=1)
+        
+        # Массовое создание
+        if lessons:
+            return Lesson.objects.bulk_create(lessons)
+        return []
+    
+    def get_duration_minutes(self):
+        """Возвращает длительность занятия в минутах"""
+        start = datetime.combine(datetime.today(), self.start_time)
+        end = datetime.combine(datetime.today(), self.end_time)
+        return int((end - start).total_seconds() / 60)
+    
+    def get_default_cost(self):
+        """Возвращает стоимость по умолчанию (можно настроить под свои нужды)"""
+        # Здесь можно добавить логику расчета стоимости
+        return 1000
+    
+    def get_teacher_payment(self, cost=None):
+        """Возвращает выплату учителю"""
+        if cost is None:
+            cost = self.get_default_cost()
+        # Например, учитель получает 70% от стоимости
+        return cost * 0.7
+
+
 class Lesson(models.Model):
     STATUS_CHOICES = (
         ('scheduled', 'Запланировано'),
         ('completed', 'Проведено'),
         ('cancelled', 'Отменено'),
         ('no_show', 'Ученик не явился'),
+        ('overdue', 'Просрочено'),
     )
     
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='lessons', verbose_name='Учитель')
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='lessons', verbose_name='Ученик')
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='lessons', verbose_name='Ученик', null=True, blank=True)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, verbose_name='Предмет')
     format = models.ForeignKey(LessonFormat, on_delete=models.SET_NULL, null=True, verbose_name='Формат')
+    schedule = models.ForeignKey(
+        Schedule, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='lessons',
+        verbose_name='Создано из расписания'
+    )
     
     date = models.DateField('Дата')
     start_time = models.TimeField('Время начала')
@@ -154,8 +299,83 @@ class Lesson(models.Model):
         ordering = ['-date', '-start_time']
     
     def __str__(self):
-        return f"{self.subject} - {self.date} {self.start_time}"
-
+        student_name = self.student.user.get_full_name() if self.student else 'Не назначен'
+        return f"{self.subject} - {self.date} {self.start_time} ({student_name})"
+    
+    def save(self, *args, **kwargs):
+        # Автоматически вычисляем длительность
+        if self.start_time and self.end_time:
+            from datetime import datetime
+            start = datetime.combine(datetime.today(), self.start_time)
+            end = datetime.combine(datetime.today(), self.end_time)
+            self.duration = int((end - start).total_seconds() / 60)
+        super().save(*args, **kwargs)
+    
+    def mark_as_completed(self, report_data=None):
+        """
+        Отмечает занятие как проведенное и создает отчет
+        
+        Args:
+            report_data: словарь с данными отчета (topic, covered_material, homework, student_progress, next_lesson_plan)
+        
+        Returns:
+            LessonReport: созданный отчет или None
+        """
+        from .models import LessonReport, Payment
+        
+        self.status = 'completed'
+        self.save()
+        
+        # Создаем отчет, если переданы данные
+        if report_data:
+            report = LessonReport.objects.create(
+                lesson=self,
+                topic=report_data.get('topic', ''),
+                covered_material=report_data.get('covered_material', ''),
+                homework=report_data.get('homework', ''),
+                student_progress=report_data.get('student_progress', ''),
+                next_lesson_plan=report_data.get('next_lesson_plan', '')
+            )
+            
+            # Начисляем выплату учителю
+            self.teacher.wallet_balance += self.teacher_payment
+            self.teacher.save()
+            
+            # Списание с баланса ученика
+            if self.student:
+                self.student.user.balance -= self.cost
+                self.student.user.save()
+                
+                # Создаем запись о платеже
+                Payment.objects.create(
+                    user=self.student.user,
+                    amount=self.cost,
+                    payment_type='expense',
+                    description=f'Оплата занятия {self.date} ({self.subject.name})',
+                    lesson=self
+                )
+            
+            return report
+        return None
+    
+    def check_overdue(self):
+        """
+        Проверяет, просрочено ли занятие
+        Возвращает True, если статус изменен на 'overdue'
+        """
+        from datetime import datetime
+        
+        if self.status != 'scheduled':
+            return False
+        
+        lesson_datetime = datetime.combine(self.date, self.start_time)
+        now = datetime.now()
+        
+        if lesson_datetime < now:
+            self.status = 'overdue'
+            self.save()
+            return True
+        return False
 
 class LessonReport(models.Model):
     lesson = models.OneToOneField(Lesson, on_delete=models.CASCADE, related_name='report', verbose_name='Занятие')
@@ -197,26 +417,6 @@ class Payment(models.Model):
     
     def __str__(self):
         return f"{self.get_payment_type_display()} - {self.amount} руб."
-
-
-class Schedule(models.Model):
-    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='schedule', verbose_name='Учитель')
-    day_of_week = models.IntegerField('День недели', choices=[
-        (0, 'Понедельник'), (1, 'Вторник'), (2, 'Среда'), (3, 'Четверг'),
-        (4, 'Пятница'), (5, 'Суббота'), (6, 'Воскресенье')
-    ])
-    start_time = models.TimeField('Время начала')
-    end_time = models.TimeField('Время окончания')
-    is_active = models.BooleanField('Активно', default=True)
-    
-    class Meta:
-        verbose_name = 'Расписание'
-        verbose_name_plural = 'Расписание'
-        ordering = ['day_of_week', 'start_time']
-    
-    def __str__(self):
-        days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
-        return f"{self.teacher.user.get_full_name()} - {days[self.day_of_week]} {self.start_time}-{self.end_time}"
 
 
 class TrialRequest(models.Model):
