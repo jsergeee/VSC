@@ -5,7 +5,6 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Sum, Q
 from django.utils import timezone
-from datetime import datetime, timedelta
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 from django.http import JsonResponse
@@ -14,6 +13,10 @@ from datetime import datetime, date, timedelta
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.db.models import Count, Q
+from django.contrib import messages
+from django.db.models import Q, Sum
+from datetime import date, timedelta
+from .models import Student, Teacher, Lesson, Material, Deposit, StudentNote
 from .models import (
     User, Teacher, Student, Lesson, Subject, 
     LessonReport, Payment, TrialRequest, Schedule
@@ -90,41 +93,71 @@ def dashboard(request):
 
 @login_required
 def student_dashboard(request):
+    """Личный кабинет ученика"""
     if request.user.role != 'student':
         messages.error(request, 'Доступ запрещен')
         return redirect('dashboard')
     
-    student = request.user.student_profile
-    today = timezone.now().date()
+    # ПОЛНОЕ обновление пользователя из базы данных
+    # Это гарантирует, что мы видим актуальные данные
+    user = User.objects.get(pk=request.user.pk)
     
-    # Получаем расписание
+    from .models import Student, Lesson, Material
+    from datetime import date
+    from django.db.models import Q
+    
+    # Получаем профиль ученика
+    try:
+        student = user.student_profile
+    except:
+        student = Student.objects.create(user=user)
+        messages.info(request, 'Профиль ученика был создан')
+    
+    # Принудительно обновляем профиль из базы
+    student.refresh_from_db()
+    
+    # Получаем баланс
+    balance = student.get_balance()
+    
+    # Получаем учителей ученика (свежие данные)
+    teachers = student.teachers.all()
+    
+    # Получаем ближайшие занятия
     upcoming_lessons = Lesson.objects.filter(
         student=student,
-        date__gte=today,
+        date__gte=date.today(),
         status='scheduled'
-    ).order_by('date', 'start_time')[:10]
+    ).select_related('teacher__user', 'subject', 'format').order_by('date', 'start_time')[:10]
     
-    # История занятий
+    # Получаем последние проведенные занятия
     past_lessons = Lesson.objects.filter(
         student=student,
         status='completed'
-    ).order_by('-date', '-start_time')[:10]
+    ).select_related('teacher__user', 'subject').order_by('-date')[:10]
     
-    # Баланс
-    balance = request.user.balance
+    # Получаем методические материалы
+    materials = Material.objects.filter(
+        Q(students=student) | Q(is_public=True) | Q(teachers__in=teachers)
+    ).distinct()[:20]
     
-    # Последние платежи
-    recent_payments = Payment.objects.filter(user=request.user).order_by('-created_at')[:5]
+    # Отладка - выведем в консоль, что получаем
+    import logging
+    logging.info(f"Student: {student}")
+    logging.info(f"Teachers count: {teachers.count()}")
+    logging.info(f"Upcoming lessons: {upcoming_lessons.count()}")
     
     context = {
         'student': student,
+        'balance': balance,
         'upcoming_lessons': upcoming_lessons,
         'past_lessons': past_lessons,
-        'balance': balance,
-        'recent_payments': recent_payments,
+        'teachers': teachers,
+        'materials': materials,
+        'debug_user': user.username,
+        'debug_student_id': student.id,
     }
-    return render(request, 'school/student/dashboard.html', context)
-
+    
+    return render(request, 'school/student/dashboard_new.html', context)
 
 @login_required
 def student_calendar(request):
@@ -461,3 +494,251 @@ def admin_complete_lesson(request, lesson_id):
         return JsonResponse({'success': False, 'error': 'Занятие не найдено'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def student_dashboard(request):
+    """Личный кабинет ученика"""
+    if request.user.role != 'student':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+    
+    student = request.user.student_profile
+    
+    # Получаем баланс
+    balance = student.get_balance()
+    
+    # Получаем последние депозиты
+    recent_deposits = student.deposits.all()[:5]
+    
+    # Получаем ближайшие занятия
+    upcoming_lessons = Lesson.objects.filter(
+        student=student,
+        date__gte=date.today(),
+        status='scheduled'
+    ).select_related('teacher__user', 'subject', 'format').order_by('date', 'start_time')[:10]
+    
+    # Получаем учителей ученика
+    teachers = student.teachers.all()
+    
+    # Получаем методические материалы (для этого ученика или публичные)
+    materials = Material.objects.filter(
+        Q(students=student) | Q(is_public=True) | Q(teachers__in=teachers)
+    ).distinct()[:20]
+    
+    # Получаем последние проведенные занятия
+    past_lessons = Lesson.objects.filter(
+        student=student,
+        status='completed'
+    ).select_related('teacher__user', 'subject').order_by('-date')[:10]
+    
+    context = {
+        'student': student,
+        'balance': balance,
+        'recent_deposits': recent_deposits,
+        'upcoming_lessons': upcoming_lessons,
+        'past_lessons': past_lessons,
+        'teachers': teachers,
+        'materials': materials,
+    }
+    
+    return render(request, 'school/student/dashboard_new.html', context)
+
+
+@login_required
+def student_materials(request):
+    """Все методические материалы для ученика"""
+    if request.user.role != 'student':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+    
+    student = request.user.student_profile
+    teachers = student.teachers.all()
+    
+    materials = Material.objects.filter(
+        Q(students=student) | Q(is_public=True) | Q(teachers__in=teachers)
+    ).distinct().order_by('-created_at')
+    
+    # Фильтр по предметам
+    subject_id = request.GET.get('subject')
+    if subject_id:
+        materials = materials.filter(subjects__id=subject_id)
+    
+    # Фильтр по типу
+    material_type = request.GET.get('type')
+    if material_type:
+        materials = materials.filter(material_type=material_type)
+    
+    subjects = Subject.objects.all()
+    
+    context = {
+        'materials': materials,
+        'subjects': subjects,
+        'student': student,
+    }
+    
+    return render(request, 'school/student/materials.html', context)
+
+
+@login_required
+def teacher_dashboard(request):
+    """Личный кабинет учителя"""
+    if request.user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+    
+    teacher = request.user.teacher_profile
+    
+    # Получаем всех учеников учителя
+    students = teacher.student_set.all().select_related('user')
+    
+    # Получаем ближайшие занятия
+    upcoming_lessons = Lesson.objects.filter(
+        teacher=teacher,
+        date__gte=date.today(),
+        status='scheduled'
+    ).select_related('student__user', 'subject').order_by('date', 'start_time')[:20]
+    
+    # Получаем занятия на сегодня
+    today_lessons = Lesson.objects.filter(
+        teacher=teacher,
+        date=date.today(),
+        status='scheduled'
+    ).select_related('student__user', 'subject').order_by('start_time')
+    
+    # Получаем методические материалы учителя
+    materials = Material.objects.filter(
+        Q(teachers=teacher) | Q(created_by=request.user)
+    ).distinct().order_by('-created_at')[:20]
+    
+    # Баланс кошелька
+    wallet_balance = teacher.wallet_balance
+    
+    # Недавние выплаты
+    recent_payments = Payment.objects.filter(
+        user=request.user,
+        payment_type='teacher_payment'
+    ).order_by('-created_at')[:10]
+    
+    context = {
+        'teacher': teacher,
+        'students': students,
+        'upcoming_lessons': upcoming_lessons,
+        'today_lessons': today_lessons,
+        'materials': materials,
+        'wallet_balance': wallet_balance,
+        'recent_payments': recent_payments,
+    }
+    
+    return render(request, 'school/teacher/dashboard_new.html', context)
+
+
+@login_required
+def teacher_student_detail(request, student_id):
+    """Детальная информация об ученике для учителя"""
+    if request.user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+    
+    teacher = request.user.teacher_profile
+    student = get_object_or_404(Student, id=student_id, teachers=teacher)
+    
+    # Получаем занятия с этим учеником
+    lessons = Lesson.objects.filter(
+        teacher=teacher,
+        student=student
+    ).select_related('subject', 'format').order_by('-date')
+    
+    # Получаем заметки учителя об этом ученике
+    notes = StudentNote.objects.filter(teacher=teacher, student=student).order_by('-created_at')
+    
+    # Получаем материалы, доступные ученику
+    materials = Material.objects.filter(
+        Q(students=student) | Q(is_public=True)
+    ).distinct()
+    
+    # Статистика
+    total_lessons = lessons.count()
+    completed_lessons = lessons.filter(status='completed').count()
+    total_cost = lessons.filter(status='completed').aggregate(Sum('cost'))['cost__sum'] or 0
+    
+    context = {
+        'student': student,
+        'lessons': lessons[:20],
+        'notes': notes,
+        'materials': materials,
+        'total_lessons': total_lessons,
+        'completed_lessons': completed_lessons,
+        'total_cost': total_cost,
+    }
+    
+    return render(request, 'school/teacher/student_detail.html', context)
+
+
+@login_required
+def teacher_materials(request):
+    """Управление методическими материалами для учителя"""
+    if request.user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+    
+    teacher = request.user.teacher_profile
+    materials = Material.objects.filter(
+        Q(teachers=teacher) | Q(created_by=request.user)
+    ).distinct().order_by('-created_at')
+    
+    # Фильтр по ученикам
+    student_id = request.GET.get('student')
+    if student_id:
+        materials = materials.filter(students__id=student_id)
+    
+    students = teacher.student_set.all()
+    
+    context = {
+        'materials': materials,
+        'students': students,
+        'teacher': teacher,
+    }
+    
+    return render(request, 'school/teacher/materials.html', context)
+
+
+@login_required
+def student_deposit(request):
+    """Пополнение баланса ученика"""
+    if request.user.role != 'student':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+    
+    if request.method == 'POST':
+        amount = request.POST.get('amount')
+        description = request.POST.get('description', 'Пополнение счета')
+        
+        try:
+            amount = float(amount)
+            if amount <= 0:
+                messages.error(request, 'Сумма должна быть положительной')
+                return redirect('student_dashboard')
+            
+            student = request.user.student_profile
+            
+            # Создаем депозит
+            deposit = Deposit.objects.create(
+                student=student,
+                amount=amount,
+                description=description,
+                created_by=request.user
+            )
+            
+            # Обновляем баланс пользователя
+            request.user.balance += amount
+            request.user.save()
+            
+            messages.success(request, f'Счет пополнен на {amount} ₽')
+            
+        except (ValueError, TypeError):
+            messages.error(request, 'Неверная сумма')
+        
+        return redirect('student_dashboard')
+    
+    return redirect('student_dashboard')

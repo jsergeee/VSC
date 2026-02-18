@@ -1,0 +1,547 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Личный кабинет ученика{% endblock %}
+
+{% block extra_css %}
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<style>
+    .balance-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .balance-amount {
+        font-size: 48px;
+        font-weight: bold;
+        line-height: 1.2;
+    }
+
+    .balance-label {
+        font-size: 16px;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .teacher-card {
+        border: none;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s;
+        height: 100%;
+    }
+
+    .teacher-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .teacher-photo {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+    }
+
+    .lesson-item {
+        border-left: 4px solid #007bff;
+        margin-bottom: 10px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 0 8px 8px 0;
+        transition: background 0.3s;
+    }
+
+    .lesson-item:hover {
+        background: #e9ecef;
+    }
+
+    .lesson-item.completed {
+        border-left-color: #28a745;
+    }
+
+    .lesson-item.overdue {
+        border-left-color: #dc3545;
+    }
+
+    .meeting-link {
+        display: inline-block;
+        padding: 5px 15px;
+        background: #28a745;
+        color: white;
+        border-radius: 20px;
+        text-decoration: none;
+        font-size: 14px;
+        transition: background 0.3s;
+    }
+
+    .meeting-link:hover {
+        background: #218838;
+        color: white;
+        text-decoration: none;
+    }
+
+    .material-card {
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+        transition: all 0.3s;
+    }
+
+    .material-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 5px 15px rgba(0, 123, 255, 0.1);
+    }
+
+    .material-icon {
+        font-size: 24px;
+        margin-right: 15px;
+        color: #007bff;
+    }
+
+    .deposit-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .deposit-item:last-child {
+        border-bottom: none;
+    }
+
+    .deposit-amount {
+        font-weight: bold;
+        color: #28a745;
+    }
+
+    .section-title {
+        position: relative;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+        font-weight: 600;
+        color: #343a40;
+    }
+
+    .section-title:after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 50px;
+        height: 3px;
+        background: #007bff;
+    }
+
+    .quick-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .stat-number {
+        font-size: 28px;
+        font-weight: bold;
+        color: #007bff;
+    }
+
+    .stat-label {
+        font-size: 14px;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        color: #6c757d;
+    }
+
+    .empty-state i {
+        font-size: 48px;
+        margin-bottom: 15px;
+        color: #adb5bd;
+    }
+
+    .nav-tabs-custom {
+        margin-bottom: 20px;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .nav-tabs-custom .nav-link {
+        border: none;
+        color: #6c757d;
+        font-weight: 500;
+        padding: 10px 20px;
+    }
+
+    .nav-tabs-custom .nav-link.active {
+        color: #007bff;
+        background: none;
+        border-bottom: 2px solid #007bff;
+    }
+
+    #calendar {
+        max-width: 100%;
+        margin: 20px 0;
+        height: 600px;
+    }
+
+    .fc-event {
+        cursor: pointer;
+    }
+
+    .fc-event-title {
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Приветствие (только имя) -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>Здравствуйте, {{ user.first_name }}!</h2>
+            <p class="text-muted">Рады видеть вас в личном кабинете</p>
+        </div>
+    </div>
+
+    <!-- Баланс (без кнопки пополнения) -->
+    <div class="row">
+        <div class="col-12">
+            <div class="balance-card">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="balance-label">Текущий баланс</div>
+                        <div class="balance-amount">{{ balance|floatformat:0 }} ₽</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Быстрая статистика -->
+    <div class="quick-stats">
+        <div class="stat-card">
+            <div class="stat-number">{{ upcoming_lessons|length }}</div>
+            <div class="stat-label">Ближайших занятий</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ past_lessons|length }}</div>
+            <div class="stat-label">Пройдено занятий</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ teachers|length }}</div>
+            <div class="stat-label">Учителей</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ materials|length }}</div>
+            <div class="stat-label">Материалов</div>
+        </div>
+    </div>
+
+    <!-- Навигационные вкладки -->
+    <ul class="nav nav-tabs-custom" id="myTab" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="schedule-tab" data-toggle="tab" href="#schedule" role="tab">
+                <i class="fa fa-calendar"></i> Расписание
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="teachers-tab" data-toggle="tab" href="#teachers" role="tab">
+                <i class="fa fa-users"></i> Мои учителя
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="materials-tab" data-toggle="tab" href="#materials" role="tab">
+                <i class="fa fa-file"></i> Методические материалы
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="history-tab" data-toggle="tab" href="#history" role="tab">
+                <i class="fa fa-history"></i> История занятий
+            </a>
+        </li>
+    </ul>
+
+    <!-- Содержимое вкладок -->
+    <div class="tab-content">
+        <!-- Вкладка Расписание (календарь) -->
+        <div class="tab-pane fade show active" id="schedule" role="tabpanel">
+            <div class="row">
+                <div class="col-12">
+                    <div id="calendar"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Вкладка Мои учителя -->
+        <div class="tab-pane fade" id="teachers" role="tabpanel">
+            <div class="row">
+                {% if teachers %}
+                {% for teacher in teachers %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="teacher-card">
+                        {% if teacher.user.photo %}
+                        <img src="{{ teacher.user.photo.url }}" class="teacher-photo"
+                            alt="{{ teacher.user.get_full_name }}">
+                        {% else %}
+                        <div class="teacher-photo bg-secondary d-flex align-items-center justify-content-center">
+                            <i class="fa fa-user fa-4x text-white"></i>
+                        </div>
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ teacher.user.get_full_name }}</h5>
+                            <p class="card-text">
+                                <small class="text-muted">
+                                    {% for subject in teacher.subjects.all %}
+                                    {{ subject.name }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </small>
+                            </p>
+                            <p class="card-text">
+                                <i class="fa fa-star text-warning"></i> Опыт: {{ teacher.experience }} лет
+                            </p>
+                            <a href="#" class="btn btn-outline-primary btn-sm" data-toggle="modal"
+                                data-target="#teacherModal{{ teacher.id }}">
+                                Подробнее
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Модальное окно с информацией об учителе -->
+                <div class="modal fade" id="teacherModal{{ teacher.id }}" tabindex="-1" role="dialog">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">{{ teacher.user.get_full_name }}</h5>
+                                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        {% if teacher.user.photo %}
+                                        <img src="{{ teacher.user.photo.url }}" class="img-fluid rounded" alt="">
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-8">
+                                        <h6>О преподавателе:</h6>
+                                        <p>{{ teacher.bio|default:"Нет информации" }}</p>
+                                        <h6>Образование:</h6>
+                                        <p>{{ teacher.education|default:"Нет информации" }}</p>
+                                        <h6>Предметы:</h6>
+                                        <p>
+                                            {% for subject in teacher.subjects.all %}
+                                            <span class="badge badge-info">{{ subject.name }}</span>
+                                            {% endfor %}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="col-12">
+                    <div class="empty-state">
+                        <i class="fa fa-users"></i>
+                        <h5>У вас пока нет учителей</h5>
+                        <p>Скоро вам будет назначен преподаватель</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Вкладка Методические материалы -->
+        <div class="tab-pane fade" id="materials" role="tabpanel">
+            <div class="row">
+                <div class="col-12 mb-3">
+                    <div class="btn-group">
+                        <button class="btn btn-outline-primary" onclick="filterMaterials('all')">Все</button>
+                        <button class="btn btn-outline-primary" onclick="filterMaterials('file')">Файлы</button>
+                        <button class="btn btn-outline-primary" onclick="filterMaterials('link')">Ссылки</button>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                {% if materials %}
+                {% for material in materials %}
+                <div class="col-md-6 material-item" data-type="{{ material.material_type }}">
+                    <div class="material-card">
+                        <div class="d-flex align-items-start">
+                            <div class="material-icon">
+                                {% if material.material_type == 'file' %}
+                                <i class="fa fa-file-pdf-o text-danger"></i>
+                                {% else %}
+                                <i class="fa fa-link text-primary"></i>
+                                {% endif %}
+                            </div>
+                            <div style="flex: 1;">
+                                <h5>{{ material.title }}</h5>
+                                <p class="text-muted small">{{ material.description|truncatechars:100 }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="fa fa-calendar"></i> {{ material.created_at|date:"d.m.Y" }}
+                                    </small>
+                                    {% if material.material_type == 'file' %}
+                                    <a href="{{ material.file.url }}" class="btn btn-sm btn-success" download>
+                                        <i class="fa fa-download"></i> Скачать
+                                    </a>
+                                    {% else %}
+                                    <a href="{{ material.link }}" target="_blank" class="btn btn-sm btn-primary">
+                                        <i class="fa fa-external-link"></i> Перейти
+                                    </a>
+                                    {% endif %}
+                                </div>
+                                {% if material.subjects.exists %}
+                                <div class="mt-2">
+                                    {% for subject in material.subjects.all %}
+                                    <span class="badge badge-secondary">{{ subject.name }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="col-12">
+                    <div class="empty-state">
+                        <i class="fa fa-file"></i>
+                        <h5>Нет методических материалов</h5>
+                        <p>Учитель добавит материалы позже</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Вкладка История занятий -->
+        <div class="tab-pane fade" id="history" role="tabpanel">
+            <div class="row">
+                <div class="col-12">
+                    <h4 class="section-title">Проведенные занятия</h4>
+                    {% if past_lessons %}
+                    {% for lesson in past_lessons %}
+                    <div class="lesson-item completed">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <strong>{{ lesson.date|date:"d.m.Y" }}</strong>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>{{ lesson.subject.name }}</strong><br>
+                                <small class="text-muted">{{ lesson.teacher.user.get_full_name }}</small>
+                            </div>
+                            <div class="col-md-3">
+                                <span class="badge badge-success">Проведено</span>
+                            </div>
+                            <div class="col-md-3 text-right">
+                                {% if lesson.report %}
+                                <a href="{% url 'lesson_detail' lesson.id %}" class="btn btn-sm btn-info">
+                                    <i class="fa fa-file-text"></i> Отчет
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="fa fa-history"></i>
+                        <h5>Нет проведенных занятий</h5>
+                        <p>История появится после первых занятий</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/ru.js'></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var calendarEl = document.getElementById('calendar');
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            locale: 'ru',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            buttonText: {
+                today: 'Сегодня',
+                month: 'Месяц',
+                week: 'Неделя',
+                day: 'День'
+            },
+            slotMinTime: '08:00:00',
+            slotMaxTime: '22:00:00',
+            allDaySlot: false,
+            events: [
+                {% for lesson in upcoming_lessons %}
+            {
+                title: '{{ lesson.subject.name }} - {{ lesson.teacher.user.last_name }}',
+                start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
+                end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
+                url: '{{ lesson.meeting_link }}',
+                backgroundColor: '#007bff',
+                borderColor: '#007bff'
+            },
+            {% endfor %}
+            {% for lesson in past_lessons %}
+    {
+        title: '{{ lesson.subject.name }} - {{ lesson.teacher.user.last_name }}',
+            start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
+                end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
+                    backgroundColor: '#28a745',
+                        borderColor: '#28a745',
+                            url: '{% if lesson.report %}{% url "lesson_detail" lesson.id %}{% endif %}'
+    },
+    {% endfor %}
+        ],
+    eventClick: function(info) {
+        if (info.event.url) {
+            window.open(info.event.url, '_blank');
+        }
+    }
+    });
+    calendar.render();
+});
+
+    function filterMaterials(type) {
+        const items = document.querySelectorAll('.material-item');
+        items.forEach(item => {
+            if (type === 'all' || item.dataset.type === type) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}

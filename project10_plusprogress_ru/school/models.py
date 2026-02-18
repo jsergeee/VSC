@@ -137,7 +137,26 @@ class Student(models.Model):
     def __str__(self):
         return self.user.get_full_name() or self.user.username
 
-
+   
+    def get_balance(self):
+        """Возвращает текущий баланс ученика (депозиты - списания за занятия)"""
+        from django.db.models import Sum
+        from .models import Lesson  # Импортируем внутри метода
+        
+        # Сумма всех депозитов
+        total_deposits = self.deposits.aggregate(Sum('amount'))['amount__sum'] or 0
+        
+        # Сумма всех проведенных занятий
+        total_lessons = Lesson.objects.filter(
+            student=self,
+            status='completed'
+        ).aggregate(Sum('cost'))['cost__sum'] or 0
+        
+        return total_deposits - total_lessons
+    
+    def get_teacher_notes(self):
+        """Возвращает заметки учителей об этом ученике"""
+        return self.teacher_notes.all()
 class LessonFormat(models.Model):
     name = models.CharField('Название', max_length=100)
     description = models.TextField('Описание', blank=True)
@@ -148,6 +167,23 @@ class LessonFormat(models.Model):
     
     def __str__(self):
         return self.name
+    
+    def get_balance(self):
+        """Возвращает текущий баланс ученика (депозиты - списания за занятия)"""
+        from django.db.models import Sum
+        
+        total_deposits = self.deposits.aggregate(Sum('amount'))['amount__sum'] or 0
+        
+        total_lessons = Lesson.objects.filter(
+            student=self,
+            status='completed'
+        ).aggregate(Sum('cost'))['cost__sum'] or 0
+        
+        return total_deposits - total_lessons
+    
+    def get_teacher_notes(self):
+        """Возвращает заметки учителей об этом ученике"""
+        return self.notes.all()
 
 
 class Schedule(models.Model):
@@ -433,3 +469,75 @@ class TrialRequest(models.Model):
     
     def __str__(self):
         return f"{self.name} - {self.subject}"
+    
+class Material(models.Model):
+    """Методические материалы"""
+    MATERIAL_TYPES = (
+        ('file', 'Файл'),
+        ('link', 'Ссылка'),
+    )
+    
+    title = models.CharField('Название', max_length=200)
+    description = models.TextField('Описание', blank=True)
+    material_type = models.CharField('Тип', max_length=10, choices=MATERIAL_TYPES, default='file')
+    file = models.FileField('Файл', upload_to='materials/', null=True, blank=True)
+    link = models.URLField('Ссылка', blank=True)
+    
+    # Кто добавил
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_materials')
+    
+    # Для кого (связь многие-ко-многим)
+    teachers = models.ManyToManyField(Teacher, blank=True, verbose_name='Учителя')
+    students = models.ManyToManyField(Student, blank=True, verbose_name='Ученики')
+    subjects = models.ManyToManyField(Subject, blank=True, verbose_name='Предметы')
+    
+    # Для всех или нет
+    is_public = models.BooleanField('Публичный', default=False)
+    
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлено', auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Методический материал'
+        verbose_name_plural = 'Методические материалы'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return self.title
+    
+    def get_absolute_url(self):
+        return f"/media/{self.file}" if self.file else self.link
+
+
+class Deposit(models.Model):
+    """Депозиты учеников (пополнения счета)"""
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='deposits')
+    amount = models.DecimalField('Сумма', max_digits=10, decimal_places=2)
+    description = models.CharField('Описание', max_length=200, blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_deposits')
+    created_at = models.DateTimeField('Дата', auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Депозит'
+        verbose_name_plural = 'Депозиты'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.student.user.get_full_name()} - {self.amount} руб."
+
+
+class StudentNote(models.Model):
+    """Заметки учителя об ученике"""
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='student_notes')
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='teacher_notes')
+    text = models.TextField('Заметка')
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлено', auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Заметка об ученике'
+        verbose_name_plural = 'Заметки об учениках'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.teacher.user.get_full_name} -> {self.student.user.get_full_name}: {self.text[:50]}"    
