@@ -297,6 +297,7 @@ class Lesson(models.Model):
         ('cancelled', 'Отменено'),
         ('no_show', 'Ученик не явился'),
         ('overdue', 'Просрочено'),
+        ('rescheduled', 'Перенесено'),
     )
     
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='lessons', verbose_name='Учитель')
@@ -311,6 +312,10 @@ class Lesson(models.Model):
         related_name='lessons',
         verbose_name='Создано из расписания'
     )
+        # Поля для отслеживания переносов
+    rescheduled_from = models.DateTimeField('Перенесено с', null=True, blank=True)
+    rescheduled_to = models.DateTimeField('Перенесено на', null=True, blank=True)
+    rescheduled_reason = models.TextField('Причина переноса', blank=True)
     
     date = models.DateField('Дата')
     start_time = models.TimeField('Время начала')
@@ -412,7 +417,38 @@ class Lesson(models.Model):
             self.save()
             return True
         return False
-
+    
+    def reschedule(self, new_date, new_start_time, new_end_time, reason=''):
+        """Перенос занятия на новое время"""
+        from datetime import datetime
+        
+        # Сохраняем информацию о переносе
+        self.rescheduled_from = datetime.combine(self.date, self.start_time)
+        self.status = 'rescheduled'
+        self.save()
+        
+        # Создаем новое занятие
+        new_lesson = Lesson.objects.create(
+            teacher=self.teacher,
+            student=self.student,
+            subject=self.subject,
+            format=self.format,
+            schedule=self.schedule,
+            date=new_date,
+            start_time=new_start_time,
+            end_time=new_end_time,
+            cost=self.cost,
+            teacher_payment=self.teacher_payment,
+            meeting_link=self.meeting_link,
+            meeting_platform=self.meeting_platform,
+            status='scheduled',
+            notes=f"Перенесено с {self.date} {self.start_time}. Причина: {reason}",
+            rescheduled_from=datetime.combine(self.date, self.start_time),
+            rescheduled_reason=reason
+        )
+        
+        return new_lesson
+    
 class LessonReport(models.Model):
     lesson = models.OneToOneField(Lesson, on_delete=models.CASCADE, related_name='report', verbose_name='Занятие')
     topic = models.CharField('Тема занятия', max_length=200)

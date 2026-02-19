@@ -20,6 +20,11 @@
         font-weight: bold;
     }
 
+    .fc .fc-timegrid-slot {
+        height: 40px !important;
+        /* Принудительно задаем высоту */
+    }
+
     .calendar-container {
         background: white;
         padding: 20px;
@@ -66,7 +71,13 @@
         </div>
 
         <div id="list-container" style="display: none;">
+            {% if cl %}
             {% include "admin/school/schedule/change_list_original.html" %}
+            {% else %}
+            <div style="padding: 20px; text-align: center; color: #666;">
+                Загрузка списка...
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

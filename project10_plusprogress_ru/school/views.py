@@ -389,43 +389,49 @@ def overdue_report(request):
 
 @staff_member_required
 def schedule_calendar_data(request):
-    """API для календаря расписаний с цветовой индикацией"""
+    """API для календаря расписаний с отображением всех занятий"""
     schedules = Schedule.objects.filter(is_active=True).select_related('teacher__user')
     
     events = []
-    today = date.today()
+    
+    # Показываем с -30 дней до +60 дней
+    start_date = date.today() - timedelta(days=30)  # 30 дней назад
+    end_date = date.today() + timedelta(days=60)    # 60 дней вперед
     
     # Цвета для разных статусов
     colors = {
-        'scheduled': '#007bff',   # Синий
-        'completed': '#28a745',    # Зеленый
-        'overdue': '#dc3545',      # Красный
-        'cancelled': '#fd7e14',    # Оранжевый
-        'no_show': '#6c757d',      # Серый
-        'empty': '#79aec8',        # Голубой (свободно)
+        'scheduled': '#007bff',   # Синий - запланировано
+        'completed': '#28a745',    # Зеленый - проведено
+        'overdue': '#dc3545',      # Красный - просрочено
+        'cancelled': '#fd7e14',    # Оранжевый - отменено
+        'rescheduled': '#9b59b6',  # Фиолетовый - перенесено
+        'no_show': '#6c757d',      # Серый - не явился
+        'empty': '#79aec8',        # Голубой - свободно
     }
     
-    # Показываем на 60 дней вперед
-    for i in range(60):
-        event_date = today + timedelta(days=i)
-        
+    current_date = start_date
+    while current_date <= end_date:
         for schedule in schedules:
-            if event_date.weekday() == schedule.day_of_week:
+            if current_date.weekday() == schedule.day_of_week:
                 # Ищем занятие на это время
                 lesson = Lesson.objects.filter(
                     teacher=schedule.teacher,
-                    date=event_date,
+                    date=current_date,
                     start_time=schedule.start_time
                 ).select_related('student__user', 'subject').first()
                 
-                start_dt = datetime.combine(event_date, schedule.start_time)
-                end_dt = datetime.combine(event_date, schedule.end_time)
+                start_dt = datetime.combine(current_date, schedule.start_time)
+                end_dt = datetime.combine(current_date, schedule.end_time)
                 
                 if lesson:
                     # Если есть занятие
                     title = f"{schedule.teacher.user.last_name} - {lesson.subject.name}"
                     if lesson.student:
                         title += f" ({lesson.student.user.last_name})"
+                    
+                    # Добавляем пометку о переносе в заголовок
+                    if lesson.rescheduled_from:
+                        title = f"↻ {title}"
                     
                     event = {
                         'id': f"lesson_{lesson.id}",
@@ -438,12 +444,15 @@ def schedule_calendar_data(request):
                         'start': start_dt.isoformat(),
                         'end': end_dt.isoformat(),
                         'color': colors.get(lesson.status, colors['scheduled']),
+                        'rescheduled': lesson.rescheduled_from is not None,
+                        'original_date': lesson.rescheduled_from.strftime('%d.%m.%Y') if lesson.rescheduled_from else None,
                     }
                 else:
                     # Свободное время
                     event = {
-                        'id': f"schedule_{schedule.id}_{event_date}",
+                        'id': f"schedule_{schedule.id}_{current_date}",
                         'schedule_id': schedule.id,
+                        'lesson_id': None,
                         'teacher_name': schedule.teacher.user.get_full_name(),
                         'subject': None,
                         'student_name': None,
@@ -451,10 +460,11 @@ def schedule_calendar_data(request):
                         'start': start_dt.isoformat(),
                         'end': end_dt.isoformat(),
                         'color': colors['empty'],
-                        'lesson_id': None,
                     }
                 
                 events.append(event)
+        
+        current_date += timedelta(days=1)
     
     return JsonResponse(events, safe=False)
 

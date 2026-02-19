@@ -1,35 +1,109 @@
 {% load i18n admin_urls static admin_list %}
 
-{% block result_list %}
-{% if cl.result_list %}
 <div class="results">
     <table id="result_list" style="width: 100%; border-collapse: collapse;">
         <thead>
             <tr>
-                <th style="text-align: left; padding: 8px;">Учитель</th>
-                <th style="text-align: left; padding: 8px;">День недели</th>
-                <th style="text-align: left; padding: 8px;">Время начала</th>
-                <th style="text-align: left; padding: 8px;">Время окончания</th>
-                <th style="text-align: left; padding: 8px;">Активно</th>
+                <th style="text-align: left; padding: 12px; background: #f0f0f0;">Учитель</th>
+                <th style="text-align: left; padding: 12px; background: #f0f0f0;">Ученик</th>
+                <th style="text-align: left; padding: 12px; background: #f0f0f0;">Предмет</th>
+                <th style="text-align: left; padding: 12px; background: #f0f0f0;">Дата</th>
+                <th style="text-align: left; padding: 12px; background: #f0f0f0;">День недели</th>
+                <th style="text-align: left; padding: 12px; background: #f0f0f0;">Время</th>
+                <th style="text-align: left; padding: 12px; background: #f0f0f0;">Статус</th>
+                <th style="text-align: left; padding: 12px; background: #f0f0f0;">Действия</th>
             </tr>
         </thead>
         <tbody>
             {% for schedule in cl.result_list %}
-            <tr class="{% cycle 'row1' 'row2' %}">
-                <td style="padding: 8px;">
-                    <a href="{% url 'admin:school_schedule_change' schedule.pk %}">
+            {# Ищем занятие для этого расписания #}
+            {% with lesson=schedule.lessons.first %}
+            <tr class="{% cycle 'row1' 'row2' %}" style="border-bottom: 1px solid #ddd;">
+                <td style="padding: 10px;">
+                    <a href="{% url 'admin:school_teacher_change' schedule.teacher.id %}"
+                        style="text-decoration: none; color: #007bff;">
                         {{ schedule.teacher.user.get_full_name }}
                     </a>
                 </td>
-                <td style="padding: 8px;">{{ schedule.get_day_of_week_display }}</td>
-                <td style="padding: 8px;">{{ schedule.start_time|time:"H:i" }}</td>
-                <td style="padding: 8px;">{{ schedule.end_time|time:"H:i" }}</td>
-                <td style="padding: 8px;">
-                    {% if schedule.is_active %}
-                    <span style="color: #28a745;">✓ Активно</span>
+                <td style="padding: 10px;">
+                    {% if lesson and lesson.student %}
+                    <a href="{% url 'admin:school_student_change' lesson.student.id %}"
+                        style="text-decoration: none; color: #007bff;">
+                        {{ lesson.student.user.get_full_name }}
+                    </a>
                     {% else %}
-                    <span style="color: #dc3545;">✗ Неактивно</span>
+                    <span style="color: #999;">—</span>
                     {% endif %}
+                </td>
+                <td style="padding: 10px;">
+                    {% if lesson %}
+                    {{ lesson.subject.name }}
+                    {% else %}
+                    <span style="color: #999;">—</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 10px;">
+                    {% if lesson %}
+                    {{ lesson.date|date:"d.m.Y" }}
+                    {% else %}
+                    <span style="color: #999;">—</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 10px;">
+                    {{ schedule.get_day_of_week_display }}
+                </td>
+                <td style="padding: 10px;">
+                    {% if lesson %}
+                    {{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}
+                    {% else %}
+                    {{ schedule.start_time|time:"H:i" }} - {{ schedule.end_time|time:"H:i" }}
+                    {% endif %}
+                </td>
+                <td style="padding: 10px;">
+                    {% if lesson %}
+                    {% if lesson.status == 'scheduled' %}
+                    <span
+                        style="background: #007bff; color: white; padding: 4px 8px; border-radius: 4px;">Запланировано</span>
+                    {% elif lesson.status == 'completed' %}
+                    <span
+                        style="background: #28a745; color: white; padding: 4px 8px; border-radius: 4px;">Проведено</span>
+                    {% elif lesson.status == 'cancelled' %}
+                    <span
+                        style="background: #fd7e14; color: white; padding: 4px 8px; border-radius: 4px;">Отменено</span>
+                    {% elif lesson.status == 'overdue' %}
+                    <span
+                        style="background: #dc3545; color: white; padding: 4px 8px; border-radius: 4px;">Просрочено</span>
+                    {% elif lesson.status == 'rescheduled' %}
+                    <span
+                        style="background: #9b59b6; color: white; padding: 4px 8px; border-radius: 4px;">Перенесено</span>
+                    {% else %}
+                    <span style="background: #6c757d; color: white; padding: 4px 8px; border-radius: 4px;">{{
+                        lesson.get_status_display }}</span>
+                    {% endif %}
+                    {% else %}
+                    <span
+                        style="background: #6c757d; color: white; padding: 4px 8px; border-radius: 4px;">Свободно</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 10px;">
+                    {% if lesson %}
+                    <a href="{% url 'admin:school_lesson_change' lesson.id %}"
+                        style="background: #28a745; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 12px; display: inline-block;">
+                        Открыть занятие
+                    </a>
+                    {% else %}
+                    <a href="{% url 'admin:school_schedule_change' schedule.id %}"
+                        style="background: #6c757d; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 12px; display: inline-block;">
+                        Открыть расписание
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endwith %}
+            {% empty %}
+            <tr>
+                <td colspan="8" style="padding: 30px; text-align: center; color: #666;">
+                    Нет расписаний
                 </td>
             </tr>
             {% endfor %}
@@ -38,17 +112,14 @@
 </div>
 
 {% if cl.paginator.num_pages > 1 %}
-<div class="paginator" style="margin-top: 20px; padding: 10px; background: #f8f8f8;">
+<div class="paginator" style="margin-top: 20px; padding: 10px; background: #f8f8f8; text-align: center;">
     {% for i in cl.paginator.page_range %}
     {% if i == cl.page_num %}
-    <span style="padding: 5px 10px; background: #79aec8; color: white;">{{ i }}</span>
+    <span style="padding: 5px 10px; background: #79aec8; color: white; margin: 0 2px;">{{ i }}</span>
     {% else %}
-    <a href="?p={{ i }}" style="padding: 5px 10px;">{{ i }}</a>
+    <a href="?p={{ i }}"
+        style="padding: 5px 10px; background: #f0f0f0; color: #333; text-decoration: none; margin: 0 2px;">{{ i }}</a>
     {% endif %}
     {% endfor %}
 </div>
 {% endif %}
-{% else %}
-<p style="margin: 20px; padding: 20px; background: #f8f8f8;">Нет расписаний</p>
-{% endif %}
-{% endblock %}
