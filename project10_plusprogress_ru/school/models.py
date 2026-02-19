@@ -93,34 +93,31 @@ class Teacher(models.Model):
     def __str__(self):
         return self.user.get_full_name() or self.user.username
     
-    def get_available_slots(self, date):
-        """Возвращает доступные временные слоты учителя на указанную дату"""
-        day = date.weekday()
-        schedules = Schedule.objects.filter(
+def get_available_slots(self, date):
+    """Возвращает доступные временные слоты учителя на указанную дату"""
+    schedules = Schedule.objects.filter(
+        teacher=self,
+        date=date,  # Фильтруем по конкретной дате
+        is_active=True
+    )
+    
+    available_slots = []
+    for schedule in schedules:
+        existing_lessons = Lesson.objects.filter(
             teacher=self,
-            day_of_week=day,
-            is_active=True
+            date=date,
+            start_time=schedule.start_time,
+            status__in=['scheduled', 'completed']
         )
         
-        available_slots = []
-        for schedule in schedules:
-            # Проверяем, не занято ли это время
-            existing_lessons = Lesson.objects.filter(
-                teacher=self,
-                date=date,
-                start_time__gte=schedule.start_time,
-                end_time__lte=schedule.end_time,
-                status__in=['scheduled', 'completed']
-            )
-            
-            if not existing_lessons.exists():
-                available_slots.append({
-                    'start': schedule.start_time,
-                    'end': schedule.end_time,
-                    'schedule_id': schedule.id
-                })
-        
-        return available_slots
+        if not existing_lessons.exists():
+            available_slots.append({
+                'start': schedule.start_time,
+                'end': schedule.end_time,
+                'schedule_id': schedule.id
+            })
+    
+    return available_slots
 
 
 class Student(models.Model):
@@ -193,7 +190,7 @@ class Schedule(models.Model):
     ]
     
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='schedules', verbose_name='Учитель')
-    day_of_week = models.IntegerField('День недели', choices=DAY_CHOICES)
+    date = models.DateField('Дата', null=True, blank=True)
     start_time = models.TimeField('Время начала')
     end_time = models.TimeField('Время окончания')
     is_active = models.BooleanField('Активно', default=True)
@@ -203,8 +200,8 @@ class Schedule(models.Model):
     class Meta:
         verbose_name = 'Расписание'
         verbose_name_plural = 'Расписания'
-        ordering = ['day_of_week', 'start_time']
-        unique_together = ['teacher', 'day_of_week', 'start_time']  # Защита от дубликатов
+        ordering = ['date', 'start_time']
+        unique_together = ['teacher', 'date', 'start_time']  # Защита от дубликатов
     
     def __str__(self):
         days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
@@ -351,6 +348,7 @@ class Lesson(models.Model):
             end = datetime.combine(datetime.today(), self.end_time)
             self.duration = int((end - start).total_seconds() / 60)
         super().save(*args, **kwargs)
+        
     
     def mark_as_completed(self, report_data=None):
         """
@@ -577,3 +575,23 @@ class StudentNote(models.Model):
     
     def __str__(self):
         return f"{self.teacher.user.get_full_name} -> {self.student.user.get_full_name}: {self.text[:50]}"    
+    
+def save(self, *args, **kwargs):
+    # Автоматически вычисляем длительность
+    if self.start_time and self.end_time:
+        from datetime import datetime
+        start = datetime.combine(datetime.today(), self.start_time)
+        end = datetime.combine(datetime.today(), self.end_time)
+        self.duration = int((end - start).total_seconds() / 60)
+    
+    # Автоматически связываем с расписанием при создании
+    if not self.pk and not self.schedule:  # Новое занятие без расписания
+        schedule = Schedule.objects.filter(
+            teacher=self.teacher,
+            day_of_week=self.date.weekday(),
+            start_time=self.start_time
+        ).first()
+        if schedule:
+            self.schedule = schedule
+    
+    super().save(*args, **kwargs)

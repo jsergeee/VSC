@@ -8,6 +8,10 @@ from django.shortcuts import render
 from .views import schedule_calendar_data
 from .views import schedule_calendar_data, admin_complete_lesson
 from django.contrib import messages
+from django import forms
+from django.db import models
+from .models import Schedule, Lesson
+from .views import schedule_calendar_data
 from .models import (
     User, Subject, Teacher, Student, Lesson, LessonFormat,
     LessonReport, Payment, Schedule, TrialRequest
@@ -94,8 +98,13 @@ class StudentAdmin(admin.ModelAdmin):
 class LessonFormatAdmin(admin.ModelAdmin):
     list_display = ('name', 'description')
     search_fields = ('name',)
-
 class LessonAdmin(admin.ModelAdmin):
+    # Кастомные виджеты для времени и даты
+    formfield_overrides = {
+        models.TimeField: {'widget': forms.TimeInput(format='%H:%M', attrs={'type': 'time', 'class': 'vTimeField'})},
+        models.DateField: {'widget': forms.DateInput(attrs={'type': 'date', 'class': 'vDateField'})},
+    }
+    
     list_display = ('id', 'subject', 'teacher', 'student', 'date', 'start_time', 'status', 'cost', 'has_report')
     list_filter = ('status', 'subject', 'date', 'teacher', 'student')
     search_fields = ('teacher__user__last_name', 'student__user__last_name', 'subject__name')
@@ -184,6 +193,21 @@ class LessonAdmin(admin.ModelAdmin):
                  name='complete-lesson'),
         ]
         return custom_urls + urls
+    
+    def changelist_view(self, request, extra_context=None):
+        # Если запрошен календарь
+        if request.GET.get('view') == 'calendar':
+            lessons = self.get_queryset(request).select_related(
+                'teacher__user', 'student__user', 'subject'
+            )
+            extra_context = extra_context or {}
+            extra_context['lessons'] = lessons
+            extra_context['title'] = 'Календарь занятий'
+            
+            return render(request, 'admin/school/lesson/change_list_calendar.html', extra_context)
+        
+        # Обычный список
+        return super().changelist_view(request, extra_context)
     
     
     
@@ -297,14 +321,27 @@ class PaymentAdmin(admin.ModelAdmin):
 
 
 class ScheduleAdmin(admin.ModelAdmin):
-    list_display = ('teacher', 'day_display', 'start_time', 'end_time', 'is_active')
-    list_filter = ('day_of_week', 'is_active', 'teacher')
+        # Кастомная форма с виджетами
+    formfield_overrides = {
+        models.TimeField: {'widget': forms.TimeInput(format='%H:%M', attrs={'type': 'time', 'class': 'vTimeField'})},
+        models.DateField: {'widget': forms.DateInput(attrs={'type': 'date', 'class': 'vDateField'})},
+    }
+    
+    list_display = ('teacher', 'date', 'day_of_week_display', 'start_time', 'end_time', 'is_active')
+    list_filter = ('date', 'is_active', 'teacher')
     search_fields = ('teacher__user__last_name',)
     
-    def day_display(self, obj):
+    fieldsets = (
+        (None, {
+            'fields': ('teacher', 'date', 'start_time', 'end_time', 'is_active')
+        }),
+    )
+    
+    def day_of_week_display(self, obj):
+        """Отображает день недели на основе даты"""
         days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
-        return days[obj.day_of_week]
-    day_display.short_description = 'День недели'
+        return days[obj.date.weekday()]
+    day_of_week_display.short_description = 'День недели'
     
     def get_urls(self):
         urls = super().get_urls()
@@ -313,6 +350,17 @@ class ScheduleAdmin(admin.ModelAdmin):
         ]
         return custom_urls + urls
     
+    def changelist_view(self, request, extra_context=None):
+        from datetime import date
+        from .models import Lesson
+        
+        extra_context = extra_context or {}
+        extra_context['total_schedules'] = Schedule.objects.count()
+        extra_context['active_schedules'] = Schedule.objects.filter(is_active=True).count()
+        extra_context['lessons_today'] = Lesson.objects.filter(date=date.today()).count()
+        
+        return super().changelist_view(request, extra_context)
+
 def changelist_view(self, request, extra_context=None):
     from datetime import date
     from .models import Lesson

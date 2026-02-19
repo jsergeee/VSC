@@ -389,85 +389,61 @@ def overdue_report(request):
 
 @staff_member_required
 def schedule_calendar_data(request):
-    """API для календаря расписаний с отображением всех занятий"""
+    """API для календаря расписаний"""
     schedules = Schedule.objects.filter(is_active=True).select_related('teacher__user')
     
     events = []
+    today = date.today()
     
-    # Показываем с -30 дней до +60 дней
-    start_date = date.today() - timedelta(days=30)  # 30 дней назад
-    end_date = date.today() + timedelta(days=60)    # 60 дней вперед
-    
-    # Цвета для разных статусов
-    colors = {
-        'scheduled': '#007bff',   # Синий - запланировано
-        'completed': '#28a745',    # Зеленый - проведено
-        'overdue': '#dc3545',      # Красный - просрочено
-        'cancelled': '#fd7e14',    # Оранжевый - отменено
-        'rescheduled': '#9b59b6',  # Фиолетовый - перенесено
-        'no_show': '#6c757d',      # Серый - не явился
-        'empty': '#79aec8',        # Голубой - свободно
-    }
-    
-    current_date = start_date
-    while current_date <= end_date:
-        for schedule in schedules:
-            if current_date.weekday() == schedule.day_of_week:
-                # Ищем занятие на это время
-                lesson = Lesson.objects.filter(
-                    teacher=schedule.teacher,
-                    date=current_date,
-                    start_time=schedule.start_time
-                ).select_related('student__user', 'subject').first()
-                
-                start_dt = datetime.combine(current_date, schedule.start_time)
-                end_dt = datetime.combine(current_date, schedule.end_time)
-                
-                if lesson:
-                    # Если есть занятие
-                    title = f"{schedule.teacher.user.last_name} - {lesson.subject.name}"
-                    if lesson.student:
-                        title += f" ({lesson.student.user.last_name})"
-                    
-                    # Добавляем пометку о переносе в заголовок
-                    if lesson.rescheduled_from:
-                        title = f"↻ {title}"
-                    
-                    event = {
-                        'id': f"lesson_{lesson.id}",
-                        'schedule_id': schedule.id,
-                        'lesson_id': lesson.id,
-                        'teacher_name': schedule.teacher.user.get_full_name(),
-                        'subject': lesson.subject.name,
-                        'student_name': lesson.student.user.get_full_name() if lesson.student else None,
-                        'status': lesson.get_status_display(),
-                        'start': start_dt.isoformat(),
-                        'end': end_dt.isoformat(),
-                        'color': colors.get(lesson.status, colors['scheduled']),
-                        'rescheduled': lesson.rescheduled_from is not None,
-                        'original_date': lesson.rescheduled_from.strftime('%d.%m.%Y') if lesson.rescheduled_from else None,
-                    }
-                else:
-                    # Свободное время
-                    event = {
-                        'id': f"schedule_{schedule.id}_{current_date}",
-                        'schedule_id': schedule.id,
-                        'lesson_id': None,
-                        'teacher_name': schedule.teacher.user.get_full_name(),
-                        'subject': None,
-                        'student_name': None,
-                        'status': 'Свободно',
-                        'start': start_dt.isoformat(),
-                        'end': end_dt.isoformat(),
-                        'color': colors['empty'],
-                    }
-                
-                events.append(event)
+    for i in range(60):
+        event_date = today + timedelta(days=i)
         
-        current_date += timedelta(days=1)
+        # Ищем расписания на эту дату
+        day_schedules = schedules.filter(date=event_date)
+        
+        for schedule in day_schedules:
+            # Ищем занятие на это время
+            lesson = Lesson.objects.filter(
+                teacher=schedule.teacher,
+                date=event_date,
+                start_time=schedule.start_time
+            ).first()
+            
+            start_dt = datetime.combine(event_date, schedule.start_time)
+            end_dt = datetime.combine(event_date, schedule.end_time)
+            
+            # Определяем цвет
+            color = '#79aec8'  # синий по умолчанию (свободно)
+            if lesson:
+                if lesson.status == 'completed':
+                    color = '#28a745'  # зеленый
+                elif lesson.status == 'overdue':
+                    color = '#dc3545'  # красный
+                elif lesson.status == 'scheduled':
+                    color = '#007bff'  # синий
+                elif lesson.status == 'cancelled':
+                    color = '#fd7e14'  # оранжевый
+            
+            event = {
+                'id': f"schedule_{schedule.id}_{event_date}",
+                'schedule_id': schedule.id,
+                'teacher_name': schedule.teacher.user.get_full_name(),
+                'start': start_dt.isoformat(),
+                'end': end_dt.isoformat(),
+                'color': color,
+            }
+            
+            if lesson:
+                event['lesson_id'] = lesson.id
+                event['title'] = f"{schedule.teacher.user.last_name} - {lesson.subject.name}"
+                if lesson.student:
+                    event['title'] += f" ({lesson.student.user.last_name})"
+            else:
+                event['title'] = f"{schedule.teacher.user.last_name} - свободно"
+            
+            events.append(event)
     
     return JsonResponse(events, safe=False)
-
 
 @staff_member_required
 @require_POST

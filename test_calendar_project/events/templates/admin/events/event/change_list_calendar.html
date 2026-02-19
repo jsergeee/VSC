@@ -1,0 +1,108 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<style>
+    #calendar {
+        max-width: 1100px;
+        margin: 20px auto;
+        height: 600px;
+    }
+    .fc-event {
+        cursor: pointer;
+    }
+    .view-toggle {
+        margin-bottom: 20px;
+        text-align: right;
+    }
+    .view-toggle a {
+        display: inline-block;
+        margin-left: 10px;
+        padding: 8px 16px;
+        border: 1px solid #79aec8;
+        border-radius: 4px;
+        background: white;
+        color: #333;
+        text-decoration: none;
+    }
+    .view-toggle a.active {
+        background: #79aec8;
+        color: white;
+    }
+    .back-link {
+        margin-bottom: 20px;
+    }
+    .back-link a {
+        color: #447e9b;
+        text-decoration: none;
+    }
+    .back-link a:hover {
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <div class="module">
+        <div class="back-link">
+            <a href=".">← Вернуться к списку</a>
+        </div>
+        
+        <div class="view-toggle">
+            <a href=".">Список</a>
+            <a href="?view=calendar" class="active">Календарь</a>
+        </div>
+
+        <div id="calendar"></div>
+    </div>
+</div>
+
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/ru.js'></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        locale: 'ru',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        buttonText: {
+            today: 'Сегодня',
+            month: 'Месяц',
+            week: 'Неделя',
+            day: 'День'
+        },
+        slotMinTime: '08:00:00',
+        slotMaxTime: '22:00:00',
+        allDaySlot: false,
+        
+        events: [
+            {% for event in events %}
+            {
+                title: '{{ event.title|escapejs }}',
+                start: '{{ event.date|date:"Y-m-d" }}T{{ event.start_time|time:"H:i:s" }}',
+                end: '{{ event.date|date:"Y-m-d" }}T{{ event.end_time|time:"H:i:s" }}',
+                color: '{% if event.status == "scheduled" %}#007bff{% elif event.status == "completed" %}#28a745{% elif event.status == "overdue" %}#dc3545{% elif event.status == "cancelled" %}#fd7e14{% endif %}',
+                url: '{% url "admin:events_event_change" event.id %}'
+            },
+            {% endfor %}
+        ],
+        
+        eventClick: function(info) {
+            if (info.event.url) {
+                window.location.href = info.event.url;
+            }
+        }
+    });
+    
+    calendar.render();
+});
+</script>
+{% endblock %}
