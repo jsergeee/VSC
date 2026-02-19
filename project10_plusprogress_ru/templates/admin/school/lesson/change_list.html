@@ -1,0 +1,24 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'scss/main.css' %}">
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <div class="module">
+        <div class="view-toggle">
+            <a href="." class="{% if not request.GET.view %}active{% endif %}">Список</a>
+            <a href="?view=calendar" class="{% if request.GET.view == 'calendar' %}active{% endif %}">Календарь</a>
+        </div>
+
+        {% if request.GET.view == 'calendar' %}
+            {% include "admin/school/lesson/change_list_calendar.html" %}
+        {% else %}
+            {{ block.super }}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

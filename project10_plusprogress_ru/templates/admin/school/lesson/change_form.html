@@ -3,6 +3,7 @@
 
 {% block after_field_sets %}
 {{ block.super }}
+<link rel="stylesheet" href="{% static 'scss/main.css' %}">
 
 {% if original and original.status == 'completed' %}
 <div class="module" style="margin-top: 20px;">
