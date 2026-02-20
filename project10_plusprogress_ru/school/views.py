@@ -21,6 +21,20 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 import io
 import json
+import csv
+import csv
+import openpyxl
+from django.contrib import messages
+from django.http import HttpResponse
+from datetime import datetime
+from .models import Lesson, Teacher, Student, Subject, LessonFormat
+from django.template.loader import render_to_string
+from weasyprint import HTML
+
+
+
+
+
 
 from .models import (
     User, Teacher, Student, Lesson, Subject, 
@@ -1145,4 +1159,739 @@ def export_to_pdf(teacher, lessons, start, end, total_payment):
     response = HttpResponse(buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="teacher_payment_{teacher.id}_{start}_{end}.pdf"'
     
+    return response
+
+
+
+@staff_member_required
+def admin_lesson_export(request, format):
+    """Экспорт уроков из админки"""
+    # Получаем все уроки с фильтрацией (как в админке)
+    lessons = Lesson.objects.all().select_related(
+        'teacher__user', 'student__user', 'subject', 'format'
+    ).order_by('-date', 'start_time')
+    
+    # Применяем фильтры из GET-параметров (как в админке)
+    teacher_id = request.GET.get('teacher__id__exact')
+    student_id = request.GET.get('student__id__exact')
+    subject_id = request.GET.get('subject__id__exact')
+    status = request.GET.get('status__exact')
+    date_from = request.GET.get('date__gte')
+    date_to = request.GET.get('date__lte')
+    
+    if teacher_id:
+        lessons = lessons.filter(teacher_id=teacher_id)
+    if student_id:
+        lessons = lessons.filter(student_id=student_id)
+    if subject_id:
+        lessons = lessons.filter(subject_id=subject_id)
+    if status:
+        lessons = lessons.filter(status=status)
+    if date_from:
+        lessons = lessons.filter(date__gte=date_from)
+    if date_to:
+        lessons = lessons.filter(date__lte=date_to)
+    
+    # Подсчет статистики
+    completed_count = lessons.filter(status='completed').count()
+    cancelled_count = lessons.filter(status='cancelled').count()
+    overdue_count = lessons.filter(status='overdue').count()
+    total_cost = lessons.aggregate(Sum('cost'))['cost__sum'] or 0
+    total_payment = lessons.aggregate(Sum('teacher_payment'))['teacher_payment__sum'] or 0
+    
+    title = f"Экспорт уроков"
+    
+    # Выбор формата экспорта
+    if format == 'excel':
+        return export_lessons_excel(lessons, title, request, completed_count, cancelled_count, overdue_count, total_cost, total_payment)
+    elif format == 'csv':
+        return export_lessons_csv(lessons, title, request, completed_count, cancelled_count, overdue_count, total_cost, total_payment)
+    elif format == 'html':
+        return export_lessons_html(lessons, title, request, completed_count, cancelled_count, overdue_count, total_cost, total_payment)
+    elif format == 'pdf':
+        return export_lessons_pdf(lessons, title, request, completed_count, cancelled_count, overdue_count, total_cost, total_payment)
+    else:
+        messages.error(request, 'Неподдерживаемый формат')
+        return redirect(request.META.get('HTTP_REFERER', 'admin:school_lesson_changelist'))
+
+
+def export_lessons_excel(lessons, title, request, completed_count, cancelled_count, overdue_count, total_cost, total_payment):
+    """Экспорт уроков в Excel"""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Уроки"
+    
+    # Стили
+    title_font = Font(name='Arial', size=16, bold=True)
+    header_font = Font(name='Arial', size=12, bold=True)
+    
+    header_fill = PatternFill(start_color="417690", end_color="417690", fill_type="solid")
+    header_font_white = Font(name='Arial', size=12, bold=True, color="FFFFFF")
+    
+    thin_border = Border(
+        left=Side(style='thin'), 
+        right=Side(style='thin'), 
+        top=Side(style='thin'), 
+        bottom=Side(style='thin')
+    )
+    
+    # Заголовок
+    ws.merge_cells('A1:I1')
+    cell = ws['A1']
+    cell.value = title
+    cell.font = title_font
+    cell.alignment = Alignment(horizontal='center')
+    
+    # Дата экспорта
+    ws.merge_cells('A2:I2')
+    cell = ws['A2']
+    cell.value = f"Дата экспорта: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+    cell.font = Font(italic=True)
+    cell.alignment = Alignment(horizontal='center')
+    
+    # Статистика
+    ws.merge_cells('A3:I3')
+    cell = ws['A3']
+    cell.value = f"Всего: {lessons.count()} | Проведено: {completed_count} | Отменено: {cancelled_count} | Просрочено: {overdue_count} | Сумма: {total_cost:,.2f} ₽ | Выплаты: {total_payment:,.2f} ₽"
+    cell.font = Font(bold=True)
+    cell.alignment = Alignment(horizontal='center')
+    
+    # Пустая строка
+    ws.append([])
+    
+    # Заголовки таблицы
+    headers = ['ID', 'Дата', 'Время', 'Учитель', 'Ученик', 'Предмет', 'Стоимость', 'Выплата учителю', 'Статус']
+    ws.append(headers)
+    
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=5, column=col)
+        cell.value = header
+        cell.font = header_font_white
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = thin_border
+    
+    # Данные
+    row = 6
+    for lesson in lessons:
+        ws.cell(row=row, column=1, value=lesson.id).border = thin_border
+        ws.cell(row=row, column=2, value=lesson.date.strftime('%d.%m.%Y')).border = thin_border
+        ws.cell(row=row, column=3, value=f"{lesson.start_time.strftime('%H:%M')}-{lesson.end_time.strftime('%H:%M')}").border = thin_border
+        ws.cell(row=row, column=4, value=lesson.teacher.user.get_full_name()).border = thin_border
+        ws.cell(row=row, column=5, value=lesson.student.user.get_full_name()).border = thin_border
+        ws.cell(row=row, column=6, value=lesson.subject.name).border = thin_border
+        ws.cell(row=row, column=7, value=float(lesson.cost)).border = thin_border
+        ws.cell(row=row, column=8, value=float(lesson.teacher_payment)).border = thin_border
+        ws.cell(row=row, column=9, value=lesson.get_status_display()).border = thin_border
+        
+        # Форматирование чисел
+        ws.cell(row=row, column=7).number_format = '#,##0.00 ₽'
+        ws.cell(row=row, column=8).number_format = '#,##0.00 ₽'
+        
+        # Цвет статуса
+        status_cell = ws.cell(row=row, column=9)
+        if lesson.status == 'completed':
+            status_cell.font = Font(color="28A745", bold=True)
+        elif lesson.status == 'cancelled':
+            status_cell.font = Font(color="DC3545", bold=True)
+        elif lesson.status == 'overdue':
+            status_cell.font = Font(color="FFC107", bold=True)
+        elif lesson.status == 'scheduled':
+            status_cell.font = Font(color="007BFF", bold=True)
+        
+        row += 1
+    
+    # Итоговая строка
+    row += 1
+    ws.cell(row=row, column=6, value="ИТОГО:").font = Font(bold=True)
+    ws.cell(row=row, column=7, value=float(total_cost)).font = Font(bold=True)
+    ws.cell(row=row, column=7).number_format = '#,##0.00 ₽'
+    ws.cell(row=row, column=8, value=float(total_payment)).font = Font(bold=True)
+    ws.cell(row=row, column=8).number_format = '#,##0.00 ₽'
+    
+    # Настройка ширины колонок
+    column_widths = [8, 12, 15, 25, 25, 20, 15, 18, 15]
+    for i, width in enumerate(column_widths, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
+    
+    # Создаем response
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    filename = f"lessons_export_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    wb.save(response)
+    return response
+
+
+def export_lessons_csv(lessons, title, request, completed_count, cancelled_count, overdue_count, total_cost, total_payment):
+    """Экспорт уроков в CSV"""
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    filename = f"lessons_export_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    # Добавляем BOM для корректного отображения русских букв
+    response.write('\ufeff')
+    
+    writer = csv.writer(response, delimiter=';')
+    
+    # Заголовок
+    writer.writerow([title])
+    writer.writerow([f"Дата экспорта: {datetime.now().strftime('%d.%m.%Y %H:%M')}"])
+    writer.writerow([f"Всего: {lessons.count()} | Проведено: {completed_count} | Отменено: {cancelled_count} | Просрочено: {overdue_count}"])
+    writer.writerow([f"Общая стоимость: {total_cost:.2f} ₽ | Общая сумма выплат: {total_payment:.2f} ₽"])
+    writer.writerow([])
+    
+    # Заголовки таблицы
+    writer.writerow(['ID', 'Дата', 'Время', 'Учитель', 'Ученик', 'Предмет', 'Стоимость', 'Выплата учителю', 'Статус'])
+    
+    # Данные
+    for lesson in lessons:
+        writer.writerow([
+            lesson.id,
+            lesson.date.strftime('%d.%m.%Y'),
+            f"{lesson.start_time.strftime('%H:%M')}-{lesson.end_time.strftime('%H:%M')}",
+            lesson.teacher.user.get_full_name(),
+            lesson.student.user.get_full_name(),
+            lesson.subject.name,
+            f"{lesson.cost:.2f}",
+            f"{lesson.teacher_payment:.2f}",
+            lesson.get_status_display(),
+        ])
+    
+    return response
+
+
+def export_lessons_html(lessons, title, request, completed_count, cancelled_count, overdue_count, total_cost, total_payment):
+    """Экспорт уроков в HTML"""
+    context = {
+        'title': title,
+        'lessons': lessons,
+        'export_date': datetime.now().strftime('%d.%m.%Y %H:%M'),
+        'completed_count': completed_count,
+        'cancelled_count': cancelled_count,
+        'overdue_count': overdue_count,
+        'total_cost': total_cost,
+        'total_payment': total_payment,
+    }
+    
+    html_content = render_to_string('admin/school/lesson/export.html', context)
+    
+    response = HttpResponse(html_content, content_type='text/html; charset=utf-8')
+    filename = f"lessons_export_{datetime.now().strftime('%Y%m%d_%H%M')}.html"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
+
+def export_lessons_pdf(lessons, title, request, completed_count, cancelled_count, overdue_count, total_cost, total_payment):
+    """Экспорт уроков в PDF"""
+    context = {
+        'title': title,
+        'lessons': lessons,
+        'export_date': datetime.now().strftime('%d.%m.%Y %H:%M'),
+        'completed_count': completed_count,
+        'cancelled_count': cancelled_count,
+        'overdue_count': overdue_count,
+        'total_cost': total_cost,
+        'total_payment': total_payment,
+        'pdf_mode': True,
+    }
+    
+    html_string = render_to_string('admin/school/lesson/export.html', context)
+    
+    # Генерируем PDF
+    response = HttpResponse(content_type='application/pdf')
+    filename = f"lessons_export_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    HTML(string=html_string).write_pdf(response)
+    
+    return response
+
+
+
+def export_lessons(request):
+    """Экспорт уроков в разных форматах"""
+    export_format = request.GET.get('export')
+    
+    # Получаем отфильтрованные уроки (как в админке)
+    lessons = Lesson.objects.all()
+    
+    # Применяем те же фильтры, что и в админке
+    # (здесь нужно добавить фильтрацию по GET параметрам)
+    
+    if export_format == 'excel':
+        return export_excel(lessons)
+    elif export_format == 'csv':
+        return export_csv(lessons)
+    elif export_format == 'pdf':
+        return export_pdf(lessons)
+    else:
+        return redirect(request.META.get('HTTP_REFERER', 'admin:school_lesson_changelist'))
+
+def export_excel(lessons):
+    response = HttpResponse(content_type='application/vnd.ms-excel')
+    response['Content-Disposition'] = 'attachment; filename="lessons.xlsx"'
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Уроки"
+    
+    # Заголовки
+    headers = ['ID', 'Дата', 'Время', 'Учитель', 'Ученик', 'Предмет', 'Стоимость', 'Статус']
+    for col, header in enumerate(headers, 1):
+        ws.cell(row=1, column=col, value=header)
+    
+    # Данные
+    for row, lesson in enumerate(lessons, 2):
+        ws.cell(row=row, column=1, value=lesson.id)
+        ws.cell(row=row, column=2, value=lesson.date.strftime('%d.%m.%Y'))
+        ws.cell(row=row, column=3, value=f"{lesson.start_time}-{lesson.end_time}")
+        ws.cell(row=row, column=4, value=str(lesson.teacher))
+        ws.cell(row=row, column=5, value=str(lesson.student))
+        ws.cell(row=row, column=6, value=lesson.subject.name)
+        ws.cell(row=row, column=7, value=float(lesson.cost))
+        ws.cell(row=row, column=8, value=lesson.get_status_display())
+    
+    wb.save(response)
+    return response
+
+def export_csv(lessons):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="lessons.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['ID', 'Дата', 'Время', 'Учитель', 'Ученик', 'Предмет', 'Стоимость', 'Статус'])
+    
+    for lesson in lessons:
+        writer.writerow([
+            lesson.id,
+            lesson.date.strftime('%d.%m.%Y'),
+            f"{lesson.start_time}-{lesson.end_time}",
+            str(lesson.teacher),
+            str(lesson.student),
+            lesson.subject.name,
+            lesson.cost,
+            lesson.get_status_display()
+        ])
+    
+    return response
+
+def export_pdf(lessons):
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="lessons.pdf"'
+    
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=landscape(A4))
+    width, height = landscape(A4)
+    
+    # Заголовок
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(50, height - 50, "Экспорт уроков")
+    
+    # Таблица (упрощенно)
+    p.setFont("Helvetica", 10)
+    y = height - 100
+    
+    for lesson in lessons[:30]:  # Ограничим 30 записями для PDF
+        p.drawString(50, y, lesson.date.strftime('%d.%m.%Y'))
+        p.drawString(120, y, str(lesson.teacher))
+        p.drawString(250, y, str(lesson.student))
+        p.drawString(400, y, lesson.subject.name)
+        p.drawString(500, y, f"{lesson.cost}₽")
+        y -= 20
+        
+        if y < 50:
+            p.showPage()
+            y = height - 50
+    
+    p.save()
+    pdf = buffer.getvalue()
+    buffer.close()
+    response.write(pdf)
+    return response
+
+
+
+
+def import_lessons(request):
+    """Импорт уроков из Excel или CSV"""
+    if request.method == 'POST':
+        file = request.FILES.get('file')
+        if not file:
+            messages.error(request, 'Выберите файл для импорта')
+            return redirect('admin:school_lesson_changelist')
+        
+        # Определяем формат по расширению
+        if file.name.endswith('.csv'):
+            return import_from_csv(file, request)
+        elif file.name.endswith(('.xlsx', '.xls')):
+            return import_from_excel(file, request)
+        else:
+            messages.error(request, 'Поддерживаются только файлы CSV и Excel (.xlsx, .xls)')
+            return redirect('admin:school_lesson_changelist')
+    
+    # GET запрос - показываем форму импорта
+    return render(request, 'admin/school/lesson/import.html')
+
+def import_from_csv(file, request):
+    """Импорт из CSV"""
+    try:
+        decoded_file = file.read().decode('utf-8-sig').splitlines()
+        reader = csv.DictReader(decoded_file, delimiter=';')
+        
+        success_count = 0
+        error_count = 0
+        errors = []
+        
+        for row_num, row in enumerate(reader, start=2):
+            try:
+                # Поиск связанных объектов
+                teacher = Teacher.objects.get(user__last_name=row.get('Учитель', '').strip())
+                student = Student.objects.get(user__last_name=row.get('Ученик', '').strip())
+                subject = Subject.objects.get(name=row.get('Предмет', '').strip())
+                
+                # Парсинг даты
+                date_str = row.get('Дата', '').strip()
+                if date_str:
+                    date = datetime.strptime(date_str, '%d.%m.%Y').date()
+                else:
+                    raise ValueError("Дата не указана")
+                
+                # Парсинг времени
+                start_time_str = row.get('Время начала', '').strip()
+                end_time_str = row.get('Время окончания', '').strip()
+                
+                if start_time_str:
+                    start_time = datetime.strptime(start_time_str, '%H:%M').time()
+                else:
+                    raise ValueError("Время начала не указано")
+                
+                if end_time_str:
+                    end_time = datetime.strptime(end_time_str, '%H:%M').time()
+                else:
+                    # Если время окончания не указано, ставим +1 час
+                    from datetime import timedelta
+                    start_dt = datetime.combine(date, start_time)
+                    end_dt = start_dt + timedelta(hours=1)
+                    end_time = end_dt.time()
+                
+                # Стоимость
+                cost = float(row.get('Стоимость', 0).replace(',', '.')) if row.get('Стоимость') else 0
+                teacher_payment = float(row.get('Выплата учителю', 0).replace(',', '.')) if row.get('Выплата учителю') else cost * 0.5
+                
+                # Статус
+                status = row.get('Статус', 'scheduled').strip().lower()
+                if status not in ['scheduled', 'completed', 'cancelled', 'overdue']:
+                    status = 'scheduled'
+                
+                # Создание урока
+                Lesson.objects.create(
+                    teacher=teacher,
+                    student=student,
+                    subject=subject,
+                    date=date,
+                    start_time=start_time,
+                    end_time=end_time,
+                    cost=cost,
+                    teacher_payment=teacher_payment,
+                    status=status,
+                )
+                success_count += 1
+                
+            except Teacher.DoesNotExist:
+                error_count += 1
+                errors.append(f"Строка {row_num}: Учитель '{row.get('Учитель')}' не найден")
+            except Student.DoesNotExist:
+                error_count += 1
+                errors.append(f"Строка {row_num}: Ученик '{row.get('Ученик')}' не найден")
+            except Subject.DoesNotExist:
+                error_count += 1
+                errors.append(f"Строка {row_num}: Предмет '{row.get('Предмет')}' не найден")
+            except Exception as e:
+                error_count += 1
+                errors.append(f"Строка {row_num}: {str(e)}")
+        
+        # Сообщаем результат
+        if success_count > 0:
+            messages.success(request, f'✅ Импортировано уроков: {success_count}')
+        if error_count > 0:
+            error_text = '\n'.join(errors[:5])
+            if len(errors) > 5:
+                error_text += f'\n... и еще {len(errors) - 5} ошибок'
+            messages.warning(request, f'⚠️ Ошибок: {error_count}\n{error_text}')
+        
+        return redirect('admin:school_lesson_changelist')
+        
+    except Exception as e:
+        messages.error(request, f'Ошибка при импорте: {str(e)}')
+        return redirect('admin:school_lesson_changelist')
+
+def find_teacher_by_full_name(name):
+    """Поиск учителя по полному имени (фамилия имя отчество)"""
+    if not name:
+        return None
+    
+    name = str(name).strip()
+    if not name:
+        return None
+    
+    # Разбиваем имя на части
+    name_parts = name.split()
+    if not name_parts:
+        return None
+    
+    # Пробуем найти по фамилии (первое слово)
+    last_name = name_parts[0]
+    teachers = Teacher.objects.filter(user__last_name__icontains=last_name)
+    
+    if teachers.exists():
+        if teachers.count() == 1:
+            return teachers.first()
+        
+        # Если несколько учителей с такой фамилией, пробуем уточнить по имени
+        if len(name_parts) > 1:
+            first_name = name_parts[1]
+            teachers = teachers.filter(user__first_name__icontains=first_name)
+            if teachers.exists():
+                return teachers.first()
+    
+    # Если не нашли, пробуем поиск по полному имени
+    for teacher in Teacher.objects.all():
+        full_name = teacher.user.get_full_name().lower()
+        if name.lower() in full_name:
+            return teacher
+    
+    return None
+
+def find_student_by_full_name(name):
+    """Поиск ученика по полному имени (фамилия имя отчество)"""
+    if not name:
+        return None
+    
+    name = str(name).strip()
+    if not name:
+        return None
+    
+    # Разбиваем имя на части
+    name_parts = name.split()
+    if not name_parts:
+        return None
+    
+    # Пробуем найти по фамилии
+    last_name = name_parts[0]
+    students = Student.objects.filter(user__last_name__icontains=last_name)
+    
+    if students.exists():
+        if students.count() == 1:
+            return students.first()
+        
+        # Если несколько, уточняем по имени
+        if len(name_parts) > 1:
+            first_name = name_parts[1]
+            students = students.filter(user__first_name__icontains=first_name)
+            if students.exists():
+                return students.first()
+    
+    # Поиск по полному имени
+    for student in Student.objects.all():
+        full_name = student.user.get_full_name().lower()
+        if name.lower() in full_name:
+            return student
+    
+    return None
+
+def import_from_excel(file, request):
+    """Импорт из Excel с поддержкой полных имен"""
+    try:
+        import tempfile
+        import os
+        from datetime import datetime as dt
+        
+        # Сохраняем временный файл
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+            for chunk in file.chunks():
+                tmp.write(chunk)
+            tmp_path = tmp.name
+        
+        wb = openpyxl.load_workbook(tmp_path)
+        ws = wb.active
+        
+        # Получаем заголовки (первая строка)
+        headers = [cell.value for cell in ws[1] if cell.value]
+        
+        success_count = 0
+        error_count = 0
+        errors = []
+        
+        for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            if not any(row):  # Пропускаем пустые строки
+                continue
+                
+            try:
+                # Создаем словарь из строки
+                row_dict = {}
+                for i, header in enumerate(headers):
+                    if i < len(row):
+                        row_dict[header] = row[i]
+                
+                # Поиск учителя по полному имени
+                teacher_name = str(row_dict.get('Учитель', '')).strip()
+                teacher = find_teacher_by_full_name(teacher_name)
+                if not teacher:
+                    raise ValueError(f"Учитель '{teacher_name}' не найден")
+                
+                # Поиск ученика по полному имени
+                student_name = str(row_dict.get('Ученик', '')).strip()
+                student = find_student_by_full_name(student_name)
+                if not student:
+                    raise ValueError(f"Ученик '{student_name}' не найден")
+                
+                # Поиск предмета (по названию, без учета регистра)
+                subject_name = str(row_dict.get('Предмет', '')).strip()
+                subject = Subject.objects.filter(name__icontains=subject_name).first()
+                if not subject:
+                    raise ValueError(f"Предмет '{subject_name}' не найден")
+                
+                # Парсинг даты
+                date_val = row_dict.get('Дата')
+                if isinstance(date_val, str):
+                    try:
+                        date = datetime.strptime(date_val, '%d.%m.%Y').date()
+                    except:
+                        date = datetime.strptime(date_val, '%Y-%m-%d').date()
+                elif isinstance(date_val, dt):
+                    date = date_val.date()
+                elif isinstance(date_val, date):
+                    date = date_val
+                else:
+                    raise ValueError("Неверный формат даты")
+                
+                # Парсинг времени
+                start_time = row_dict.get('Время начала')
+                if isinstance(start_time, str):
+                    try:
+                        start_time = datetime.strptime(start_time, '%H:%M').time()
+                    except:
+                        start_time = datetime.strptime(start_time, '%H.%M').time()
+                elif isinstance(start_time, dt):
+                    start_time = start_time.time()
+                elif start_time is None:
+                    raise ValueError("Время начала не указано")
+                
+                end_time = row_dict.get('Время окончания')
+                if isinstance(end_time, str):
+                    try:
+                        end_time = datetime.strptime(end_time, '%H:%M').time()
+                    except:
+                        end_time = datetime.strptime(end_time, '%H.%M').time()
+                elif isinstance(end_time, dt):
+                    end_time = end_time.time()
+                elif end_time is None:
+                    from datetime import timedelta
+                    start_dt = dt.combine(date, start_time)
+                    end_dt = start_dt + timedelta(hours=1)
+                    end_time = end_dt.time()
+                
+                # Стоимость
+                cost_val = row_dict.get('Стоимость', 0)
+                if isinstance(cost_val, str):
+                    cost = float(cost_val.replace(',', '.'))
+                else:
+                    cost = float(cost_val or 0)
+                
+                # Выплата учителю
+                payment_val = row_dict.get('Выплата учителю', cost * 0.5)
+                if isinstance(payment_val, str):
+                    teacher_payment = float(payment_val.replace(',', '.'))
+                else:
+                    teacher_payment = float(payment_val or cost * 0.5)
+                
+                # Статус (с поддержкой русских названий)
+                status = row_dict.get('Статус', 'scheduled')
+                if isinstance(status, str):
+                    status = status.strip().lower()
+                
+                status_map = {
+                    'запланировано': 'scheduled',
+                    'проведено': 'completed',
+                    'отменено': 'cancelled',
+                    'просрочено': 'overdue',
+                    'scheduled': 'scheduled',
+                    'completed': 'completed',
+                    'cancelled': 'cancelled',
+                    'overdue': 'overdue',
+                }
+                status = status_map.get(status, 'scheduled')
+                
+                # Создание урока
+                Lesson.objects.create(
+                    teacher=teacher,
+                    student=student,
+                    subject=subject,
+                    date=date,
+                    start_time=start_time,
+                    end_time=end_time,
+                    cost=cost,
+                    teacher_payment=teacher_payment,
+                    status=status,
+                )
+                success_count += 1
+                
+            except Exception as e:
+                error_count += 1
+                errors.append(f"Строка {row_num}: {str(e)}")
+        
+        # Удаляем временный файл
+        os.unlink(tmp_path)
+        
+        # Сообщаем результат
+        if success_count > 0:
+            messages.success(request, f'✅ Импортировано уроков: {success_count}')
+        if error_count > 0:
+            error_text = '\n'.join(errors[:10])
+            if len(errors) > 10:
+                error_text += f'\n... и еще {len(errors) - 10} ошибок'
+            messages.warning(request, f'⚠️ Ошибок: {error_count}\n{error_text}')
+        
+        return redirect('admin:school_lesson_changelist')
+        
+    except Exception as e:
+        messages.error(request, f'Ошибка при импорте: {str(e)}')
+        return redirect('admin:school_lesson_changelist')
+    
+def download_import_template(request):
+    """Скачать шаблон для импорта"""
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="import_lessons_template.xlsx"'
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Импорт уроков"
+    
+    # Заголовки
+    headers = ['Дата', 'Время начала', 'Время окончания', 'Учитель', 'Ученик', 'Предмет', 'Стоимость', 'Выплата учителю', 'Статус']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = openpyxl.styles.Font(bold=True, color="FFFFFF")
+        cell.fill = openpyxl.styles.PatternFill(start_color="417690", end_color="417690", fill_type="solid")
+    
+    # Пример данных
+    examples = [
+        ['01.03.2026', '10:00', '11:00', 'Иванов', 'Петров', 'Математика', '1000', '500', 'scheduled'],
+        ['02.03.2026', '11:00', '12:00', 'Петрова', 'Сидорова', 'Русский язык', '900', '450', 'completed'],
+        ['03.03.2026', '14:00', '15:00', 'Смирнов', 'Козлова', 'Английский язык', '1100', '550', 'scheduled'],
+    ]
+    
+    for row_num, example in enumerate(examples, start=2):
+        for col_num, value in enumerate(example, 1):
+            ws.cell(row=row_num, column=col_num, value=value)
+    
+    # Настройка ширины колонок
+    for col in range(1, len(headers) + 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 18
+    
+    wb.save(response)
     return response
