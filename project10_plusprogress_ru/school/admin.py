@@ -69,9 +69,30 @@ class SubjectAdmin(admin.ModelAdmin):
 
 
 class TeacherAdmin(admin.ModelAdmin):
-    list_display = ('user', 'display_subjects', 'experience', 'wallet_balance', 'created')
+    list_display = ('user', 'display_subjects', 'experience', 'created')
     list_filter = ('subjects',)
     search_fields = ('user__first_name', 'user__last_name', 'user__email')
+    
+    # Явно указываем все поля, которые должны быть в карточке
+    fieldsets = (
+        (None, {
+            'fields': ('user', 'subjects', 'experience')
+        }),
+        ('Дополнительная информация', {
+            'fields': ('education', 'bio'),  # Только существующие поля
+            'classes': ('collapse',),
+        }),
+    )
+      # Добавляем filter_horizontal для поля subjects
+    filter_horizontal = ('subjects',)
+    
+    def display_subjects(self, obj):
+        return ", ".join([s.name for s in obj.subjects.all()])
+    display_subjects.short_description = 'Предметы'
+    
+    def created(self, obj):
+        return obj.user.date_joined.strftime('%d.%m.%Y')
+    created.short_description = 'Дата регистрации'
     
     def display_subjects(self, obj):
         return ", ".join([s.name for s in obj.subjects.all()])
@@ -83,7 +104,7 @@ class TeacherAdmin(admin.ModelAdmin):
 
 
 class StudentAdmin(admin.ModelAdmin):
-    list_display = ('user', 'parent_name', 'parent_phone', 'get_teachers_count')
+    list_display = ('user', 'parent_name', 'parent_phone', 'get_teachers_count', 'get_balance_display')
     search_fields = ('user__first_name', 'user__last_name', 'user__email', 'parent_name')
     filter_horizontal = ('teachers',)
     list_filter = ('teachers',)
@@ -92,6 +113,32 @@ class StudentAdmin(admin.ModelAdmin):
     def get_teachers_count(self, obj):
         return obj.teachers.count()
     get_teachers_count.short_description = 'Кол-во учителей'
+    
+    def get_balance_display(self, obj):
+        """Отображает баланс ученика с цветовой индикацией"""
+        balance = obj.user.balance
+        formatted_balance = f"{balance:,.2f}".replace(',', ' ').replace('.', ',')
+        
+        # Выбираем цвет и иконку в зависимости от баланса
+        if balance > 0:
+            color = '#28a745'  # зеленый
+            icon = '💰'
+        elif balance < 0:
+            color = '#dc3545'  # красный
+            icon = '🔴'
+        else:
+            color = '#6c757d'  # серый
+            icon = '⚪'
+        
+        from django.utils.html import format_html
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{} {}</span>',
+            color,
+            icon,
+            formatted_balance
+        )
+    get_balance_display.short_description = 'Баланс'
+    get_balance_display.admin_order_field = 'user__balance'
 
 
 # Добавляем класс LessonFormatAdmin

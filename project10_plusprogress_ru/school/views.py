@@ -1,4 +1,22 @@
 # school/views.py
+from django.shortcuts import render, get_object_or_404
+from django.contrib.admin.views.decorators import staff_member_required
+from django.db.models import Sum, Count
+from django.http import HttpResponse, JsonResponse
+from datetime import datetime, timedelta
+from decimal import Decimal
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from docx import Document
+from docx.shared import Inches, Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
+import io
+import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
@@ -15,6 +33,7 @@ from django.views.decorators.http import require_POST
 from django.db.models import Count, Q
 from django.contrib import messages
 from django.db.models import Q, Sum
+from decimal import Decimal
 from datetime import date, timedelta
 from .models import Student, Teacher, Lesson, Material, Deposit, StudentNote
 from .models import (
@@ -728,3 +747,511 @@ def student_deposit(request):
         return redirect('student_dashboard')
     
     return redirect('student_dashboard')
+
+@staff_member_required
+def student_report(request, student_id):
+    student = get_object_or_404(Student, id=student_id)
+    
+    # Получаем параметры фильтрации
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    # Базовый queryset
+    lessons = Lesson.objects.filter(student=student)
+    
+    # Применяем фильтры по датам
+    if date_from:
+        lessons = lessons.filter(date__gte=date_from)
+    if date_to:
+        lessons = lessons.filter(date__lte=date_to)
+    
+    # Получаем все уникальные даты занятий
+    dates = lessons.dates('date', 'day').order_by('date')
+    
+    # Получаем все уникальные предметы
+    subjects = lessons.values_list('subject__name', flat=True).distinct()
+    
+    # Подготавливаем данные для таблицы
+    subjects_data = []
+    daily_totals = {date: 0 for date in dates}
+    
+    for subject_name in subjects:
+        subject_lessons = lessons.filter(subject__name=subject_name)
+        daily_costs = []
+        subject_total = 0
+        
+        for date in dates:
+            day_lessons = subject_lessons.filter(date=date)
+            day_total = day_lessons.aggregate(Sum('cost'))['cost__sum'] or 0
+            daily_costs.append(day_total)
+            subject_total += day_total
+            daily_totals[date] += day_total
+        
+        subjects_data.append({
+            'name': subject_name,
+            'daily_costs': daily_costs,
+            'total': subject_total
+        })
+    
+    # Агрегация по предметам (для статистики)
+    subject_stats = lessons.values(
+        'subject__name'
+    ).annotate(
+        lesson_count=Count('id'),
+        total_cost=Sum('cost')
+    ).order_by('-total_cost')
+    
+    # Общие итоги
+    total_lessons = lessons.count()
+    total_cost = lessons.aggregate(Sum('cost'))['cost__sum'] or 0
+    
+    context = {
+        'student': student,
+        'subject_stats': subject_stats,
+        'total_lessons': total_lessons,
+        'total_cost': total_cost,
+        'dates': dates,
+        'subjects_data': subjects_data,
+        'daily_totals': [daily_totals[date] for date in dates],
+    }
+    
+    return render(request, 'admin/school/student/report.html', context)
+
+
+@staff_member_required
+def teacher_report(request, teacher_id):
+    teacher = get_object_or_404(Teacher, id=teacher_id)
+    
+    # Получаем параметры фильтрации
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    # Базовый queryset уроков учителя
+    lessons = Lesson.objects.filter(teacher=teacher)
+    
+    # Применяем фильтры по датам
+    if date_from:
+        lessons = lessons.filter(date__gte=date_from)
+    if date_to:
+        lessons = lessons.filter(date__lte=date_to)
+    
+    # Получаем все уникальные даты занятий
+    dates = lessons.dates('date', 'day').order_by('date')
+    
+    # Получаем всех уникальных учеников с их предметами
+    students_lessons = lessons.values(
+        'student', 'student__user__last_name', 'student__user__first_name', 'subject__name'
+    ).distinct()
+    
+    # Подготавливаем данные для таблицы занятий (стоимость для ученика)
+    students_data = []
+    daily_totals_lessons = {date: Decimal('0') for date in dates}
+    
+    for item in students_lessons:
+        student_id = item['student']
+        student_name = f"{item['student__user__last_name']} {item['student__user__first_name']}"
+        subject_name = item['subject__name']
+        
+        student_lessons = lessons.filter(
+            student_id=student_id,
+            subject__name=subject_name
+        )
+        
+        daily_costs = []
+        student_total = Decimal('0')
+        
+        for date in dates:
+            day_lessons = student_lessons.filter(date=date)
+            day_total = day_lessons.aggregate(Sum('cost'))['cost__sum'] or Decimal('0')
+            daily_costs.append(day_total)
+            student_total += day_total
+            daily_totals_lessons[date] += day_total
+        
+        students_data.append({
+            'name': f"{student_name} ({subject_name})",
+            'daily_costs': daily_costs,
+            'total': student_total
+        })
+    
+    # Подготавливаем данные для таблицы выплат (БЕРЕМ ИЗ ПОЛЯ teacher_payment)
+    payments_data = []
+    daily_totals_payments = {date: Decimal('0') for date in dates}
+    
+    for item in students_lessons:
+        student_id = item['student']
+        student_name = f"{item['student__user__last_name']} {item['student__user__first_name']}"
+        subject_name = item['subject__name']
+        
+        student_lessons = lessons.filter(
+            student_id=student_id,
+            subject__name=subject_name
+        )
+        
+        daily_payments = []
+        student_payment_total = Decimal('0')
+        
+        for date in dates:
+            day_lessons = student_lessons.filter(date=date)
+            # Берем сумму выплаты учителю из поля teacher_payment
+            day_payment = day_lessons.aggregate(Sum('teacher_payment'))['teacher_payment__sum'] or Decimal('0')
+            daily_payments.append(day_payment)
+            student_payment_total += day_payment
+            daily_totals_payments[date] += day_payment
+        
+        payments_data.append({
+            'name': f"{student_name} ({subject_name})",
+            'daily_payments': daily_payments,
+            'total': student_payment_total
+        })
+    
+    # Общие итоги
+    total_lessons = lessons.count()
+    total_income = lessons.aggregate(Sum('cost'))['cost__sum'] or Decimal('0')
+    total_payment = lessons.aggregate(Sum('teacher_payment'))['teacher_payment__sum'] or Decimal('0')
+    
+    context = {
+        'teacher': teacher,
+        'total_lessons': total_lessons,
+        'total_income': total_income,
+        'total_payment': total_payment,
+        'dates': dates,
+        'students_data': students_data,
+        'payments_data': payments_data,
+        'daily_totals_lessons': [daily_totals_lessons[date] for date in dates],
+        'daily_totals_payments': [daily_totals_payments[date] for date in dates],
+    }
+    
+    return render(request, 'admin/school/teacher/report.html', context)
+
+
+@staff_member_required
+def teacher_payments_dashboard(request):
+    """Дашборд для расчета выплат учителям"""
+    teachers = Teacher.objects.all().select_related('user')
+    
+    # Период по умолчанию: последние 7 дней
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=7)
+    
+    context = {
+        'teachers': teachers,
+        'default_start': start_date.strftime('%Y-%m-%d'),
+        'default_end': end_date.strftime('%Y-%m-%d'),
+        'title': 'Расчет выплат учителям',
+    }
+    return render(request, 'admin/school/teacher_payments/dashboard.html', context)
+
+@staff_member_required
+def calculate_teacher_payment(request):
+    """API для расчета выплат учителю за период"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Метод не поддерживается'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        teacher_id = data.get('teacher_id')
+        start_date = datetime.strptime(data.get('start_date'), '%Y-%m-%d').date()
+        end_date = datetime.strptime(data.get('end_date'), '%Y-%m-%d').date()
+        
+        teacher = get_object_or_404(Teacher, id=teacher_id)
+        
+        # Получаем все проведенные уроки за период
+        completed_lessons = Lesson.objects.filter(
+            teacher=teacher,
+            status='completed',
+            date__gte=start_date,
+            date__lte=end_date
+        ).select_related('student__user', 'subject').order_by('date')
+        
+        # Получаем все отчеты (если у вас есть модель TeacherPayment)
+        # Если нет - создаем временную структуру
+        reports = []  # Здесь будут отчеты, когда добавим модель
+        
+        # Агрегация по предметам
+        subject_stats = completed_lessons.values(
+            'subject__name'
+        ).annotate(
+            lesson_count=Count('id'),
+            total_payment=Sum('teacher_payment')
+        ).order_by('-total_payment')
+        
+        # Агрегация по ученикам
+        student_stats = completed_lessons.values(
+            'student__user__last_name',
+            'student__user__first_name',
+            'student__user__patronymic'
+        ).annotate(
+            lesson_count=Count('id'),
+            total_payment=Sum('teacher_payment')
+        ).order_by('-total_payment')
+        
+        # Данные для таблицы по дням
+        dates = []
+        current_date = start_date
+        while current_date <= end_date:
+            dates.append(current_date.strftime('%d.%m.%Y'))
+            current_date += timedelta(days=1)
+        
+        # Собираем данные для сводной таблицы
+        lessons_data = []
+        for lesson in completed_lessons:
+            lessons_data.append({
+                'date': lesson.date.strftime('%d.%m.%Y'),
+                'student': lesson.student.user.get_full_name(),
+                'subject': lesson.subject.name,
+                'cost': float(lesson.cost),
+                'teacher_payment': float(lesson.teacher_payment),
+                'status': lesson.status
+            })
+        
+        # Итоги
+        total_lessons = completed_lessons.count()
+        total_cost = completed_lessons.aggregate(Sum('cost'))['cost__sum'] or Decimal('0')
+        total_payment = completed_lessons.aggregate(Sum('teacher_payment'))['teacher_payment__sum'] or Decimal('0')
+        
+        response_data = {
+            'teacher': {
+                'id': teacher.id,
+                'name': teacher.user.get_full_name(),
+            },
+            'period': {
+                'start': start_date.strftime('%d.%m.%Y'),
+                'end': end_date.strftime('%d.%m.%Y'),
+            },
+            'totals': {
+                'lessons': total_lessons,
+                'cost': float(total_cost),
+                'payment': float(total_payment),
+            },
+            'subject_stats': list(subject_stats),
+            'student_stats': list(student_stats),
+            'lessons_data': lessons_data,
+            'dates': dates,
+        }
+        
+        return JsonResponse(response_data)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+@staff_member_required
+def export_teacher_payment(request, format, teacher_id, start_date, end_date):
+    """Экспорт отчета в разных форматах"""
+    
+    teacher = get_object_or_404(Teacher, id=teacher_id)
+    start = datetime.strptime(start_date, '%Y-%m-%d').date()
+    end = datetime.strptime(end_date, '%Y-%m-%d').date()
+    
+    # Получаем данные
+    lessons = Lesson.objects.filter(
+        teacher=teacher,
+        status='completed',
+        date__gte=start,
+        date__lte=end
+    ).select_related('student__user', 'subject').order_by('date')
+    
+    total_payment = lessons.aggregate(Sum('teacher_payment'))['teacher_payment__sum'] or Decimal('0')
+    
+    if format == 'excel':
+        return export_to_excel(teacher, lessons, start, end, total_payment)
+    elif format == 'word':
+        return export_to_word(teacher, lessons, start, end, total_payment)
+    elif format == 'pdf':
+        return export_to_pdf(teacher, lessons, start, end, total_payment)
+    else:
+        return HttpResponse('Неподдерживаемый формат', status=400)
+
+def export_to_excel(teacher, lessons, start, end, total_payment):
+    """Экспорт в Excel"""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Расчет выплат"
+    
+    # Стили
+    title_font = Font(name='Arial', size=14, bold=True)
+    header_font = Font(name='Arial', size=11, bold=True)
+    normal_font = Font(name='Arial', size=10)
+    
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_font_white = Font(name='Arial', size=11, bold=True, color="FFFFFF")
+    
+    thin_border = Border(
+        left=Side(style='thin'), 
+        right=Side(style='thin'), 
+        top=Side(style='thin'), 
+        bottom=Side(style='thin')
+    )
+    
+    # Заголовок
+    ws.merge_cells('A1:F1')
+    cell = ws['A1']
+    cell.value = f"Расчет выплат учителю: {teacher.user.get_full_name()}"
+    cell.font = title_font
+    cell.alignment = Alignment(horizontal='center')
+    
+    # Период
+    ws.merge_cells('A2:F2')
+    cell = ws['A2']
+    cell.value = f"Период: {start.strftime('%d.%m.%Y')} - {end.strftime('%d.%m.%Y')}"
+    cell.font = normal_font
+    cell.alignment = Alignment(horizontal='center')
+    
+    # Пустая строка
+    ws.append([])
+    
+    # Заголовки таблицы
+    headers = ['Дата', 'Ученик', 'Предмет', 'Стоимость урока', 'Выплата учителю', 'Статус']
+    ws.append(headers)
+    
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=4, column=col)
+        cell.value = header
+        cell.font = header_font_white
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = thin_border
+    
+    # Данные
+    row = 5
+    for lesson in lessons:
+        ws.cell(row=row, column=1, value=lesson.date.strftime('%d.%m.%Y')).border = thin_border
+        ws.cell(row=row, column=2, value=lesson.student.user.get_full_name()).border = thin_border
+        ws.cell(row=row, column=3, value=lesson.subject.name).border = thin_border
+        ws.cell(row=row, column=4, value=float(lesson.cost)).border = thin_border
+        ws.cell(row=row, column=5, value=float(lesson.teacher_payment)).border = thin_border
+        ws.cell(row=row, column=6, value=lesson.get_status_display()).border = thin_border
+        
+        # Форматирование чисел
+        ws.cell(row=row, column=4).number_format = '#,##0.00 ₽'
+        ws.cell(row=row, column=5).number_format = '#,##0.00 ₽'
+        row += 1
+    
+    # Итог
+    row += 1
+    ws.cell(row=row, column=4, value="ИТОГО:").font = header_font
+    ws.cell(row=row, column=5, value=float(total_payment)).font = header_font
+    ws.cell(row=row, column=5).number_format = '#,##0.00 ₽'
+    
+    # Настройка ширины колонок
+    column_widths = [12, 30, 20, 15, 15, 15]
+    for i, width in enumerate(column_widths, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
+    
+    # Создаем response
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="teacher_payment_{teacher.id}_{start}_{end}.xlsx"'
+    
+    wb.save(response)
+    return response
+
+def export_to_word(teacher, lessons, start, end, total_payment):
+    """Экспорт в Word"""
+    doc = Document()
+    
+    # Заголовок
+    title = doc.add_heading('Расчет выплат учителю', 0)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # Информация об учителе
+    doc.add_heading('Информация об учителе:', level=1)
+    doc.add_paragraph(f'ФИО: {teacher.user.get_full_name()}')
+    doc.add_paragraph(f'Email: {teacher.user.email}')
+    doc.add_paragraph(f'Телефон: {teacher.user.phone}')
+    
+    # Период
+    doc.add_heading('Период расчета:', level=1)
+    doc.add_paragraph(f'с {start.strftime("%d.%m.%Y")} по {end.strftime("%d.%m.%Y")}')
+    
+    # Таблица с уроками
+    doc.add_heading('Детализация уроков:', level=1)
+    
+    table = doc.add_table(rows=1, cols=5)
+    table.style = 'Table Grid'
+    
+    # Заголовки
+    header_cells = table.rows[0].cells
+    headers = ['Дата', 'Ученик', 'Предмет', 'Стоимость', 'Выплата']
+    for i, header in enumerate(headers):
+        header_cells[i].text = header
+        header_cells[i].paragraphs[0].runs[0].font.bold = True
+    
+    # Данные
+    for lesson in lessons:
+        row_cells = table.add_row().cells
+        row_cells[0].text = lesson.date.strftime('%d.%m.%Y')
+        row_cells[1].text = lesson.student.user.get_full_name()
+        row_cells[2].text = lesson.subject.name
+        row_cells[3].text = f"{lesson.cost:.2f} ₽"
+        row_cells[4].text = f"{lesson.teacher_payment:.2f} ₽"
+    
+    # Итог
+    doc.add_paragraph()
+    total_para = doc.add_paragraph()
+    total_para.add_run('ИТОГО К ВЫПЛАТЕ: ').bold = True
+    total_para.add_run(f'{total_payment:.2f} ₽').bold = True
+    
+    # Сохраняем
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    response['Content-Disposition'] = f'attachment; filename="teacher_payment_{teacher.id}_{start}_{end}.docx"'
+    
+    doc.save(response)
+    return response
+
+def export_to_pdf(teacher, lessons, start, end, total_payment):
+    """Экспорт в PDF"""
+    buffer = io.BytesIO()
+    
+    # Создаем PDF
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Заголовок
+    title = Paragraph(f"Расчет выплат учителю", styles['Title'])
+    elements.append(title)
+    elements.append(Paragraph(f"<b>{teacher.user.get_full_name()}</b>", styles['Normal']))
+    elements.append(Paragraph(f"Период: {start.strftime('%d.%m.%Y')} - {end.strftime('%d.%m.%Y')}", styles['Normal']))
+    elements.append(Paragraph("<br/>", styles['Normal']))
+    
+    # Таблица
+    data = [['Дата', 'Ученик', 'Предмет', 'Стоимость', 'Выплата']]
+    
+    for lesson in lessons:
+        data.append([
+            lesson.date.strftime('%d.%m.%Y'),
+            lesson.student.user.get_full_name(),
+            lesson.subject.name,
+            f"{lesson.cost:.2f} ₽",
+            f"{lesson.teacher_payment:.2f} ₽"
+        ])
+    
+    # Итог
+    data.append(['', '', '', 'ИТОГО:', f"{total_payment:.2f} ₽"])
+    
+    table = Table(data)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.lightgrey),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -2), 1, colors.black),
+        ('GRID', (0, -1), (-1, -1), 1, colors.black),
+    ]))
+    
+    elements.append(table)
+    
+    # Сборка PDF
+    doc.build(elements)
+    
+    # Сохраняем
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="teacher_payment_{teacher.id}_{start}_{end}.pdf"'
+    
+    return response

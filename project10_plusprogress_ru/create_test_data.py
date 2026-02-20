@@ -13,9 +13,19 @@ from school.models import (
     LessonFormat, Schedule, Payment, Deposit
 )
 
+def calculate_teacher_payment(cost, percentage):
+    """
+    Расчет выплаты учителю с округлением до 50 рублей
+    percentage: 0.85 для 85%, 0.9 для 90%
+    """
+    raw_payment = cost * percentage
+    # Округляем до ближайших 50 рублей
+    rounded_payment = round(raw_payment / 50) * 50
+    return Decimal(str(rounded_payment))
+
 def create_test_data():
     print("=" * 60)
-    print("СОЗДАНИЕ ТЕСТОВЫХ ДАННЫХ")
+    print("СОЗДАНИЕ ТЕСТОВЫХ ДАННЫХ ДЛЯ ТЕСТИРОВАНИЯ АВТОМАТИЧЕСКОГО РАСЧЕТА")
     print("=" * 60)
     
     # 1. ПРЕДМЕТЫ
@@ -48,7 +58,7 @@ def create_test_data():
         formats.append(fmt)
         print(f"  {'[+]' if created else '[ ]'} {name}")
     
-    # 3. УЧИТЕЛЯ (10)
+    # 3. УЧИТЕЛЯ
     print("\n3. СОЗДАЕМ УЧИТЕЛЕЙ:")
     
     teachers_data = [
@@ -102,7 +112,7 @@ def create_test_data():
         teacher.save()
         teachers.append(teacher)
     
-    # 4. УЧЕНИКИ (30)
+    # 4. УЧЕНИКИ
     print("\n4. СОЗДАЕМ УЧЕНИКОВ:")
     
     first_names = [
@@ -142,7 +152,7 @@ def create_test_data():
                 'email': email,
                 'phone': phone,
                 'role': 'student',
-                'balance': 0  # Начинаем с нулевым балансом
+                'balance': 0
             }
         )
         
@@ -162,170 +172,361 @@ def create_test_data():
         student.save()
         students.append(student)
     
-    # 5. СОЗДАЕМ ЗАНЯТИЯ
-    print("\n5. СОЗДАЕМ ЗАНЯТИЯ:")
+    # 5. СОЗДАЕМ ЗАНЯТИЯ С РАЗНЫМИ СТАТУСАМИ
+    print("\n5. СОЗДАЕМ ЗАНЯТИЯ ДЛЯ ТЕСТИРОВАНИЯ АВТОМАТИКИ:")
     
-    start_date = date(2026, 2, 10)
-    end_date = date(2026, 3, 31)
+    # СЦЕНАРИЙ 1: Проведенные занятия
+    print("\n   СЦЕНАРИЙ 1: Проведенные занятия")
+    create_completed_lessons(students, teachers, subjects, formats)
     
-    # Выходные и праздники
-    holidays = [
-        date(2026, 2, 14), date(2026, 2, 15),  # выходные
-        date(2026, 2, 21), date(2026, 2, 22),  # выходные
-        date(2026, 2, 23),  # праздник
-        date(2026, 2, 28), date(2026, 3, 1),   # выходные
-        date(2026, 3, 7), date(2026, 3, 8),    # выходные + праздник
-        date(2026, 3, 14), date(2026, 3, 15),  # выходные
-        date(2026, 3, 21), date(2026, 3, 22),  # выходные
-        date(2026, 3, 28), date(2026, 3, 29),  # выходные
-        date(2026, 3, 31),  # последний день
-    ]
+    # СЦЕНАРИЙ 2: Запланированные занятия
+    print("\n   СЦЕНАРИЙ 2: Запланированные занятия")
+    create_scheduled_lessons(students, teachers, subjects, formats)
     
-    # Временные слоты (с 9 до 20)
-    time_slots = [
-        (time(9, 0), time(10, 0)),
-        (time(10, 0), time(11, 0)),
-        (time(11, 0), time(12, 0)),
-        (time(13, 0), time(14, 0)),
-        (time(14, 0), time(15, 0)),
-        (time(15, 0), time(16, 0)),
-        (time(16, 0), time(17, 0)),
-        (time(17, 0), time(18, 0)),
-        (time(18, 0), time(19, 0)),
-        (time(19, 0), time(20, 0)),
-    ]
+    # СЦЕНАРИЙ 3: Отмененные занятия
+    print("\n   СЦЕНАРИЙ 3: Отмененные занятия")
+    create_cancelled_lessons(students, teachers, subjects, formats)
     
-    lessons_created = 0
-    target_lessons = 100
+    # СЦЕНАРИЙ 4: Просроченные занятия
+    print("\n   СЦЕНАРИЙ 4: Просроченные занятия")
+    create_overdue_lessons(students, teachers, subjects, formats)
     
-    # Определяем статусы для разных периодов
-    first_period_end = date(2026, 2, 19)
+    # СЦЕНАРИЙ 5: Занятия, которые должны стать просроченными завтра
+    print("\n   СЦЕНАРИЙ 5: Занятия, которые просрочатся завтра")
+    create_future_overdue_lessons(students, teachers, subjects, formats)
     
-    while lessons_created < target_lessons:
-        # Выбираем случайную дату
-        days_range = (end_date - start_date).days
-        random_days = random.randint(0, days_range)
-        current_date = start_date + timedelta(days=random_days)
-        
-        # Проверяем, не выходной ли это и не праздник
-        if current_date.weekday() >= 5:  # Сб, Вс
-            continue
-        if current_date in holidays:
-            continue
-        
-        # Выбираем учителя и ученика
+    # 6. ПРОВЕРЯЕМ РЕЗУЛЬТАТЫ
+    print("\n" + "=" * 60)
+    print("ПРОВЕРКА АВТОМАТИЧЕСКОГО РАСЧЕТА БАЛАНСОВ")
+    print("=" * 60)
+    
+    check_balances()
+    
+    print("=" * 60)
+    print("✅ ТЕСТОВЫЕ ДАННЫЕ ДЛЯ АВТОМАТИКИ СОЗДАНЫ!")
+    print("=" * 60)
+
+def create_completed_lessons(students, teachers, subjects, formats):
+    """Создает проведенные занятия - должны изменить балансы"""
+    count = 0
+    # Длительности занятий
+    durations = [45, 50, 60]
+    
+    for i in range(20):  # 20 проведенных занятий
         teacher = random.choice(teachers)
         student = random.choice(students)
+        subject = random.choice(list(teacher.subjects.all()) or subjects)
         
-        # Проверяем, есть ли уже занятие у этого учителя в это время
-        start_time, end_time = random.choice(time_slots)
+        # Дата в прошлом
+        lesson_date = date.today() - timedelta(days=random.randint(1, 10))
         
-        existing = Lesson.objects.filter(
-            teacher=teacher,
-            date=current_date,
-            start_time=start_time
-        ).exists()
+        # Стоимость от 650 до 1100 с шагом 50
+        cost = random.choice(range(650, 1150, 50))
         
-        if existing:
-            continue
+        # Случайный процент выплаты учителю (85% или 90%)
+        percentage = random.choice([0.85, 0.9])
+        teacher_payment = calculate_teacher_payment(cost, percentage)
         
-        # Определяем статус в зависимости от даты
-        if current_date <= first_period_end:
-            # Период 10.02-19.02: 90% проведены, 5% отменены, 5% запланированы
-            rand = random.random()
-            if rand < 0.9:
-                status = 'completed'
-            elif rand < 0.95:
-                status = 'cancelled'
-            else:
-                status = 'scheduled'
-        else:
-            # После 19.02: все запланированы (будут просрочены автоматически)
-            status = 'scheduled'
+        # Длительность занятия
+        duration = random.choice(durations)
         
-        # Выбираем предмет учителя
-        subject = random.choice(list(teacher.subjects.all()))
-        if not subject:
-            subject = random.choice(subjects)
+        # Время начала (с 9 до 19, чтобы занятие не выходило за 20:00)
+        start_hour = random.randint(9, 19)
+        start_minute = random.choice([0, 15, 30, 45])
+        start_time = time(start_hour, start_minute)
         
-        # Выбираем платформу
-        platform = random.choice(formats)
+        # Время окончания с учетом длительности
+        end_minutes = start_hour * 60 + start_minute + duration
+        end_time = time(end_minutes // 60, end_minutes % 60)
         
-        # Стоимость урока (от 650 до 1000)
-        cost = random.randint(650, 1000)
-        # Выплата учителю (минус 100-150)
-        teacher_payment = cost - random.randint(100, 150)
-        
-        # Создаем занятие
         lesson = Lesson.objects.create(
             teacher=teacher,
             student=student,
             subject=subject,
-            format=platform,
-            date=current_date,
+            format=random.choice(formats),
+            date=lesson_date,
             start_time=start_time,
             end_time=end_time,
-            duration=60,
+            duration=duration,
             cost=Decimal(str(cost)),
-            teacher_payment=Decimal(str(teacher_payment)),
+            teacher_payment=teacher_payment,
             meeting_link=f"https://zoom.us/j/{random.randint(100000, 999999)}",
-            meeting_platform=platform.name,
-            status=status
+            meeting_platform=random.choice(formats).name,
+            status='completed'
         )
         
-        # Если занятие проведено, обновляем балансы
-        if status == 'completed':
-            # У ученика баланс уменьшается
-            student.user.balance -= Decimal(str(cost))
-            student.user.save()
-            
-            # У учителя баланс увеличивается
-            teacher.wallet_balance += Decimal(str(teacher_payment))
-            teacher.save()
-            
-            # Создаем платеж
-            Payment.objects.create(
-                user=student.user,
-                amount=Decimal(str(cost)),
-                payment_type='expense',
-                description=f'Оплата занятия {lesson.date} ({lesson.subject.name})',
-                lesson=lesson
+        # АВТОМАТИЧЕСКИЙ РАСЧЕТ: уменьшаем баланс ученика, увеличиваем баланс учителя
+        student.user.balance -= Decimal(str(cost))
+        student.user.save()
+        
+        teacher.wallet_balance += teacher_payment
+        teacher.save()
+        
+        Payment.objects.create(
+            user=student.user,
+            amount=Decimal(str(cost)),
+            payment_type='expense',
+            description=f'Оплата проведенного занятия {lesson.date}',
+            lesson=lesson
+        )
+        
+        count += 1
+        
+        if count % 5 == 0:
+            print(f"    ... создано {count} проведенных занятий")
+    
+    print(f"  ✅ Создано {count} проведенных занятий")
+
+def create_scheduled_lessons(students, teachers, subjects, formats):
+    """Создает запланированные занятия - баланс НЕ меняется"""
+    count = 0
+    durations = [45, 50, 60]
+    
+    for i in range(15):  # 15 запланированных занятий
+        teacher = random.choice(teachers)
+        student = random.choice(students)
+        subject = random.choice(list(teacher.subjects.all()) or subjects)
+        
+        # Дата в будущем
+        lesson_date = date.today() + timedelta(days=random.randint(1, 14))
+        
+        cost = random.choice(range(650, 1150, 50))
+        percentage = random.choice([0.85, 0.9])
+        teacher_payment = calculate_teacher_payment(cost, percentage)
+        duration = random.choice(durations)
+        
+        start_hour = random.randint(9, 19)
+        start_minute = random.choice([0, 15, 30, 45])
+        start_time = time(start_hour, start_minute)
+        
+        end_minutes = start_hour * 60 + start_minute + duration
+        end_time = time(end_minutes // 60, end_minutes % 60)
+        
+        Lesson.objects.create(
+            teacher=teacher,
+            student=student,
+            subject=subject,
+            format=random.choice(formats),
+            date=lesson_date,
+            start_time=start_time,
+            end_time=end_time,
+            duration=duration,
+            cost=Decimal(str(cost)),
+            teacher_payment=teacher_payment,
+            meeting_link=f"https://zoom.us/j/{random.randint(100000, 999999)}",
+            meeting_platform=random.choice(formats).name,
+            status='scheduled'
+        )
+        count += 1
+    
+    print(f"  ✅ Создано {count} запланированных занятий")
+
+def create_cancelled_lessons(students, teachers, subjects, formats):
+    """Создает отмененные занятия - баланс НЕ меняется"""
+    count = 0
+    durations = [45, 50, 60]
+    
+    for i in range(5):  # 5 отмененных занятий
+        teacher = random.choice(teachers)
+        student = random.choice(students)
+        subject = random.choice(list(teacher.subjects.all()) or subjects)
+        
+        # Дата может быть в прошлом или будущем
+        if random.choice([True, False]):
+            lesson_date = date.today() - timedelta(days=random.randint(1, 5))
+        else:
+            lesson_date = date.today() + timedelta(days=random.randint(1, 5))
+        
+        cost = random.choice(range(650, 1150, 50))
+        percentage = random.choice([0.85, 0.9])
+        teacher_payment = calculate_teacher_payment(cost, percentage)
+        duration = random.choice(durations)
+        
+        start_hour = random.randint(9, 19)
+        start_minute = random.choice([0, 15, 30, 45])
+        start_time = time(start_hour, start_minute)
+        
+        end_minutes = start_hour * 60 + start_minute + duration
+        end_time = time(end_minutes // 60, end_minutes % 60)
+        
+        Lesson.objects.create(
+            teacher=teacher,
+            student=student,
+            subject=subject,
+            format=random.choice(formats),
+            date=lesson_date,
+            start_time=start_time,
+            end_time=end_time,
+            duration=duration,
+            cost=Decimal(str(cost)),
+            teacher_payment=teacher_payment,
+            meeting_link=f"https://zoom.us/j/{random.randint(100000, 999999)}",
+            meeting_platform=random.choice(formats).name,
+            status='cancelled'
+        )
+        count += 1
+    
+    print(f"  ✅ Создано {count} отмененных занятий")
+
+def create_overdue_lessons(students, teachers, subjects, formats):
+    """Создает просроченные занятия"""
+    count = 0
+    durations = [45, 50, 60]
+    
+    for i in range(8):  # 8 просроченных занятий
+        teacher = random.choice(teachers)
+        student = random.choice(students)
+        subject = random.choice(list(teacher.subjects.all()) or subjects)
+        
+        # Дата в прошлом (более 24 часов назад)
+        lesson_date = date.today() - timedelta(days=random.randint(2, 5))
+        
+        cost = random.choice(range(650, 1150, 50))
+        percentage = random.choice([0.85, 0.9])
+        teacher_payment = calculate_teacher_payment(cost, percentage)
+        duration = random.choice(durations)
+        
+        start_hour = random.randint(9, 19)
+        start_minute = random.choice([0, 15, 30, 45])
+        start_time = time(start_hour, start_minute)
+        
+        end_minutes = start_hour * 60 + start_minute + duration
+        end_time = time(end_minutes // 60, end_minutes % 60)
+        
+        Lesson.objects.create(
+            teacher=teacher,
+            student=student,
+            subject=subject,
+            format=random.choice(formats),
+            date=lesson_date,
+            start_time=start_time,
+            end_time=end_time,
+            duration=duration,
+            cost=Decimal(str(cost)),
+            teacher_payment=teacher_payment,
+            meeting_link=f"https://zoom.us/j/{random.randint(100000, 999999)}",
+            meeting_platform=random.choice(formats).name,
+            status='overdue'
+        )
+        count += 1
+    
+    print(f"  ✅ Создано {count} просроченных занятий")
+
+def create_future_overdue_lessons(students, teachers, subjects, formats):
+    """Создает занятия, которые СТАНУТ просроченными завтра"""
+    count = 0
+    durations = [45, 50, 60]
+    
+    for i in range(5):  # 5 занятий, которые просрочатся завтра
+        teacher = random.choice(teachers)
+        student = random.choice(students)
+        subject = random.choice(list(teacher.subjects.all()) or subjects)
+        
+        # Дата вчера (чтобы завтра стали просроченными)
+        lesson_date = date.today() - timedelta(days=1)
+        
+        cost = random.choice(range(650, 1150, 50))
+        percentage = random.choice([0.85, 0.9])
+        teacher_payment = calculate_teacher_payment(cost, percentage)
+        duration = random.choice(durations)
+        
+        start_hour = random.randint(9, 19)
+        start_minute = random.choice([0, 15, 30, 45])
+        start_time = time(start_hour, start_minute)
+        
+        end_minutes = start_hour * 60 + start_minute + duration
+        end_time = time(end_minutes // 60, end_minutes % 60)
+        
+        Lesson.objects.create(
+            teacher=teacher,
+            student=student,
+            subject=subject,
+            format=random.choice(formats),
+            date=lesson_date,
+            start_time=start_time,
+            end_time=end_time,
+            duration=duration,
+            cost=Decimal(str(cost)),
+            teacher_payment=teacher_payment,
+            meeting_link=f"https://zoom.us/j/{random.randint(100000, 999999)}",
+            meeting_platform=random.choice(formats).name,
+            status='scheduled'  # Сейчас запланированы, но вчерашняя дата!
+        )
+        count += 1
+    
+    print(f"  ✅ Создано {count} занятий, которые станут просроченными завтра")
+
+def check_balances():
+    """Проверяет корректность автоматического расчета балансов"""
+    
+    # Проверяем учеников
+    print("\n👨‍🎓 БАЛАНСЫ УЧЕНИКОВ:")
+    students_with_negative = 0
+    students_with_zero = 0
+    
+    for student in Student.objects.all()[:10]:  # Покажем первых 10
+        balance = student.user.balance
+        completed_lessons_sum = sum(
+            lesson.cost for lesson in Lesson.objects.filter(
+                student=student, 
+                status='completed'
             )
+        )
         
-        lessons_created += 1
+        print(f"  {student.user.get_full_name()}: {balance} руб.")
+        print(f"    Сумма проведенных занятий: {completed_lessons_sum} руб.")
         
-        if lessons_created % 10 == 0:
-            print(f"  ... создано {lessons_created} занятий")
+        if balance < 0:
+            students_with_negative += 1
+            print(f"    ⚠️ Долг: {abs(balance)} руб.")
+        elif balance == 0:
+            students_with_zero += 1
     
-    print(f"  ✅ Всего создано занятий: {lessons_created}")
+    print(f"\n  Итого: {students_with_negative} учеников в долгу, {students_with_zero} с нулевым балансом")
     
-    # 6. ИТОГИ
-    print("\n" + "=" * 60)
-    print("ИТОГИ СОЗДАНИЯ ТЕСТОВЫХ ДАННЫХ")
-    print("=" * 60)
-    print(f"📚 Предметы: {Subject.objects.count()}")
-    print(f"👨‍🏫 Учителя: {Teacher.objects.count()}")
-    print(f"🧑‍🎓 Ученики: {Student.objects.count()}")
-    print(f"📝 Занятия: {Lesson.objects.count()}")
+    # Проверяем учителей
+    print("\n👨‍🏫 БАЛАНСЫ УЧИТЕЛЕЙ:")
+    teachers_with_positive = 0
     
-    # Статистика по статусам
-    print(f"\n📊 Статистика по занятиям:")
-    print(f"  ✅ Проведено: {Lesson.objects.filter(status='completed').count()}")
-    print(f"  📅 Запланировано: {Lesson.objects.filter(status='scheduled').count()}")
-    print(f"  ❌ Отменено: {Lesson.objects.filter(status='cancelled').count()}")
-    print(f"  ⏰ Просрочено: {Lesson.objects.filter(status='overdue').count()}")
+    for teacher in Teacher.objects.all()[:10]:  # Покажем первых 10
+        balance = teacher.wallet_balance
+        completed_lessons_sum = sum(
+            lesson.teacher_payment for lesson in Lesson.objects.filter(
+                teacher=teacher, 
+                status='completed'
+            )
+        )
+        
+        print(f"  {teacher.user.get_full_name()}: {balance} руб.")
+        print(f"    Заработано за проведенные занятия: {completed_lessons_sum} руб.")
+        
+        if balance > 0:
+            teachers_with_positive += 1
     
-    # Финансовая статистика
-    total_teacher_balance = sum(t.wallet_balance for t in Teacher.objects.all())
+    print(f"\n  Итого: {teachers_with_positive} учителей с положительным балансом")
+    
+    # Общая статистика
     total_student_balance = sum(u.balance for u in User.objects.filter(role='student'))
+    total_teacher_balance = sum(t.wallet_balance for t in Teacher.objects.all())
     
-    print(f"\n💰 Финансовая статистика:")
-    print(f"  👨‍🏫 Общий баланс учителей: {total_teacher_balance:.2f} руб.")
-    print(f"  🧑‍🎓 Общий баланс учеников: {total_student_balance:.2f} руб.")
+    print(f"\n💰 ОБЩАЯ СТАТИСТИКА:")
+    print(f"  Суммарный долг учеников: {abs(total_student_balance):.2f} руб.")
+    print(f"  Суммарный заработок учителей: {total_teacher_balance:.2f} руб.")
     
-    print("=" * 60)
-    print("✅ ТЕСТОВЫЕ ДАННЫЕ УСПЕШНО СОЗДАНЫ!")
-    print("=" * 60)
+    # Проверяем консистентность
+    total_lessons_cost = sum(l.cost for l in Lesson.objects.filter(status='completed'))
+    total_teacher_payments = sum(l.teacher_payment for l in Lesson.objects.filter(status='completed'))
+    platform_commission = total_lessons_cost - total_teacher_payments
+    
+    print(f"\n📊 ПРОВЕРКА КОНСИСТЕНТНОСТИ:")
+    print(f"  Общая стоимость проведенных занятий: {total_lessons_cost:.2f} руб.")
+    print(f"  Общая сумма выплат учителям: {total_teacher_payments:.2f} руб.")
+    print(f"  Комиссия платформы: {platform_commission:.2f} руб.")
+    
+    if abs(abs(total_student_balance) - total_lessons_cost) < 0.01:
+        print("  ✅ Балансы учеников соответствуют проведенным занятиям")
+    else:
+        print(f"  ⚠️ Несоответствие: долг учеников {abs(total_student_balance)} vs стоимость занятий {total_lessons_cost}")
 
 if __name__ == '__main__':
     create_test_data()

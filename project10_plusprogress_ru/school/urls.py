@@ -16,6 +16,10 @@ urlpatterns = [
     
     # Teacher URLs
     path('teacher/dashboard/', views.teacher_dashboard, name='teacher_dashboard'),
+    path('admin/school/teacher/<int:teacher_id>/report/', views.teacher_report, name='admin-teacher-report'),
+    path('admin/teacher-payments/', views.teacher_payments_dashboard, name='teacher-payments-dashboard'),
+    path('admin/teacher-payments/calculate/', views.calculate_teacher_payment, name='calculate-teacher-payment'),
+    path('admin/teacher-payments/export/<str:format>/<int:teacher_id>/<str:start_date>/<str:end_date>/', views.export_teacher_payment, name='export-teacher-payment'),
     
     # Lesson URLs
     path('lessons/<int:lesson_id>/', views.lesson_detail, name='lesson_detail'),
@@ -32,6 +36,7 @@ urlpatterns = [
     path('student/dashboard/', views.student_dashboard, name='student_dashboard'),
     path('student/materials/', views.student_materials, name='student_materials'),
     path('student/deposit/', views.student_deposit, name='student_deposit'),
+    path('admin/school/student/<int:student_id>/report/', views.student_report, name='admin-student-report'),
     
     # Teacher URLs
     path('teacher/dashboard/', views.teacher_dashboard, name='teacher_dashboard'),
