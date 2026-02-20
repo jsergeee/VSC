@@ -1,9 +1,13 @@
-# school/views.py
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
-from django.db.models import Sum, Count
+from django.contrib import messages
+from django.db.models import Sum, Count, Q
+from django.utils import timezone
 from django.http import HttpResponse, JsonResponse
-from datetime import datetime, timedelta
+from django.views.decorators.http import require_GET, require_POST
+from datetime import datetime, date, timedelta
 from decimal import Decimal
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
@@ -17,28 +21,11 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 import io
 import json
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, authenticate, logout
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.db.models import Sum, Q
-from django.utils import timezone
-from django.http import JsonResponse
-from django.views.decorators.http import require_GET
-from django.http import JsonResponse
-from django.contrib.admin.views.decorators import staff_member_required
-from datetime import datetime, date, timedelta
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-from django.db.models import Count, Q
-from django.contrib import messages
-from django.db.models import Q, Sum
-from decimal import Decimal
-from datetime import date, timedelta
-from .models import Student, Teacher, Lesson, Material, Deposit, StudentNote
+
 from .models import (
     User, Teacher, Student, Lesson, Subject, 
-    LessonReport, Payment, TrialRequest, Schedule
+    LessonReport, Payment, TrialRequest, Schedule,
+    Material, Deposit, StudentNote
 )
 from .forms import (
     UserRegistrationForm, UserLoginForm, TrialRequestForm,
@@ -118,12 +105,7 @@ def student_dashboard(request):
         return redirect('dashboard')
     
     # ПОЛНОЕ обновление пользователя из базы данных
-    # Это гарантирует, что мы видим актуальные данные
     user = User.objects.get(pk=request.user.pk)
-    
-    from .models import Student, Lesson, Material
-    from datetime import date
-    from django.db.models import Q
     
     # Получаем профиль ученика
     try:
@@ -132,14 +114,16 @@ def student_dashboard(request):
         student = Student.objects.create(user=user)
         messages.info(request, 'Профиль ученика был создан')
     
-    # Принудительно обновляем профиль из базы
     student.refresh_from_db()
     
     # Получаем баланс
     balance = student.get_balance()
     
-    # Получаем учителей ученика (свежие данные)
+    # Получаем учителей ученика
     teachers = student.teachers.all()
+    
+    # Получаем последние депозиты
+    recent_deposits = student.deposits.all()[:5]
     
     # Получаем ближайшие занятия
     upcoming_lessons = Lesson.objects.filter(
@@ -159,24 +143,18 @@ def student_dashboard(request):
         Q(students=student) | Q(is_public=True) | Q(teachers__in=teachers)
     ).distinct()[:20]
     
-    # Отладка - выведем в консоль, что получаем
-    import logging
-    logging.info(f"Student: {student}")
-    logging.info(f"Teachers count: {teachers.count()}")
-    logging.info(f"Upcoming lessons: {upcoming_lessons.count()}")
-    
     context = {
         'student': student,
         'balance': balance,
+        'recent_deposits': recent_deposits,
         'upcoming_lessons': upcoming_lessons,
         'past_lessons': past_lessons,
         'teachers': teachers,
         'materials': materials,
-        'debug_user': user.username,
-        'debug_student_id': student.id,
     }
     
-    return render(request, 'school/student/dashboard_new.html', context)
+    return render(request, 'school/student/dashboard.html', context)
+
 
 @login_required
 def student_calendar(request):
@@ -204,350 +182,6 @@ def student_calendar(request):
         'calendar_events': calendar_events,
     }
     return render(request, 'school/student/calendar.html', context)
-
-
-@login_required
-def teacher_dashboard(request):
-    if request.user.role != 'teacher':
-        messages.error(request, 'Доступ запрещен')
-        return redirect('dashboard')
-    
-    teacher = request.user.teacher_profile
-    today = timezone.now().date()
-    
-    # Список учеников
-    students = Student.objects.filter(teachers=teacher)
-    
-    # Расписание на сегодня
-    today_lessons = Lesson.objects.filter(
-        teacher=teacher,
-        date=today
-    ).order_by('start_time')
-    
-    # Предстоящие занятия
-    upcoming_lessons = Lesson.objects.filter(
-        teacher=teacher,
-        date__gt=today,
-        status='scheduled'
-    ).order_by('date', 'start_time')[:10]
-    
-    # Баланс кошелька
-    wallet_balance = teacher.wallet_balance
-    
-    # Недавние выплаты
-    recent_payments = Payment.objects.filter(
-        user=request.user,
-        payment_type='teacher_payment'
-    ).order_by('-created_at')[:5]
-    
-    context = {
-        'teacher': teacher,
-        'students': students,
-        'today_lessons': today_lessons,
-        'upcoming_lessons': upcoming_lessons,
-        'wallet_balance': wallet_balance,
-        'recent_payments': recent_payments,
-    }
-    return render(request, 'school/teacher/dashboard.html', context)
-
-
-@login_required
-def lesson_detail(request, lesson_id):
-    lesson = get_object_or_404(Lesson, id=lesson_id)
-    
-    # Проверка доступа
-    user = request.user
-    if user.role == 'student' and lesson.student.user != user:
-        messages.error(request, 'Доступ запрещен')
-        return redirect('dashboard')
-    elif user.role == 'teacher' and lesson.teacher.user != user:
-        messages.error(request, 'Доступ запрещен')
-        return redirect('dashboard')
-    
-    report = None
-    if hasattr(lesson, 'report'):
-        report = lesson.report
-    
-    if request.method == 'POST' and user.role == 'teacher':
-        form = LessonReportForm(request.POST, instance=report)
-        if form.is_valid():
-            report = form.save(commit=False)
-            report.lesson = lesson
-            report.save()
-            
-            # Обновляем статус урока
-            lesson.status = 'completed'
-            lesson.save()
-            
-            messages.success(request, 'Отчет сохранен')
-            return redirect('lesson_detail', lesson_id=lesson.id)
-    else:
-        form = LessonReportForm(instance=report)
-    
-    context = {
-        'lesson': lesson,
-        'report': report,
-        'form': form if user.role == 'teacher' and lesson.status != 'completed' else None,
-    }
-    return render(request, 'school/lesson_detail.html', context)
-
-
-@login_required
-def profile(request):
-    if request.method == 'POST':
-        form = ProfileUpdateForm(request.POST, request.FILES, instance=request.user)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Профиль обновлен')
-            return redirect('profile')
-    else:
-        form = ProfileUpdateForm(instance=request.user)
-    
-    return render(request, 'school/profile.html', {'form': form})
-
-@require_GET
-def api_schedules(request):
-    """API для календаря расписаний"""
-    schedules = Schedule.objects.filter(is_active=True).select_related('teacher__user')
-    
-    events = []
-    today = date.today()
-    
-    for schedule in schedules:
-        # Генерируем события на месяц вперед
-        for i in range(30):
-            event_date = today + timedelta(days=i)
-            if event_date.weekday() == schedule.day_of_week:
-                # Проверяем, есть ли занятие в это время
-                lesson = Lesson.objects.filter(
-                    teacher=schedule.teacher,
-                    date=event_date,
-                    start_time=schedule.start_time
-                ).first()
-                
-                start_dt = datetime.combine(event_date, schedule.start_time)
-                end_dt = datetime.combine(event_date, schedule.end_time)
-                
-                event = {
-                    'id': f"schedule_{schedule.id}_{event_date}",
-                    'teacher_name': schedule.teacher.user.get_full_name(),
-                    'subject': 'Расписание',
-                    'start': start_dt.isoformat(),
-                    'end': end_dt.isoformat(),
-                    'color': '#28a745' if lesson else '#3788d8',
-                }
-                
-                if lesson:
-                    event['subject'] = lesson.subject.name
-                    event['student_name'] = lesson.student.user.get_full_name()
-                    event['status'] = lesson.status
-                
-                events.append(event)
-    
-    return JsonResponse(events, safe=False)
-
-@login_required
-def overdue_report(request):
-    """Отчет по просроченным занятиям"""
-    if request.user.role not in ['admin', 'teacher']:
-        messages.error(request, 'Доступ запрещен')
-        return redirect('dashboard')
-    
-    # Обновляем статусы просроченных занятий
-    now = timezone.now()
-    overdue_lessons = Lesson.objects.filter(
-        status='scheduled',
-        date__lt=now.date()
-    ) | Lesson.objects.filter(
-        status='scheduled',
-        date=now.date(),
-        start_time__lt=now.time()
-    )
-    
-    for lesson in overdue_lessons:
-        lesson.check_overdue()
-    
-    # Фильтры
-    teacher_id = request.GET.get('teacher')
-    student_id = request.GET.get('student')
-    date_from = request.GET.get('date_from')
-    date_to = request.GET.get('date_to')
-    
-    lessons = Lesson.objects.filter(status='overdue').select_related(
-        'teacher__user', 'student__user', 'subject'
-    )
-    
-    if teacher_id:
-        lessons = lessons.filter(teacher_id=teacher_id)
-    if student_id:
-        lessons = lessons.filter(student_id=student_id)
-    if date_from:
-        lessons = lessons.filter(date__gte=date_from)
-    if date_to:
-        lessons = lessons.filter(date__lte=date_to)
-    
-    # Статистика
-    stats = {
-        'total': lessons.count(),
-        'by_teacher': lessons.values('teacher__user__last_name').annotate(
-            count=Count('id')
-        ).order_by('-count'),
-        'by_subject': lessons.values('subject__name').annotate(
-            count=Count('id')
-        ).order_by('-count'),
-    }
-    
-    context = {
-        'lessons': lessons.order_by('-date', '-start_time'),
-        'stats': stats,
-        'teachers': Teacher.objects.all(),
-        'students': Student.objects.all(),
-    }
-    
-    return render(request, 'school/reports/overdue.html', context)
-
-@staff_member_required
-def schedule_calendar_data(request):
-    """API для календаря расписаний"""
-    schedules = Schedule.objects.filter(is_active=True).select_related('teacher__user')
-    
-    events = []
-    today = date.today()
-    
-    for i in range(60):
-        event_date = today + timedelta(days=i)
-        
-        # Ищем расписания на эту дату
-        day_schedules = schedules.filter(date=event_date)
-        
-        for schedule in day_schedules:
-            # Ищем занятие на это время
-            lesson = Lesson.objects.filter(
-                teacher=schedule.teacher,
-                date=event_date,
-                start_time=schedule.start_time
-            ).first()
-            
-            start_dt = datetime.combine(event_date, schedule.start_time)
-            end_dt = datetime.combine(event_date, schedule.end_time)
-            
-            # Определяем цвет
-            color = '#79aec8'  # синий по умолчанию (свободно)
-            if lesson:
-                if lesson.status == 'completed':
-                    color = '#28a745'  # зеленый
-                elif lesson.status == 'overdue':
-                    color = '#dc3545'  # красный
-                elif lesson.status == 'scheduled':
-                    color = '#007bff'  # синий
-                elif lesson.status == 'cancelled':
-                    color = '#fd7e14'  # оранжевый
-            
-            event = {
-                'id': f"schedule_{schedule.id}_{event_date}",
-                'schedule_id': schedule.id,
-                'teacher_name': schedule.teacher.user.get_full_name(),
-                'start': start_dt.isoformat(),
-                'end': end_dt.isoformat(),
-                'color': color,
-            }
-            
-            if lesson:
-                event['lesson_id'] = lesson.id
-                event['title'] = f"{schedule.teacher.user.last_name} - {lesson.subject.name}"
-                if lesson.student:
-                    event['title'] += f" ({lesson.student.user.last_name})"
-            else:
-                event['title'] = f"{schedule.teacher.user.last_name} - свободно"
-            
-            events.append(event)
-    
-    return JsonResponse(events, safe=False)
-
-@staff_member_required
-@require_POST
-def admin_complete_lesson(request, lesson_id):
-    """Завершает занятие из админ-панели"""
-    try:
-        lesson = Lesson.objects.get(pk=lesson_id)
-        
-        if lesson.status == 'completed':
-            return JsonResponse({'success': False, 'error': 'Занятие уже завершено'})
-        
-        report_data = {
-            'topic': request.POST.get('topic'),
-            'covered_material': request.POST.get('covered_material'),
-            'homework': request.POST.get('homework'),
-            'student_progress': request.POST.get('student_progress'),
-            'next_lesson_plan': request.POST.get('next_lesson_plan', '')
-        }
-        
-        # Проверяем обязательные поля
-        if not all([report_data['topic'], report_data['covered_material'], 
-                   report_data['homework'], report_data['student_progress']]):
-            return JsonResponse({'success': False, 'error': 'Заполните все обязательные поля'})
-        
-        report = lesson.mark_as_completed(report_data)
-        
-        return JsonResponse({
-            'success': True,
-            'report_id': report.id,
-            'message': f'Занятие завершено. Создан отчет #{report.id}'
-        })
-        
-    except Lesson.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Занятие не найдено'})
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
-
-
-@login_required
-def student_dashboard(request):
-    """Личный кабинет ученика"""
-    if request.user.role != 'student':
-        messages.error(request, 'Доступ запрещен')
-        return redirect('dashboard')
-    
-    student = request.user.student_profile
-    
-    # Получаем баланс
-    balance = student.get_balance()
-    
-    # Получаем последние депозиты
-    recent_deposits = student.deposits.all()[:5]
-    
-    # Получаем ближайшие занятия
-    upcoming_lessons = Lesson.objects.filter(
-        student=student,
-        date__gte=date.today(),
-        status='scheduled'
-    ).select_related('teacher__user', 'subject', 'format').order_by('date', 'start_time')[:10]
-    
-    # Получаем учителей ученика
-    teachers = student.teachers.all()
-    
-    # Получаем методические материалы (для этого ученика или публичные)
-    materials = Material.objects.filter(
-        Q(students=student) | Q(is_public=True) | Q(teachers__in=teachers)
-    ).distinct()[:20]
-    
-    # Получаем последние проведенные занятия
-    past_lessons = Lesson.objects.filter(
-        student=student,
-        status='completed'
-    ).select_related('teacher__user', 'subject').order_by('-date')[:10]
-    
-    context = {
-        'student': student,
-        'balance': balance,
-        'recent_deposits': recent_deposits,
-        'upcoming_lessons': upcoming_lessons,
-        'past_lessons': past_lessons,
-        'teachers': teachers,
-        'materials': materials,
-    }
-    
-    return render(request, 'school/student/dashboard_new.html', context)
 
 
 @login_required
@@ -586,6 +220,47 @@ def student_materials(request):
 
 
 @login_required
+def student_deposit(request):
+    """Пополнение баланса ученика"""
+    if request.user.role != 'student':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+    
+    if request.method == 'POST':
+        amount = request.POST.get('amount')
+        description = request.POST.get('description', 'Пополнение счета')
+        
+        try:
+            amount = float(amount)
+            if amount <= 0:
+                messages.error(request, 'Сумма должна быть положительной')
+                return redirect('student_dashboard')
+            
+            student = request.user.student_profile
+            
+            # Создаем депозит
+            deposit = Deposit.objects.create(
+                student=student,
+                amount=amount,
+                description=description,
+                created_by=request.user
+            )
+            
+            # Обновляем баланс пользователя
+            request.user.balance += amount
+            request.user.save()
+            
+            messages.success(request, f'Счет пополнен на {amount} ₽')
+            
+        except (ValueError, TypeError):
+            messages.error(request, 'Неверная сумма')
+        
+        return redirect('student_dashboard')
+    
+    return redirect('student_dashboard')
+
+
+@login_required
 def teacher_dashboard(request):
     """Личный кабинет учителя"""
     if request.user.role != 'teacher':
@@ -593,6 +268,7 @@ def teacher_dashboard(request):
         return redirect('dashboard')
     
     teacher = request.user.teacher_profile
+    today = timezone.now().date()
     
     # Получаем всех учеников учителя
     students = teacher.student_set.all().select_related('user')
@@ -600,14 +276,14 @@ def teacher_dashboard(request):
     # Получаем ближайшие занятия
     upcoming_lessons = Lesson.objects.filter(
         teacher=teacher,
-        date__gte=date.today(),
+        date__gte=today,
         status='scheduled'
     ).select_related('student__user', 'subject').order_by('date', 'start_time')[:20]
     
     # Получаем занятия на сегодня
     today_lessons = Lesson.objects.filter(
         teacher=teacher,
-        date=date.today(),
+        date=today,
         status='scheduled'
     ).select_related('student__user', 'subject').order_by('start_time')
     
@@ -635,7 +311,7 @@ def teacher_dashboard(request):
         'recent_payments': recent_payments,
     }
     
-    return render(request, 'school/teacher/dashboard_new.html', context)
+    return render(request, 'school/teacher/dashboard.html', context)
 
 
 @login_required
@@ -709,44 +385,258 @@ def teacher_materials(request):
 
 
 @login_required
-def student_deposit(request):
-    """Пополнение баланса ученика"""
-    if request.user.role != 'student':
+def lesson_detail(request, lesson_id):
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+    
+    # Проверка доступа
+    user = request.user
+    if user.role == 'student' and lesson.student.user != user:
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+    elif user.role == 'teacher' and lesson.teacher.user != user:
         messages.error(request, 'Доступ запрещен')
         return redirect('dashboard')
     
-    if request.method == 'POST':
-        amount = request.POST.get('amount')
-        description = request.POST.get('description', 'Пополнение счета')
-        
-        try:
-            amount = float(amount)
-            if amount <= 0:
-                messages.error(request, 'Сумма должна быть положительной')
-                return redirect('student_dashboard')
-            
-            student = request.user.student_profile
-            
-            # Создаем депозит
-            deposit = Deposit.objects.create(
-                student=student,
-                amount=amount,
-                description=description,
-                created_by=request.user
-            )
-            
-            # Обновляем баланс пользователя
-            request.user.balance += amount
-            request.user.save()
-            
-            messages.success(request, f'Счет пополнен на {amount} ₽')
-            
-        except (ValueError, TypeError):
-            messages.error(request, 'Неверная сумма')
-        
-        return redirect('student_dashboard')
+    report = None
+    if hasattr(lesson, 'report'):
+        report = lesson.report
     
-    return redirect('student_dashboard')
+    if request.method == 'POST' and user.role == 'teacher':
+        form = LessonReportForm(request.POST, instance=report)
+        if form.is_valid():
+            report = form.save(commit=False)
+            report.lesson = lesson
+            report.save()
+            
+            # Обновляем статус урока
+            lesson.status = 'completed'
+            lesson.save()
+            
+            messages.success(request, 'Отчет сохранен')
+            return redirect('lesson_detail', lesson_id=lesson.id)
+    else:
+        form = LessonReportForm(instance=report)
+    
+    context = {
+        'lesson': lesson,
+        'report': report,
+        'form': form if user.role == 'teacher' and lesson.status != 'completed' else None,
+    }
+    return render(request, 'school/lesson_detail.html', context)
+
+
+@login_required
+def profile(request):
+    if request.method == 'POST':
+        form = ProfileUpdateForm(request.POST, request.FILES, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Профиль обновлен')
+            return redirect('profile')
+    else:
+        form = ProfileUpdateForm(instance=request.user)
+    
+    return render(request, 'school/profile.html', {'form': form})
+
+
+@require_GET
+def api_schedules(request):
+    """API для календаря расписаний"""
+    schedules = Schedule.objects.filter(is_active=True).select_related('teacher__user')
+    
+    events = []
+    today = date.today()
+    
+    for schedule in schedules:
+        # Генерируем события на месяц вперед
+        for i in range(30):
+            event_date = today + timedelta(days=i)
+            if event_date.weekday() == schedule.day_of_week:
+                # Проверяем, есть ли занятие в это время
+                lesson = Lesson.objects.filter(
+                    teacher=schedule.teacher,
+                    date=event_date,
+                    start_time=schedule.start_time
+                ).first()
+                
+                start_dt = datetime.combine(event_date, schedule.start_time)
+                end_dt = datetime.combine(event_date, schedule.end_time)
+                
+                event = {
+                    'id': f"schedule_{schedule.id}_{event_date}",
+                    'teacher_name': schedule.teacher.user.get_full_name(),
+                    'subject': 'Расписание',
+                    'start': start_dt.isoformat(),
+                    'end': end_dt.isoformat(),
+                    'color': '#28a745' if lesson else '#3788d8',
+                }
+                
+                if lesson:
+                    event['subject'] = lesson.subject.name
+                    event['student_name'] = lesson.student.user.get_full_name()
+                    event['status'] = lesson.status
+                
+                events.append(event)
+    
+    return JsonResponse(events, safe=False)
+
+
+@login_required
+def overdue_report(request):
+    """Отчет по просроченным занятиям"""
+    if request.user.role not in ['admin', 'teacher']:
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+    
+    # Обновляем статусы просроченных занятий
+    now = timezone.now()
+    overdue_lessons = Lesson.objects.filter(
+        status='scheduled',
+        date__lt=now.date()
+    ) | Lesson.objects.filter(
+        status='scheduled',
+        date=now.date(),
+        start_time__lt=now.time()
+    )
+    
+    for lesson in overdue_lessons:
+        lesson.check_overdue()
+    
+    # Фильтры
+    teacher_id = request.GET.get('teacher')
+    student_id = request.GET.get('student')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    lessons = Lesson.objects.filter(status='overdue').select_related(
+        'teacher__user', 'student__user', 'subject'
+    )
+    
+    if teacher_id:
+        lessons = lessons.filter(teacher_id=teacher_id)
+    if student_id:
+        lessons = lessons.filter(student_id=student_id)
+    if date_from:
+        lessons = lessons.filter(date__gte=date_from)
+    if date_to:
+        lessons = lessons.filter(date__lte=date_to)
+    
+    # Статистика
+    stats = {
+        'total': lessons.count(),
+        'by_teacher': lessons.values('teacher__user__last_name').annotate(
+            count=Count('id')
+        ).order_by('-count'),
+        'by_subject': lessons.values('subject__name').annotate(
+            count=Count('id')
+        ).order_by('-count'),
+    }
+    
+    context = {
+        'lessons': lessons.order_by('-date', '-start_time'),
+        'stats': stats,
+        'teachers': Teacher.objects.all(),
+        'students': Student.objects.all(),
+    }
+    
+    return render(request, 'school/reports/overdue.html', context)
+
+
+@staff_member_required
+def schedule_calendar_data(request):
+    """API для календаря расписаний"""
+    schedules = Schedule.objects.filter(is_active=True).select_related('teacher__user')
+    
+    events = []
+    today = date.today()
+    
+    for i in range(60):
+        event_date = today + timedelta(days=i)
+        
+        # Ищем расписания на эту дату
+        day_schedules = schedules.filter(date=event_date)
+        
+        for schedule in day_schedules:
+            # Ищем занятие на это время
+            lesson = Lesson.objects.filter(
+                teacher=schedule.teacher,
+                date=event_date,
+                start_time=schedule.start_time
+            ).first()
+            
+            start_dt = datetime.combine(event_date, schedule.start_time)
+            end_dt = datetime.combine(event_date, schedule.end_time)
+            
+            # Определяем цвет
+            color = '#79aec8'  # синий по умолчанию (свободно)
+            if lesson:
+                if lesson.status == 'completed':
+                    color = '#28a745'  # зеленый
+                elif lesson.status == 'overdue':
+                    color = '#dc3545'  # красный
+                elif lesson.status == 'scheduled':
+                    color = '#007bff'  # синий
+                elif lesson.status == 'cancelled':
+                    color = '#fd7e14'  # оранжевый
+            
+            event = {
+                'id': f"schedule_{schedule.id}_{event_date}",
+                'schedule_id': schedule.id,
+                'teacher_name': schedule.teacher.user.get_full_name(),
+                'start': start_dt.isoformat(),
+                'end': end_dt.isoformat(),
+                'color': color,
+            }
+            
+            if lesson:
+                event['lesson_id'] = lesson.id
+                event['title'] = f"{schedule.teacher.user.last_name} - {lesson.subject.name}"
+                if lesson.student:
+                    event['title'] += f" ({lesson.student.user.last_name})"
+            else:
+                event['title'] = f"{schedule.teacher.user.last_name} - свободно"
+            
+            events.append(event)
+    
+    return JsonResponse(events, safe=False)
+
+
+@staff_member_required
+@require_POST
+def admin_complete_lesson(request, lesson_id):
+    """Завершает занятие из админ-панели"""
+    try:
+        lesson = Lesson.objects.get(pk=lesson_id)
+        
+        if lesson.status == 'completed':
+            return JsonResponse({'success': False, 'error': 'Занятие уже завершено'})
+        
+        report_data = {
+            'topic': request.POST.get('topic'),
+            'covered_material': request.POST.get('covered_material'),
+            'homework': request.POST.get('homework'),
+            'student_progress': request.POST.get('student_progress'),
+            'next_lesson_plan': request.POST.get('next_lesson_plan', '')
+        }
+        
+        # Проверяем обязательные поля
+        if not all([report_data['topic'], report_data['covered_material'], 
+                   report_data['homework'], report_data['student_progress']]):
+            return JsonResponse({'success': False, 'error': 'Заполните все обязательные поля'})
+        
+        report = lesson.mark_as_completed(report_data)
+        
+        return JsonResponse({
+            'success': True,
+            'report_id': report.id,
+            'message': f'Занятие завершено. Создан отчет #{report.id}'
+        })
+        
+    except Lesson.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Занятие не найдено'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
 
 @staff_member_required
 def student_report(request, student_id):
@@ -941,6 +831,7 @@ def teacher_payments_dashboard(request):
     }
     return render(request, 'admin/school/teacher_payments/dashboard.html', context)
 
+
 @staff_member_required
 def calculate_teacher_payment(request):
     """API для расчета выплат учителю за период"""
@@ -962,10 +853,6 @@ def calculate_teacher_payment(request):
             date__gte=start_date,
             date__lte=end_date
         ).select_related('student__user', 'subject').order_by('date')
-        
-        # Получаем все отчеты (если у вас есть модель TeacherPayment)
-        # Если нет - создаем временную структуру
-        reports = []  # Здесь будут отчеты, когда добавим модель
         
         # Агрегация по предметам
         subject_stats = completed_lessons.values(
@@ -1034,6 +921,7 @@ def calculate_teacher_payment(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
 
+
 @staff_member_required
 def export_teacher_payment(request, format, teacher_id, start_date, end_date):
     """Экспорт отчета в разных форматах"""
@@ -1060,6 +948,7 @@ def export_teacher_payment(request, format, teacher_id, start_date, end_date):
         return export_to_pdf(teacher, lessons, start, end, total_payment)
     else:
         return HttpResponse('Неподдерживаемый формат', status=400)
+
 
 def export_to_excel(teacher, lessons, start, end, total_payment):
     """Экспорт в Excel"""
@@ -1146,6 +1035,7 @@ def export_to_excel(teacher, lessons, start, end, total_payment):
     wb.save(response)
     return response
 
+
 def export_to_word(teacher, lessons, start, end, total_payment):
     """Экспорт в Word"""
     doc = Document()
@@ -1198,6 +1088,7 @@ def export_to_word(teacher, lessons, start, end, total_payment):
     
     doc.save(response)
     return response
+
 
 def export_to_pdf(teacher, lessons, start, end, total_payment):
     """Экспорт в PDF"""
