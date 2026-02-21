@@ -4,6 +4,8 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import User, TrialRequest, LessonReport
 from django import forms
 from .models import LessonFeedback
+from .models import Homework, HomeworkSubmission
+
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -212,4 +214,49 @@ class LessonFeedbackForm(forms.ModelForm):
         }
         help_texts = {
             'is_public': 'Если отметить, ваш отзыв может быть опубликован на сайте школы',
+        }
+        
+
+class HomeworkForm(forms.ModelForm):
+    """Форма создания домашнего задания"""
+    class Meta:
+        model = Homework
+        fields = ['title', 'description', 'attachments', 'deadline']
+        widgets = {
+            'deadline': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'rows': 5, 'class': 'form-control'}),
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'title': 'Название задания',
+            'description': 'Описание',
+            'attachments': 'Файл с заданием',
+            'deadline': 'Срок сдачи',
+        }
+
+class HomeworkSubmissionForm(forms.ModelForm):
+    """Форма сдачи домашнего задания"""
+    class Meta:
+        model = HomeworkSubmission
+        fields = ['answer_text', 'file']
+        widgets = {
+            'answer_text': forms.Textarea(attrs={'rows': 5, 'class': 'form-control', 'placeholder': 'Напишите ответ здесь...'}),
+        }
+        labels = {
+            'answer_text': 'Текст ответа',
+            'file': 'Прикрепить файл',
+        }
+
+class HomeworkCheckForm(forms.ModelForm):
+    """Форма проверки домашнего задания"""
+    class Meta:
+        model = HomeworkSubmission
+        fields = ['grade', 'teacher_comment']
+        widgets = {
+            'teacher_comment': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'grade': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 5}),
+        }
+        labels = {
+            'grade': 'Оценка',
+            'teacher_comment': 'Комментарий учителя',
         }

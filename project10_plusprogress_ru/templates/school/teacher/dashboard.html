@@ -169,9 +169,11 @@
 <div class="container mt-4">
     <!-- Приветствие (только имя) -->
     <div class="row mb-4">
-        <div class="col-12">
+        <div class="col-12 d-flex justify-content-between align-items-center">
             <h2>Здравствуйте, {{ user.first_name }}!</h2>
-            <p class="text-muted">Рады видеть вас в личном кабинете учителя</p>
+            <a href="{% url 'teacher_homeworks' %}" class="btn btn-success">
+                <i class="fa fa-book"></i> Домашние задания
+            </a>
         </div>
     </div>
 
@@ -554,7 +556,7 @@
     </div>
 </div>
 
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/ru.js'></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {

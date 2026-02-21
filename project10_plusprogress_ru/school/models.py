@@ -1,4 +1,6 @@
 # school/models.py
+import uuid
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
@@ -297,50 +299,62 @@ class Lesson(models.Model):
         ('overdue', 'Просрочено'),
         ('rescheduled', 'Перенесено'),
     )
-    
+
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='lessons', verbose_name='Учитель')
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='lessons', verbose_name='Ученик', null=True, blank=True)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='lessons', verbose_name='Ученик',
+                                null=True, blank=True)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, verbose_name='Предмет')
     format = models.ForeignKey(LessonFormat, on_delete=models.SET_NULL, null=True, verbose_name='Формат')
     schedule = models.ForeignKey(
-        Schedule, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        Schedule,
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
         related_name='lessons',
         verbose_name='Создано из расписания'
     )
-        # Поля для отслеживания переносов
+
+    # Поля для отслеживания переносов
     rescheduled_from = models.DateTimeField('Перенесено с', null=True, blank=True)
     rescheduled_to = models.DateTimeField('Перенесено на', null=True, blank=True)
     rescheduled_reason = models.TextField('Причина переноса', blank=True)
-    
+
     date = models.DateField('Дата')
     start_time = models.TimeField('Время начала')
     end_time = models.TimeField('Время окончания')
     duration = models.IntegerField('Длительность (минут)', default=60)
-    
+
     cost = models.DecimalField('Стоимость', max_digits=10, decimal_places=2)
     teacher_payment = models.DecimalField('Выплата учителю', max_digits=10, decimal_places=2)
-    
+
     meeting_link = models.URLField('Ссылка на занятие', blank=True)
     meeting_platform = models.CharField('Платформа', max_length=50, blank=True)
-    
+
+    # ===== НОВОЕ ПОЛЕ ДЛЯ ВИДЕО =====
+    video_room = models.CharField(
+        'Комната для видео',
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text='Уникальный идентификатор комнаты для Jitsi Meet'
+    )
+    # =================================
+
     status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='scheduled')
     notes = models.TextField('Заметки', blank=True)
-    
+
     created_at = models.DateTimeField('Создано', auto_now_add=True)
     updated_at = models.DateTimeField('Обновлено', auto_now=True)
-    
+
     class Meta:
         verbose_name = 'Занятие'
         verbose_name_plural = 'Занятия'
         ordering = ['-date', '-start_time']
-    
+
     def __str__(self):
         student_name = self.student.user.get_full_name() if self.student else 'Не назначен'
         return f"{self.subject} - {self.date} {self.start_time} ({student_name})"
-    
+
     def save(self, *args, **kwargs):
         # Автоматически вычисляем длительность
         if self.start_time and self.end_time:
@@ -348,24 +362,29 @@ class Lesson(models.Model):
             start = datetime.combine(datetime.today(), self.start_time)
             end = datetime.combine(datetime.today(), self.end_time)
             self.duration = int((end - start).total_seconds() / 60)
+
+        # Автоматически генерируем комнату для видео при создании
+        if not self.video_room and not self.pk:
+            import uuid
+            self.video_room = f"lesson-{uuid.uuid4().hex[:8]}"
+
         super().save(*args, **kwargs)
-        
-    
+
     def mark_as_completed(self, report_data=None):
         """
         Отмечает занятие как проведенное и создает отчет
-        
+
         Args:
             report_data: словарь с данными отчета (topic, covered_material, homework, student_progress, next_lesson_plan)
-        
+
         Returns:
             LessonReport: созданный отчет или None
         """
         from .models import LessonReport, Payment
-        
+
         self.status = 'completed'
         self.save()
-        
+
         # Создаем отчет, если переданы данные
         if report_data:
             report = LessonReport.objects.create(
@@ -376,16 +395,16 @@ class Lesson(models.Model):
                 student_progress=report_data.get('student_progress', ''),
                 next_lesson_plan=report_data.get('next_lesson_plan', '')
             )
-            
+
             # Начисляем выплату учителю
             self.teacher.wallet_balance += self.teacher_payment
             self.teacher.save()
-            
+
             # Списание с баланса ученика
             if self.student:
                 self.student.user.balance -= self.cost
                 self.student.user.save()
-                
+
                 # Создаем запись о платеже
                 Payment.objects.create(
                     user=self.student.user,
@@ -394,38 +413,38 @@ class Lesson(models.Model):
                     description=f'Оплата занятия {self.date} ({self.subject.name})',
                     lesson=self
                 )
-            
+
             return report
         return None
-    
+
     def check_overdue(self):
         """
         Проверяет, просрочено ли занятие
         Возвращает True, если статус изменен на 'overdue'
         """
         from datetime import datetime
-        
+
         if self.status != 'scheduled':
             return False
-        
+
         lesson_datetime = datetime.combine(self.date, self.start_time)
         now = datetime.now()
-        
+
         if lesson_datetime < now:
             self.status = 'overdue'
             self.save()
             return True
         return False
-    
+
     def reschedule(self, new_date, new_start_time, new_end_time, reason=''):
         """Перенос занятия на новое время"""
         from datetime import datetime
-        
+
         # Сохраняем информацию о переносе
         self.rescheduled_from = datetime.combine(self.date, self.start_time)
         self.status = 'rescheduled'
         self.save()
-        
+
         # Создаем новое занятие
         new_lesson = Lesson.objects.create(
             teacher=self.teacher,
@@ -440,13 +459,15 @@ class Lesson(models.Model):
             teacher_payment=self.teacher_payment,
             meeting_link=self.meeting_link,
             meeting_platform=self.meeting_platform,
+            video_room=f"lesson-{uuid.uuid4().hex[:8]}",  # Новая комната для нового урока
             status='scheduled',
             notes=f"Перенесено с {self.date} {self.start_time}. Причина: {reason}",
             rescheduled_from=datetime.combine(self.date, self.start_time),
             rescheduled_reason=reason
         )
-        
+
         return new_lesson
+
     
 class LessonReport(models.Model):
     lesson = models.OneToOneField(Lesson, on_delete=models.CASCADE, related_name='report', verbose_name='Занятие')
@@ -464,6 +485,8 @@ class LessonReport(models.Model):
     
     def __str__(self):
         return f"Отчет: {self.lesson}"
+
+
 
 
 class Payment(models.Model):
@@ -504,6 +527,7 @@ class TrialRequest(models.Model):
     
     def __str__(self):
         return f"{self.name} - {self.subject}"
+
     
 class Material(models.Model):
     """Методические материалы"""
@@ -610,6 +634,9 @@ class Notification(models.Model):
         ('homework_assigned', '📝 Новое задание'),
         ('feedback_received', '⭐ Новая оценка'),
         ('system', '⚙ Системное уведомление'),
+        ('homework_assigned', '📝 Новое задание'),
+        ('homework_submitted', '📤 Задание сдано'),
+        ('homework_checked', '✅ Задание проверено'),
     )
     
     user = models.ForeignKey(
@@ -818,3 +845,174 @@ class TeacherRating(models.Model):
             self.rating_5_count = self.rating_4_count = self.rating_3_count = self.rating_2_count = self.rating_1_count = 0
         
         self.save()
+        
+        
+class Homework(models.Model):
+    """Домашнее задание"""
+    lesson = models.ForeignKey(
+        Lesson, 
+        on_delete=models.CASCADE,
+        related_name='homeworks',
+        verbose_name='Урок'
+    )
+    teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.CASCADE,
+        related_name='given_homeworks',
+        verbose_name='Учитель'
+    )
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name='homeworks',
+        verbose_name='Ученик'
+    )
+    subject = models.ForeignKey(
+        Subject,
+        on_delete=models.CASCADE,
+        verbose_name='Предмет'
+    )
+    title = models.CharField(
+        max_length=200,
+        verbose_name='Название'
+    )
+    description = models.TextField(
+        verbose_name='Описание задания'
+    )
+    attachments = models.FileField(
+        upload_to='homeworks/attachments/',
+        blank=True,
+        null=True,
+        verbose_name='Файл с заданием'
+    )
+    deadline = models.DateTimeField(
+        verbose_name='Срок сдачи'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата выдачи'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата обновления'
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Активно'
+    )
+    
+    class Meta:
+        verbose_name = 'Домашнее задание'
+        verbose_name_plural = 'Домашние задания'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['student', 'deadline']),
+            models.Index(fields=['teacher', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.title} - {self.student.user.get_full_name()} ({self.deadline.strftime('%d.%m.%Y')})"
+    
+    def get_status(self):
+        """Возвращает статус задания для ученика"""
+        try:
+            submission = self.submission
+            if submission.status == 'submitted':
+                return 'submitted'
+            elif submission.status == 'checked':
+                return 'checked'
+        except HomeworkSubmission.DoesNotExist:
+            pass
+        
+        if timezone.now() > self.deadline:
+            return 'overdue'
+        return 'pending'
+    
+    def get_status_display(self):
+        status = self.get_status()
+        statuses = {
+            'pending': '⏳ Ожидает выполнения',
+            'submitted': '📤 Выполнено, ожидает проверки',
+            'checked': '✅ Проверено',
+            'overdue': '⚠️ Просрочено',
+        }
+        return statuses.get(status, status)
+
+
+class HomeworkSubmission(models.Model):
+    """Выполненное домашнее задание"""
+    STATUS_CHOICES = [
+        ('submitted', 'Отправлено на проверку'),
+        ('checked', 'Проверено'),
+    ]
+    
+    homework = models.OneToOneField(
+        Homework,
+        on_delete=models.CASCADE,
+        related_name='submission',
+        verbose_name='Задание'
+    )
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name='submissions',
+        verbose_name='Ученик'
+    )
+    answer_text = models.TextField(
+        verbose_name='Текст ответа',
+        blank=True
+    )
+    file = models.FileField(
+        upload_to='homeworks/submissions/',
+        verbose_name='Файл с работой',
+        blank=True,
+        null=True
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='submitted',
+        verbose_name='Статус'
+    )
+    grade = models.IntegerField(
+        null=True,
+        blank=True,
+        verbose_name='Оценка'
+    )
+    teacher_comment = models.TextField(
+        blank=True,
+        verbose_name='Комментарий учителя'
+    )
+    submitted_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата сдачи'
+    )
+    checked_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата проверки'
+    )
+    
+    class Meta:
+        verbose_name = 'Выполненное задание'
+        verbose_name_plural = 'Выполненные задания'
+    
+    def __str__(self):
+        return f"Решение: {self.homework.title} - {self.student}"
+    
+    def save(self, *args, **kwargs):
+        if self.pk is None:
+            # Создание уведомления при сдаче
+            self.create_notification()
+        super().save(*args, **kwargs)
+    
+    def create_notification(self):
+        """Уведомление учителю о сданном задании"""
+        from .models import Notification
+        Notification.objects.create(
+            user=self.homework.teacher.user,
+            title='📝 Сдано домашнее задание',
+            message=f"{self.student.user.get_full_name()} сдал задание: {self.homework.title}",
+            notification_type='homework_submitted',
+            link=f'/teacher/homework/{self.homework.id}/'
+        )

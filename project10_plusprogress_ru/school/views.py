@@ -38,6 +38,10 @@ from django.contrib import messages
 from django.db.models import Avg, Count
 from .models import Lesson, LessonFeedback, TeacherRating
 from .forms import LessonFeedbackForm
+from .models import Homework, HomeworkSubmission
+from .forms import HomeworkForm, HomeworkSubmissionForm, HomeworkCheckForm
+from django.utils import timezone
+import uuid
 
 
 
@@ -125,46 +129,56 @@ def student_dashboard(request):
     if request.user.role != 'student':
         messages.error(request, 'Доступ запрещен')
         return redirect('dashboard')
-    
+
     # ПОЛНОЕ обновление пользователя из базы данных
     user = User.objects.get(pk=request.user.pk)
-    
+
     # Получаем профиль ученика
     try:
         student = user.student_profile
     except:
         student = Student.objects.create(user=user)
         messages.info(request, 'Профиль ученика был создан')
-    
+
     student.refresh_from_db()
-    
+
     # Получаем баланс
     balance = student.get_balance()
-    
+
     # Получаем учителей ученика
     teachers = student.teachers.all()
-    
+
     # Получаем последние депозиты
     recent_deposits = student.deposits.all()[:5]
-    
+
     # Получаем ближайшие занятия
     upcoming_lessons = Lesson.objects.filter(
         student=student,
         date__gte=date.today(),
         status='scheduled'
     ).select_related('teacher__user', 'subject', 'format').order_by('date', 'start_time')[:10]
-    
+
     # Получаем последние проведенные занятия
     past_lessons = Lesson.objects.filter(
         student=student,
         status='completed'
     ).select_related('teacher__user', 'subject').order_by('-date')[:10]
-    
+
     # Получаем методические материалы
     materials = Material.objects.filter(
         Q(students=student) | Q(is_public=True) | Q(teachers__in=teachers)
     ).distinct()[:20]
-    
+
+    # ===== НОВЫЙ КОД: ПОЛУЧАЕМ ДОМАШНИЕ ЗАДАНИЯ =====
+    from .models import Homework  # импорт внутри функции
+    recent_homeworks = Homework.objects.filter(
+        student=student,
+        is_active=True
+    ).exclude(
+        submission__status='checked'
+    ).select_related('teacher__user', 'subject').order_by('deadline')[:4]
+    # ================================================
+
     context = {
         'student': student,
         'balance': balance,
@@ -173,11 +187,10 @@ def student_dashboard(request):
         'past_lessons': past_lessons,
         'teachers': teachers,
         'materials': materials,
+        'recent_homeworks': recent_homeworks,  # ← ДОБАВЛЯЕМ В КОНТЕКСТ
     }
-    
+
     return render(request, 'school/student/dashboard.html', context)
-
-
 @login_required
 def student_calendar(request):
     if request.user.role != 'student':
@@ -2116,3 +2129,226 @@ def student_feedbacks(request):
         'student': student,
     }
     return render(request, 'school/student/feedbacks.html', context)
+
+
+
+
+@login_required
+def teacher_homeworks(request):
+    """Список заданий для учителя"""
+    if request.user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+    
+    teacher = request.user.teacher_profile
+    
+    # Фильтры
+    student_id = request.GET.get('student')
+    status = request.GET.get('status')
+    
+    homeworks = Homework.objects.filter(teacher=teacher).select_related(
+        'student__user', 'subject'
+    ).prefetch_related('submission')
+    
+    if student_id:
+        homeworks = homeworks.filter(student_id=student_id)
+    
+    students = Student.objects.filter(teachers=teacher)
+    
+    # Статистика
+    stats = {
+        'total': homeworks.count(),
+        'pending': sum(1 for h in homeworks if h.get_status() == 'pending'),
+        'submitted': sum(1 for h in homeworks if h.get_status() == 'submitted'),
+        'checked': sum(1 for h in homeworks if h.get_status() == 'checked'),
+        'overdue': sum(1 for h in homeworks if h.get_status() == 'overdue'),
+    }
+    
+    context = {
+        'homeworks': homeworks.order_by('-created_at'),
+        'students': students,
+        'stats': stats,
+        'teacher': teacher,
+    }
+    return render(request, 'school/teacher/homeworks.html', context)
+
+
+@login_required
+def teacher_homework_create(request, student_id):
+    """Создание домашнего задания для конкретного ученика"""
+    if request.user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+    
+    teacher = request.user.teacher_profile
+    student = get_object_or_404(Student, id=student_id, teachers=teacher)
+    
+    if request.method == 'POST':
+        form = HomeworkForm(request.POST, request.FILES)
+        if form.is_valid():
+            homework = form.save(commit=False)
+            homework.teacher = teacher
+            homework.student = student
+            homework.subject = student.subjects.first()  # Или выбрать предмет
+            homework.save()
+            
+            # Уведомление ученику
+            Notification.objects.create(
+                user=student.user,
+                title='📝 Новое домашнее задание',
+                message=f"{teacher.user.get_full_name()} выдал задание: {homework.title}",
+                notification_type='homework_assigned',
+                link='/student/homeworks/'
+            )
+            
+            messages.success(request, f'Задание "{homework.title}" создано')
+            return redirect('teacher_homeworks')
+    else:
+        form = HomeworkForm()
+    
+    context = {
+        'form': form,
+        'student': student,
+        'teacher': teacher,
+    }
+    return render(request, 'school/teacher/homework_form.html', context)
+
+
+@login_required
+def teacher_homework_detail(request, homework_id):
+    """Детали задания для учителя (с возможностью проверки)"""
+    if request.user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+    
+    teacher = request.user.teacher_profile
+    homework = get_object_or_404(Homework, id=homework_id, teacher=teacher)
+    
+    submission = None
+    if hasattr(homework, 'submission'):
+        submission = homework.submission
+    
+    if request.method == 'POST' and submission:
+        form = HomeworkCheckForm(request.POST, instance=submission)
+        if form.is_valid():
+            submission = form.save(commit=False)
+            submission.status = 'checked'
+            submission.checked_at = timezone.now()
+            submission.save()
+            
+            # Уведомление ученику о проверке
+            Notification.objects.create(
+                user=homework.student.user,
+                title='✅ Задание проверено',
+                message=f"Ваше задание '{homework.title}' проверено. Оценка: {submission.grade}",
+                notification_type='homework_checked',
+                link='/student/homeworks/'
+            )
+            
+            messages.success(request, 'Задание проверено')
+            return redirect('teacher_homeworks')
+    else:
+        form = HomeworkCheckForm(instance=submission) if submission else None
+    
+    context = {
+        'homework': homework,
+        'submission': submission,
+        'form': form,
+        'teacher': teacher,
+    }
+    return render(request, 'school/teacher/homework_detail.html', context)
+
+
+@login_required
+def student_homeworks(request):
+    """Список заданий для ученика"""
+    if request.user.role != 'student':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+    
+    student = request.user.student_profile
+    
+    # Фильтры
+    status = request.GET.get('status')
+    
+    homeworks = Homework.objects.filter(student=student).select_related(
+        'teacher__user', 'subject'
+    ).prefetch_related('submission')
+    
+    if status:
+        if status == 'pending':
+            homeworks = [h for h in homeworks if h.get_status() == 'pending']
+        elif status == 'submitted':
+            homeworks = [h for h in homeworks if h.get_status() == 'submitted']
+        elif status == 'checked':
+            homeworks = [h for h in homeworks if h.get_status() == 'checked']
+        elif status == 'overdue':
+            homeworks = [h for h in homeworks if h.get_status() == 'overdue']
+    
+    # Статистика
+    all_homeworks = Homework.objects.filter(student=student)
+    stats = {
+        'total': all_homeworks.count(),
+        'pending': sum(1 for h in all_homeworks if h.get_status() == 'pending'),
+        'submitted': sum(1 for h in all_homeworks if h.get_status() == 'submitted'),
+        'checked': sum(1 for h in all_homeworks if h.get_status() == 'checked'),
+        'overdue': sum(1 for h in all_homeworks if h.get_status() == 'overdue'),
+    }
+    
+    context = {
+        'homeworks': homeworks,
+        'stats': stats,
+        'student': student,
+    }
+    return render(request, 'school/student/homeworks.html', context)
+
+
+@login_required
+def student_homework_detail(request, homework_id):
+    """Детали задания для ученика (с возможностью сдачи)"""
+    if request.user.role != 'student':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+    
+    student = request.user.student_profile
+    homework = get_object_or_404(Homework, id=homework_id, student=student)
+    
+    # Проверяем, есть ли уже сданное задание
+    try:
+        submission = homework.submission
+        can_submit = False
+    except HomeworkSubmission.DoesNotExist:
+        submission = None
+        can_submit = True
+    
+    if request.method == 'POST' and can_submit:
+        form = HomeworkSubmissionForm(request.POST, request.FILES)
+        if form.is_valid():
+            submission = form.save(commit=False)
+            submission.homework = homework
+            submission.student = student
+            submission.save()
+            
+            messages.success(request, 'Задание отправлено на проверку!')
+            return redirect('student_homeworks')
+    else:
+        form = HomeworkSubmissionForm()
+    
+    context = {
+        'homework': homework,
+        'submission': submission,
+        'form': form if can_submit else None,
+        'can_submit': can_submit,
+        'student': student,
+    }
+    return render(request, 'school/student/homework_detail.html', context)
+
+
+
+
+def generate_video_room(request, lesson_id):
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+    if not lesson.video_room:
+        lesson.video_room = str(uuid.uuid4())[:8]
+        lesson.save()
+    return JsonResponse({'room': lesson.video_room})

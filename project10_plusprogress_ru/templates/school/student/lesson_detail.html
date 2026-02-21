@@ -38,6 +38,32 @@
         border-radius: 50px;
         text-decoration: none;
         font-weight: bold;
+        transition: all 0.3s;
+    }
+    .zoom-link:hover {
+        background: #1a5bbf;
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+    .btn-video {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        padding: 15px 30px;
+        border-radius: 50px;
+        font-weight: bold;
+        transition: all 0.3s;
+        width: 100%;
+        margin-bottom: 10px;
+        display: inline-block;
+        text-decoration: none;
+    }
+    .btn-video:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        color: white;
+        text-decoration: none;
     }
     .status-badge { padding: 8px 16px; border-radius: 30px; font-size: 0.9rem; font-weight: 600; }
     .status-scheduled { background: #cce5ff; color: #004085; }
@@ -70,6 +96,19 @@
         padding: 12px 30px;
         border-radius: 50px;
         font-weight: bold;
+        transition: all 0.3s;
+    }
+    .btn-rating:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4);
+    }
+    .video-note {
+        background: #e8f4fd;
+        border-left: 4px solid #2196f3;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 10px;
+        font-size: 0.9rem;
     }
 </style>
 {% endblock %}
@@ -98,7 +137,7 @@
             <div class="col-md-4 text-right">
                 {% if lesson.status == 'scheduled' and lesson.meeting_link %}
                 <a href="{{ lesson.meeting_link }}" target="_blank" class="zoom-link">
-                    <i class="fa fa-video-camera"></i> Подключиться
+                    <i class="fa fa-video-camera"></i> Подключиться (Zoom)
                 </a>
                 {% endif %}
             </div>
@@ -136,6 +175,36 @@
                     <tr><td><strong>Время:</strong></td><td>{{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}</td></tr>
                 </table>
             </div>
+
+            <!-- ===== ВИДЕО-ЗВОНОК JITSI (НОВАЯ ВКЛАДКА) ===== -->
+            {% if lesson.status == 'scheduled' %}
+            <div class="info-card">
+                <h5><i class="fa fa-video-camera"></i> Видео-урок</h5>
+                <div class="text-center">
+                    {% with room_name="plusprogress-"|add:lesson.id|stringformat:"s"|add:"-"|add:lesson.date|date:"Ymd" %}
+                    <a href="https://meet.jit.si/{{ room_name }}#userInfo.displayName={{ request.user.get_full_name|urlencode }}&userInfo.email={{ request.user.email|urlencode }}&config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false"
+                       target="_blank"
+                       class="btn-video">
+                        <i class="fa fa-video-camera"></i> Начать видео-урок
+                    </a>
+                    {% endwith %}
+
+                    <div class="video-note text-left">
+                        <p><i class="fa fa-info-circle text-primary"></i> <strong>Как работает:</strong></p>
+                        <ul class="pl-3 mb-0">
+                            <li>Откроется новая вкладка с Jitsi Meet</li>
+                            <li>Войдите через Google (один раз)</li>
+                            <li>Учитель и ученик заходят по одной ссылке</li>
+                            <li>Кто первый зашел - тот и начинает урок</li>
+                        </ul>
+                    </div>
+
+                    <p class="text-muted mt-2 small">
+                        <i class="fa fa-user"></i> Вы зайдете как <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+                    </p>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Правая колонка -->
@@ -190,6 +259,7 @@
     </div>
 </div>
 
+<!-- Скрипт для звездочек -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const labels = document.querySelectorAll('.rating-stars-input label');

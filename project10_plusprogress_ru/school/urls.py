@@ -54,4 +54,12 @@ urlpatterns = [
     path('lesson/<int:lesson_id>/feedback/', views.lesson_feedback, name='lesson_feedback'),
     path('teacher/feedbacks/', views.teacher_feedbacks, name='teacher_feedbacks'),
     path('student/feedbacks/', views.student_feedbacks, name='student_feedbacks'),
+    
+    # Домашние задания
+path('teacher/homeworks/', views.teacher_homeworks, name='teacher_homeworks'),
+path('teacher/homework/create/<int:student_id>/', views.teacher_homework_create, name='teacher_homework_create'),
+path('teacher/homework/<int:homework_id>/', views.teacher_homework_detail, name='teacher_homework_detail'),
+
+path('student/homeworks/', views.student_homeworks, name='student_homeworks'),
+path('student/homework/<int:homework_id>/', views.student_homework_detail, name='student_homework_detail'),
 ]
