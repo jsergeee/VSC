@@ -30,6 +30,14 @@ from datetime import datetime
 from .models import Lesson, Teacher, Student, Subject, LessonFormat
 from django.template.loader import render_to_string
 from weasyprint import HTML
+from .models import Notification
+from django.utils.timesince import timesince
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.db.models import Avg, Count
+from .models import Lesson, LessonFeedback, TeacherRating
+from .forms import LessonFeedbackForm
 
 
 
@@ -411,32 +419,53 @@ def lesson_detail(request, lesson_id):
         messages.error(request, 'Доступ запрещен')
         return redirect('dashboard')
     
+    # Получаем предыдущие уроки с этим учителем (для ученика)
+    previous_lessons = []
+    if user.role == 'student':
+        previous_lessons = Lesson.objects.filter(
+            student=lesson.student,
+            teacher=lesson.teacher,
+            date__lt=lesson.date
+        ).order_by('-date', '-start_time')[:5]
+    
     report = None
     if hasattr(lesson, 'report'):
         report = lesson.report
     
-    if request.method == 'POST' and user.role == 'teacher':
-        form = LessonReportForm(request.POST, instance=report)
-        if form.is_valid():
-            report = form.save(commit=False)
-            report.lesson = lesson
-            report.save()
+    # Обработка POST запроса (оценка урока)
+    if request.method == 'POST' and user.role == 'student' and lesson.status == 'completed' and not hasattr(lesson, 'feedback'):
+        rating = request.POST.get('rating')
+        comment = request.POST.get('comment', '')
+        is_public = request.POST.get('is_public') == 'on'
+        
+        if rating and rating.isdigit():
+            from .models import LessonFeedback, TeacherRating
             
-            # Обновляем статус урока
-            lesson.status = 'completed'
-            lesson.save()
+            # Создаем оценку
+            feedback = LessonFeedback.objects.create(
+                lesson=lesson,
+                student=lesson.student,
+                teacher=lesson.teacher,
+                rating=int(rating),
+                comment=comment,
+                is_public=is_public
+            )
             
-            messages.success(request, 'Отчет сохранен')
+            # Обновляем рейтинг учителя
+            teacher_rating, created = TeacherRating.objects.get_or_create(teacher=lesson.teacher)
+            teacher_rating.update_stats()
+            
+            messages.success(request, 'Спасибо за вашу оценку!')
             return redirect('lesson_detail', lesson_id=lesson.id)
-    else:
-        form = LessonReportForm(instance=report)
+        else:
+            messages.error(request, 'Пожалуйста, поставьте оценку')
     
     context = {
         'lesson': lesson,
         'report': report,
-        'form': form if user.role == 'teacher' and lesson.status != 'completed' else None,
+        'previous_lessons': previous_lessons,
     }
-    return render(request, 'school/lesson_detail.html', context)
+    return render(request, 'school/student/lesson_detail.html', context)
 
 
 @login_required
@@ -1895,3 +1924,195 @@ def download_import_template(request):
     
     wb.save(response)
     return response
+
+
+
+@login_required
+def get_notifications(request):
+    """API для получения уведомлений (для AJAX)"""
+    try:
+        notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:20]
+        unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+        
+        notifications_data = []
+        for n in notifications:
+            # Вычисляем "сколько времени назад" безопасно
+            try:
+                time_diff = timezone.now() - n.created_at
+                if time_diff.days > 0:
+                    created_ago = f"{time_diff.days} дн. назад"
+                elif time_diff.seconds // 3600 > 0:
+                    created_ago = f"{time_diff.seconds // 3600} ч. назад"
+                elif time_diff.seconds // 60 > 0:
+                    created_ago = f"{time_diff.seconds // 60} мин. назад"
+                else:
+                    created_ago = "только что"
+            except:
+                created_ago = n.created_at.strftime('%d.%m.%Y %H:%M')
+            
+            notifications_data.append({
+                'id': n.id,
+                'title': n.title,
+                'message': n.message,
+                'type': n.notification_type,
+                'is_read': n.is_read,
+                'link': n.link if n.link else '',
+                'created_at': n.created_at.strftime('%d.%m.%Y %H:%M'),
+                'created_ago': created_ago,
+            })
+        
+        data = {
+            'unread_count': unread_count,
+            'notifications': notifications_data
+        }
+        
+        # Для отладки
+        print(f"📨 Уведомления для {request.user}: {len(notifications_data)} шт., непрочитано: {unread_count}")
+        
+        return JsonResponse(data)
+        
+    except Exception as e:
+        print(f"❌ Ошибка в get_notifications: {e}")
+        return JsonResponse({'error': str(e), 'notifications': [], 'unread_count': 0}, status=500)
+    
+    
+@login_required
+@require_POST
+def mark_notification_read(request, notification_id):
+    """Отметить уведомление как прочитанное"""
+    try:
+        notification = Notification.objects.get(id=notification_id, user=request.user)
+        notification.is_read = True
+        notification.save()
+        
+        # Получаем обновленное количество непрочитанных
+        unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+        
+        print(f"✅ Уведомление {notification_id} отмечено как прочитанное для {request.user}")
+        
+        return JsonResponse({
+            'status': 'ok', 
+            'unread_count': unread_count,
+            'message': 'Уведомление отмечено как прочитанное'
+        })
+    except Notification.DoesNotExist:
+        print(f"❌ Уведомление {notification_id} не найдено для {request.user}")
+        return JsonResponse({'status': 'error', 'message': 'Уведомление не найдено'}, status=404)
+    except Exception as e:
+        print(f"❌ Ошибка: {e}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@login_required
+@require_POST
+def mark_all_notifications_read(request):
+    """Отметить все уведомления как прочитанные"""
+    try:
+        count = Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        print(f"✅ Отмечено {count} уведомлений как прочитанные для {request.user}")
+        return JsonResponse({
+            'status': 'ok', 
+            'count': count,
+            'message': f'Отмечено {count} уведомлений'
+        })
+    except Exception as e:
+        print(f"❌ Ошибка: {e}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    
+    
+
+
+@login_required
+def lesson_feedback(request, lesson_id):
+    """Страница оценки урока"""
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+    
+    # Проверяем, что ученик имеет право оценивать
+    if request.user.role != 'student' or lesson.student.user != request.user:
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+    
+    # Проверяем, что урок проведен
+    if lesson.status != 'completed':
+        messages.error(request, 'Можно оценивать только проведенные уроки')
+        return redirect('student_dashboard')
+    
+    # Проверяем, не оценивал ли уже
+    if hasattr(lesson, 'feedback'):
+        messages.info(request, 'Вы уже оценили этот урок')
+        return redirect('student_dashboard')
+    
+    if request.method == 'POST':
+        form = LessonFeedbackForm(request.POST)
+        if form.is_valid():
+            feedback = form.save(commit=False)
+            feedback.lesson = lesson
+            feedback.student = lesson.student
+            feedback.teacher = lesson.teacher
+            feedback.save()
+            
+            messages.success(request, 'Спасибо за вашу оценку! Отзыв поможет нам стать лучше.')
+            return redirect('student_dashboard')
+    else:
+        form = LessonFeedbackForm()
+    
+    context = {
+        'lesson': lesson,
+        'form': form,
+    }
+    return render(request, 'school/student/lesson_feedback.html', context)
+
+
+@login_required
+def teacher_feedbacks(request):
+    """Страница с отзывами для учителя"""
+    if request.user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+    
+    teacher = request.user.teacher_profile
+    feedbacks = LessonFeedback.objects.filter(teacher=teacher).select_related(
+        'lesson', 'student__user', 'lesson__subject'
+    ).order_by('-created_at')
+    
+    # Статистика
+    stats = feedbacks.aggregate(
+        avg_rating=Avg('rating'),
+        total=Count('id')
+    )
+    
+    # Распределение по звездам
+    rating_distribution = {
+        5: feedbacks.filter(rating=5).count(),
+        4: feedbacks.filter(rating=4).count(),
+        3: feedbacks.filter(rating=3).count(),
+        2: feedbacks.filter(rating=2).count(),
+        1: feedbacks.filter(rating=1).count(),
+    }
+    
+    context = {
+        'feedbacks': feedbacks,
+        'stats': stats,
+        'rating_distribution': rating_distribution,
+        'teacher': teacher,
+    }
+    return render(request, 'school/teacher/feedbacks.html', context)
+
+
+@login_required
+def student_feedbacks(request):
+    """Страница с отзывами для ученика"""
+    if request.user.role != 'student':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+    
+    student = request.user.student_profile
+    feedbacks = LessonFeedback.objects.filter(student=student).select_related(
+        'lesson', 'teacher__user', 'lesson__subject'
+    ).order_by('-created_at')
+    
+    context = {
+        'feedbacks': feedbacks,
+        'student': student,
+    }
+    return render(request, 'school/student/feedbacks.html', context)

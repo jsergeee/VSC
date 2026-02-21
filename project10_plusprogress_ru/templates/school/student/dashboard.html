@@ -5,8 +5,36 @@
 
 {% block extra_css %}
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<style>
+    /* Стили для звездочек и кнопок */
+    .rating-stars {
+        color: #ffc107;
+        font-size: 1.2rem;
+        letter-spacing: 2px;
+    }
 
+    .btn-rating {
+        background: linear-gradient(45deg, #ffc107, #ff9800);
+        border: none;
+        color: white;
+        transition: all 0.3s;
+    }
 
+    .btn-rating:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4);
+        color: white;
+    }
+
+    .feedback-badge {
+        background: #e8f5e9;
+        color: #2e7d32;
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        border: 1px solid #c8e6c9;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -115,6 +143,19 @@
                             <p class="card-text">
                                 <i class="fa fa-star text-warning"></i> Опыт: {{ teacher.experience }} лет
                             </p>
+
+                            <!-- Рейтинг учителя (если есть) -->
+                            {% if teacher.rating_stats %}
+                            <div class="mb-2">
+                                <span class="rating-stars">
+                                    {% for i in "12345"|make_list %}
+                                        {% if forloop.counter <= teacher.rating_stats.average_rating %}★{% else %}☆{% endif %}
+                                    {% endfor %}
+                                </span>
+                                <small class="text-muted ml-1">({{ teacher.rating_stats.total_feedbacks }} оценок)</small>
+                            </div>
+                            {% endif %}
+
                             <a href="#" class="btn btn-outline-primary btn-sm" data-toggle="modal"
                                 data-target="#teacherModal{{ teacher.id }}">
                                 Подробнее
@@ -149,6 +190,20 @@
                                             <span class="badge badge-info">{{ subject.name }}</span>
                                             {% endfor %}
                                         </p>
+
+                                        <!-- Рейтинг в модалке -->
+                                        {% if teacher.rating_stats %}
+                                        <h6>Рейтинг:</h6>
+                                        <div class="mb-3">
+                                            <div class="rating-stars mb-2">
+                                                {% for i in "12345"|make_list %}
+                                                    {% if forloop.counter <= teacher.rating_stats.average_rating %}★{% else %}☆{% endif %}
+                                                {% endfor %}
+                                                <span class="ml-2">{{ teacher.rating_stats.average_rating|floatformat:1 }} / 5</span>
+                                            </div>
+                                            <small class="text-muted">На основе {{ teacher.rating_stats.total_feedbacks }} оценок</small>
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -243,23 +298,53 @@
                     <div class="lesson-item completed">
                         <div class="row align-items-center">
                             <div class="col-md-3">
-                                <strong>{{ lesson.date|date:"d.m.Y" }}</strong>
+                                <strong>{{ lesson.date|date:"d.m.Y" }}</strong><br>
+                                <small class="text-muted">{{ lesson.start_time|time:"H:i" }}</small>
                             </div>
                             <div class="col-md-3">
                                 <strong>{{ lesson.subject.name }}</strong><br>
                                 <small class="text-muted">{{ lesson.teacher.user.get_full_name }}</small>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <span class="badge badge-success">Проведено</span>
                             </div>
-                            <div class="col-md-3 text-right">
+                            <div class="col-md-4 text-right">
                                 {% if lesson.report %}
                                 <a href="{% url 'lesson_detail' lesson.id %}" class="btn btn-sm btn-info">
                                     <i class="fa fa-file-text"></i> Отчет
                                 </a>
                                 {% endif %}
+
+                                <!-- Кнопки оценок -->
+                                {% if lesson.feedback %}
+                                <span class="feedback-badge">
+                                    <i class="fa fa-star text-warning"></i>
+                                    Ваша оценка:
+                                    <span class="rating-stars">
+                                        {% for i in "12345"|make_list %}
+                                            {% if forloop.counter <= lesson.feedback.rating %}★{% else %}☆{% endif %}
+                                        {% endfor %}
+                                    </span>
+                                </span>
+                                {% else %}
+                                <a href="{% url 'lesson_feedback' lesson.id %}" class="btn btn-sm btn-rating">
+                                    <i class="fa fa-star"></i> Оценить урок
+                                </a>
+                                {% endif %}
                             </div>
                         </div>
+
+                        <!-- Если есть комментарий в оценке -->
+                        {% if lesson.feedback and lesson.feedback.comment %}
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <div class="bg-light p-2 rounded">
+                                    <i class="fa fa-quote-left text-muted"></i>
+                                    {{ lesson.feedback.comment|truncatechars:100 }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                     {% else %}
@@ -299,34 +384,34 @@
             allDaySlot: false,
             events: [
                 {% for lesson in upcoming_lessons %}
-            {
-                title: '{{ lesson.subject.name }} - {{ lesson.teacher.user.last_name }}',
-                start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
-                end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
-                url: '{{ lesson.meeting_link }}',
-                backgroundColor: '#007bff',
-                borderColor: '#007bff'
-            },
-            {% endfor %}
-            {% for lesson in past_lessons %}
-    {
-        title: '{{ lesson.subject.name }} - {{ lesson.teacher.user.last_name }}',
-            start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
-                end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
+                {
+                    title: '{{ lesson.subject.name }} - {{ lesson.teacher.user.last_name }}',
+                    start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
+                    end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
+                    url: "{% url 'lesson_detail' lesson.id %}",
+                    backgroundColor: '#007bff',
+                    borderColor: '#007bff'
+                },
+                {% endfor %}
+                {% for lesson in past_lessons %}
+                {
+                    title: '{{ lesson.subject.name }} - {{ lesson.teacher.user.last_name }}',
+                    start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
+                    end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
                     backgroundColor: '#28a745',
-                        borderColor: '#28a745',
-                            url: '{% if lesson.report %}{% url "lesson_detail" lesson.id %}{% endif %}'
-    },
-    {% endfor %}
-        ],
-    eventClick: function(info) {
-        if (info.event.url) {
-            window.open(info.event.url, '_blank');
-        }
-    }
+                    borderColor: '#28a745',
+                    url: "{% url 'lesson_detail' lesson.id %}"
+                },
+                {% endfor %}
+            ],
+            eventClick: function(info) {
+                if (info.event.url) {
+                    window.open(info.event.url, '_blank');
+                }
+            }
+        });
+        calendar.render();
     });
-    calendar.render();
-});
 
     function filterMaterials(type) {
         const items = document.querySelectorAll('.material-item');

@@ -2378,3 +2378,84 @@ ul.benefits.white li i {
 	}
 
 }
+
+
+/* Уведомления */
+.notifications-dropdown {
+    width: 350px;
+    max-height: 500px;
+    overflow: hidden;
+    padding: 0;
+}
+
+.notifications-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    border-bottom: 1px solid #dee2e6;
+    background-color: #f8f9fa;
+}
+
+.notifications-header h6 {
+    margin: 0;
+}
+
+.notifications-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.notification-item {
+    padding: 12px 15px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.notification-item:hover {
+    background-color: #f8f9fa;
+}
+
+.notification-item.unread {
+    background-color: #e8f4fd;
+}
+
+.notification-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+    margin-right: 12px;
+}
+
+.notification-icon i {
+    font-size: 20px;
+}
+
+.notification-content {
+    flex: 1;
+}
+
+.notification-title {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.notification-message {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 4px;
+}
+
+.notification-time {
+    font-size: 0.8em;
+    color: #999;
+}
+
+.notifications-footer {
+    border-top: 1px solid #dee2e6;
+}

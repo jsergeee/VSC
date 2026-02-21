@@ -37,9 +37,21 @@ urlpatterns = [
     path('student/materials/', views.student_materials, name='student_materials'),
     path('student/deposit/', views.student_deposit, name='student_deposit'),
     path('admin/school/student/<int:student_id>/report/', views.student_report, name='admin-student-report'),
+    path('lesson/<int:lesson_id>/', views.lesson_detail, name='lesson_detail'),
+    path('lesson/<int:lesson_id>/feedback/', views.lesson_feedback, name='lesson_feedback'),
     
     # Teacher URLs
     path('teacher/dashboard/', views.teacher_dashboard, name='teacher_dashboard'),
     path('teacher/student/<int:student_id>/', views.teacher_student_detail, name='teacher_student_detail'),
     path('teacher/materials/', views.teacher_materials, name='teacher_materials'),
+    
+        # Уведомления
+    path('api/notifications/', views.get_notifications, name='api_notifications'),
+    path('api/notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
+    path('api/notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
+    
+    # Оценки уроков
+    path('lesson/<int:lesson_id>/feedback/', views.lesson_feedback, name='lesson_feedback'),
+    path('teacher/feedbacks/', views.teacher_feedbacks, name='teacher_feedbacks'),
+    path('student/feedbacks/', views.student_feedbacks, name='student_feedbacks'),
 ]

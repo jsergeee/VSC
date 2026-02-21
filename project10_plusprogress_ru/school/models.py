@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta, datetime
+from django.db.models import Avg, Sum, Count
 
 
 class User(AbstractUser):
@@ -595,3 +596,225 @@ def save(self, *args, **kwargs):
             self.schedule = schedule
     
     super().save(*args, **kwargs)
+    
+    
+class Notification(models.Model):
+    """Система уведомлений для пользователей"""
+    NOTIFICATION_TYPES = (
+        ('lesson_reminder', '🔔 Напоминание о занятии'),
+        ('lesson_canceled', '❌ Занятие отменено'),
+        ('lesson_completed', '✅ Занятие проведено'),
+        ('payment_received', '💰 Поступление средств'),
+        ('payment_withdrawn', '💸 Списание средств'),
+        ('material_added', '📚 Новый материал'),
+        ('homework_assigned', '📝 Новое задание'),
+        ('feedback_received', '⭐ Новая оценка'),
+        ('system', '⚙ Системное уведомление'),
+    )
+    
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE,
+        related_name='notifications',
+        verbose_name='Пользователь'
+    )
+    title = models.CharField(
+        max_length=200,
+        verbose_name='Заголовок'
+    )
+    message = models.TextField(
+        verbose_name='Сообщение'
+    )
+    notification_type = models.CharField(
+        max_length=20,
+        choices=NOTIFICATION_TYPES,
+        default='system',
+        verbose_name='Тип уведомления'
+    )
+    is_read = models.BooleanField(
+        default=False,
+        verbose_name='Прочитано'
+    )
+    link = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name='Ссылка'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Создано'
+    )
+    expires_at = models.DateTimeField(
+        null=True, 
+        blank=True,
+        verbose_name='Истекает'
+    )
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Уведомление'
+        verbose_name_plural = 'Уведомления'
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['user', 'is_read']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username}: {self.title}"
+    
+    def mark_as_read(self):
+        """Отметить как прочитанное"""
+        self.is_read = True
+        self.save()
+    
+    @classmethod
+    def get_unread_count(cls, user):
+        """Количество непрочитанных уведомлений для пользователя"""
+        return cls.objects.filter(user=user, is_read=False).count()
+    
+    
+    
+class LessonFeedback(models.Model):
+    """Обратная связь по уроку от ученика"""
+    RATING_CHOICES = [
+        (1, '⭐ Ужасно'),
+        (2, '⭐⭐ Плохо'),
+        (3, '⭐⭐⭐ Нормально'),
+        (4, '⭐⭐⭐⭐ Хорошо'),
+        (5, '⭐⭐⭐⭐⭐ Отлично'),
+    ]
+    
+    lesson = models.OneToOneField(
+        Lesson, 
+        on_delete=models.CASCADE,
+        related_name='feedback',
+        verbose_name='Урок'
+    )
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name='feedbacks',
+        verbose_name='Ученик'
+    )
+    teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.CASCADE,
+        related_name='feedbacks',
+        verbose_name='Учитель'
+    )
+    rating = models.IntegerField(
+        choices=RATING_CHOICES,
+        verbose_name='Оценка'
+    )
+    comment = models.TextField(
+        verbose_name='Комментарий',
+        blank=True,
+        help_text='Что понравилось? Что можно улучшить?'
+    )
+    is_public = models.BooleanField(
+        default=False,
+        verbose_name='Публичный отзыв',
+        help_text='Показывать на сайте?'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата оценки'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата обновления'
+    )
+    
+    class Meta:
+        verbose_name = 'Оценка урока'
+        verbose_name_plural = 'Оценки уроков'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['teacher', '-created_at']),
+            models.Index(fields=['student', '-created_at']),
+            models.Index(fields=['rating']),
+        ]
+    
+    def __str__(self):
+        return f"{self.student} оценил {self.teacher} на {self.rating}⭐"
+    
+    def save(self, *args, **kwargs):
+        # При создании оценки создаем уведомление
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        
+        if is_new:
+            self.create_notifications()
+    
+    def create_notifications(self):
+        """Создает уведомления для учителя и админа"""
+        from .models import Notification
+        
+        # Уведомление учителю
+        Notification.objects.create(
+            user=self.teacher.user,
+            title=f'⭐ Новая оценка: {self.rating}/5',
+            message=f'Ученик {self.student.user.get_full_name()} оценил урок по {self.lesson.subject.name}. Комментарий: {self.comment[:50]}...',
+            notification_type='feedback_received',
+            link=f'/teacher/feedbacks/#feedback-{self.id}'
+        )
+        
+        # Уведомление админам
+        admin_users = User.objects.filter(role='admin')
+        for admin in admin_users:
+            Notification.objects.create(
+                user=admin,
+                title=f'⭐ Новая оценка: {self.rating}/5',
+                message=f'Учитель: {self.teacher.user.get_full_name()}, Ученик: {self.student.user.get_full_name()}, Предмет: {self.lesson.subject.name}',
+                notification_type='feedback_received',
+                link=f'/admin/school/lessonfeedback/{self.id}/change/'
+            )
+
+
+class TeacherRating(models.Model):
+    """Агрегированный рейтинг учителя"""
+    teacher = models.OneToOneField(
+        Teacher,
+        on_delete=models.CASCADE,
+        related_name='rating_stats',
+        verbose_name='Учитель'
+    )
+    average_rating = models.FloatField(
+        default=0,
+        verbose_name='Средний балл'
+    )
+    total_feedbacks = models.IntegerField(
+        default=0,
+        verbose_name='Всего оценок'
+    )
+    rating_5_count = models.IntegerField(default=0, verbose_name='5⭐')
+    rating_4_count = models.IntegerField(default=0, verbose_name='4⭐')
+    rating_3_count = models.IntegerField(default=0, verbose_name='3⭐')
+    rating_2_count = models.IntegerField(default=0, verbose_name='2⭐')
+    rating_1_count = models.IntegerField(default=0, verbose_name='1⭐')
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Рейтинг учителя'
+        verbose_name_plural = 'Рейтинги учителей'
+    
+    def __str__(self):
+        return f"{self.teacher}: {self.average_rating:.1f}⭐ ({self.total_feedbacks} оценок)"
+    
+    def update_stats(self):
+        """Обновляет статистику из всех оценок"""
+        feedbacks = LessonFeedback.objects.filter(teacher=self.teacher)
+        self.total_feedbacks = feedbacks.count()
+        
+        if self.total_feedbacks > 0:
+            self.average_rating = feedbacks.aggregate(Avg('rating'))['rating__avg'] or 0
+            self.rating_5_count = feedbacks.filter(rating=5).count()
+            self.rating_4_count = feedbacks.filter(rating=4).count()
+            self.rating_3_count = feedbacks.filter(rating=3).count()
+            self.rating_2_count = feedbacks.filter(rating=2).count()
+            self.rating_1_count = feedbacks.filter(rating=1).count()
+        else:
+            self.average_rating = 0
+            self.rating_5_count = self.rating_4_count = self.rating_3_count = self.rating_2_count = self.rating_1_count = 0
+        
+        self.save()

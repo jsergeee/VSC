@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Урок {{ lesson.subject.name }} - {{ lesson.date }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .lesson-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        padding: 30px;
+        color: white;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    .lesson-header h1 { font-size: 2.5rem; margin-bottom: 10px; }
+    .lesson-header .badge { font-size: 1rem; padding: 10px 20px; border-radius: 30px; }
+    .info-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        border: 1px solid #f0f0f0;
+    }
+    .teacher-photo {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #667eea;
+    }
+    .zoom-link {
+        display: inline-block;
+        padding: 15px 30px;
+        background: #2d8cff;
+        color: white;
+        border-radius: 50px;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    .status-badge { padding: 8px 16px; border-radius: 30px; font-size: 0.9rem; font-weight: 600; }
+    .status-scheduled { background: #cce5ff; color: #004085; }
+    .status-completed { background: #d4edda; color: #155724; }
+    .status-cancelled { background: #f8d7da; color: #721c24; }
+    .status-overdue { background: #fff3cd; color: #856404; }
+    .rating-stars-input {
+        display: flex;
+        flex-direction: row-reverse;
+        justify-content: center;
+        gap: 10px;
+    }
+    .rating-stars-input input { display: none; }
+    .rating-stars-input label {
+        font-size: 50px;
+        color: #ddd;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .rating-stars-input label:hover,
+    .rating-stars-input label:hover~label,
+    .rating-stars-input input:checked~label {
+        color: #ffd700;
+        transform: scale(1.1);
+    }
+    .btn-rating {
+        background: linear-gradient(45deg, #ffc107, #ff9800);
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 50px;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Заголовок урока -->
+    <div class="lesson-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1>{{ lesson.subject.name }}</h1>
+                <p class="mb-2">
+                    <i class="fa fa-calendar"></i> {{ lesson.date|date:"d.m.Y" }}
+                    <i class="fa fa-clock ml-3"></i> {{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}
+                </p>
+                <p class="mb-0">
+                    <span class="badge status-{{ lesson.status }} status-badge">
+                        {% if lesson.status == 'scheduled' %}Запланировано
+                        {% elif lesson.status == 'completed' %}Проведено
+                        {% elif lesson.status == 'cancelled' %}Отменено
+                        {% elif lesson.status == 'overdue' %}Просрочено
+                        {% endif %}
+                    </span>
+                </p>
+            </div>
+            <div class="col-md-4 text-right">
+                {% if lesson.status == 'scheduled' and lesson.meeting_link %}
+                <a href="{{ lesson.meeting_link }}" target="_blank" class="zoom-link">
+                    <i class="fa fa-video-camera"></i> Подключиться
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Левая колонка -->
+        <div class="col-md-4">
+            <!-- Карточка учителя -->
+            <div class="info-card text-center">
+                <h5><i class="fa fa-user"></i> Учитель</h5>
+                {% if lesson.teacher.user.photo %}
+                <img src="{{ lesson.teacher.user.photo.url }}" class="teacher-photo mb-3" alt="">
+                {% else %}
+                <div class="teacher-photo bg-secondary d-flex align-items-center justify-content-center mb-3 mx-auto">
+                    <i class="fa fa-user fa-3x text-white"></i>
+                </div>
+                {% endif %}
+                <h4>{{ lesson.teacher.user.get_full_name }}</h4>
+                <p class="text-muted">
+                    {% for subject in lesson.teacher.subjects.all %}
+                    {{ subject.name }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </p>
+            </div>
+
+            <!-- Информация об уроке -->
+            <div class="info-card">
+                <h5><i class="fa fa-info-circle"></i> Информация</h5>
+                <table class="table table-sm table-borderless">
+                    <tr><td><strong>Предмет:</strong></td><td>{{ lesson.subject.name }}</td></tr>
+                    <tr><td><strong>Стоимость:</strong></td><td>{{ lesson.cost }} ₽</td></tr>
+                    <tr><td><strong>Дата:</strong></td><td>{{ lesson.date|date:"d.m.Y" }}</td></tr>
+                    <tr><td><strong>Время:</strong></td><td>{{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Правая колонка -->
+        <div class="col-md-8">
+            {% if lesson.status == 'completed' and lesson.report %}
+            <!-- Отчет -->
+            <div class="info-card">
+                <h5><i class="fa fa-file-text"></i> Отчет</h5>
+                <p><strong>Тема:</strong> {{ lesson.report.topic }}</p>
+                <p><strong>Что прошли:</strong> {{ lesson.report.covered_material }}</p>
+                <p><strong>ДЗ:</strong> {{ lesson.report.homework }}</p>
+                <p><strong>Прогресс:</strong> {{ lesson.report.student_progress }}</p>
+            </div>
+
+            <!-- Оценка -->
+            <div class="info-card">
+                <h5><i class="fa fa-star"></i> Оценка</h5>
+                {% if lesson.feedback %}
+                <div class="text-center">
+                    <div class="rating-stars mb-3">
+                        {% for i in "12345"|make_list %}
+                            {% if forloop.counter <= lesson.feedback.rating %}★{% else %}☆{% endif %}
+                        {% endfor %}
+                    </div>
+                    {% if lesson.feedback.comment %}
+                    <p>{{ lesson.feedback.comment }}</p>
+                    {% endif %}
+                </div>
+                {% else %}
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="text-center mb-4">
+                        <div class="rating-stars-input">
+                            <input type="radio" name="rating" value="5" id="star5"><label for="star5">★</label>
+                            <input type="radio" name="rating" value="4" id="star4"><label for="star4">★</label>
+                            <input type="radio" name="rating" value="3" id="star3"><label for="star3">★</label>
+                            <input type="radio" name="rating" value="2" id="star2"><label for="star2">★</label>
+                            <input type="radio" name="rating" value="1" id="star1"><label for="star1">★</label>
+                        </div>
+                    </div>
+                    <textarea name="comment" class="form-control mb-3" rows="2" placeholder="Комментарий..."></textarea>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="is_public" class="form-check-input" id="is_public">
+                        <label class="form-check-label" for="is_public">Опубликовать на сайте</label>
+                    </div>
+                    <button type="submit" class="btn btn-rating btn-block">Оценить</button>
+                </form>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const labels = document.querySelectorAll('.rating-stars-input label');
+    labels.forEach(label => {
+        label.addEventListener('mouseover', function() {
+            let val = this.getAttribute('for').replace('star', '');
+            labels.forEach(l => l.style.color = '#ddd');
+            for(let i = 5; i >= val; i--) {
+                let l = document.querySelector(`label[for="star${i}"]`);
+                if(l) l.style.color = '#ffd700';
+            }
+        });
+        label.addEventListener('mouseout', function() {
+            let checked = document.querySelector('input[name="rating"]:checked');
+            if(checked) {
+                let val = checked.value;
+                labels.forEach(l => l.style.color = '#ddd');
+                for(let i = 5; i >= val; i--) {
+                    let l = document.querySelector(`label[for="star${i}"]`);
+                    if(l) l.style.color = '#ffd700';
+                }
+            } else {
+                labels.forEach(l => l.style.color = '#ddd');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

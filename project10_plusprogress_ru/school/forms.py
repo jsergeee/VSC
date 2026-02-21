@@ -2,6 +2,8 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import User, TrialRequest, LessonReport
+from django import forms
+from .models import LessonFeedback
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -186,3 +188,28 @@ class CustomUserChangeForm(UserChangeForm):
         fields = ('username', 'first_name', 'last_name', 'patronymic',
                  'email', 'phone', 'photo', 'role', 'balance', 
                  'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')
+        
+        
+
+
+class LessonFeedbackForm(forms.ModelForm):
+    """Форма для оценки урока"""
+    class Meta:
+        model = LessonFeedback
+        fields = ['rating', 'comment', 'is_public']
+        widgets = {
+            'rating': forms.RadioSelect(choices=LessonFeedback.RATING_CHOICES),
+            'comment': forms.Textarea(attrs={
+                'rows': 4,
+                'placeholder': 'Расскажите, как прошёл урок. Что понравилось? Что можно улучшить?'
+            }),
+            'is_public': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        labels = {
+            'rating': 'Оцените урок',
+            'comment': 'Ваш отзыв',
+            'is_public': 'Разрешить публикацию отзыва на сайте',
+        }
+        help_texts = {
+            'is_public': 'Если отметить, ваш отзыв может быть опубликован на сайте школы',
+        }

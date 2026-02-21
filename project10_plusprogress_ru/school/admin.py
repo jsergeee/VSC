@@ -12,6 +12,8 @@ from django import forms
 from django.db import models
 from .models import Schedule, Lesson
 from .views import schedule_calendar_data
+from .models import Notification
+from .models import LessonFeedback, TeacherRating
 from .models import (
     User, Subject, Teacher, Student, Lesson, LessonFormat,
     LessonReport, Payment, Schedule, TrialRequest
@@ -448,3 +450,66 @@ admin.site.site_header = 'Администрирование Плюс Прогр
 admin.site.site_title = 'Плюс Прогресс'
 admin.site.index_title = 'Управление онлайн школой'
 # school/admin.py
+
+
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'title', 'notification_type', 'is_read', 'created_at']
+    list_filter = ['notification_type', 'is_read', 'created_at']
+    search_fields = ['user__username', 'user__email', 'title']
+    date_hierarchy = 'created_at'
+    raw_id_fields = ['user']
+    list_per_page = 50
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user')
+    
+    
+
+@admin.register(LessonFeedback)
+class LessonFeedbackAdmin(admin.ModelAdmin):
+    list_display = ['id', 'lesson', 'student', 'teacher', 'rating_stars', 'created_at', 'is_public']
+    list_filter = ['rating', 'is_public', 'created_at']
+    search_fields = ['student__user__last_name', 'teacher__user__last_name', 'comment']
+    raw_id_fields = ['lesson', 'student', 'teacher']
+    date_hierarchy = 'created_at'
+    actions = ['make_public', 'make_private']
+    
+    def rating_stars(self, obj):
+        return '⭐' * obj.rating
+    rating_stars.short_description = 'Оценка'
+    
+    def make_public(self, request, queryset):
+        queryset.update(is_public=True)
+        self.message_user(request, f'Отмечено {queryset.count()} оценок как публичные')
+    make_public.short_description = 'Сделать публичными'
+    
+    def make_private(self, request, queryset):
+        queryset.update(is_public=False)
+        self.message_user(request, f'Отмечено {queryset.count()} оценок как приватные')
+    make_private.short_description = 'Сделать приватными'
+    
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        # Обновляем рейтинг учителя
+        rating, created = TeacherRating.objects.get_or_create(teacher=obj.teacher)
+        rating.update_stats()
+
+
+@admin.register(TeacherRating)
+class TeacherRatingAdmin(admin.ModelAdmin):
+    list_display = ['teacher', 'average_rating_display', 'total_feedbacks', 'rating_distribution', 'updated_at']
+    list_select_related = ['teacher__user']
+    readonly_fields = ['teacher', 'average_rating', 'total_feedbacks', 'rating_5_count', 'rating_4_count', 'rating_3_count', 'rating_2_count', 'rating_1_count', 'updated_at']
+    
+    def average_rating_display(self, obj):
+        return f"{obj.average_rating:.1f} ⭐"
+    average_rating_display.short_description = 'Средний балл'
+    
+    def rating_distribution(self, obj):
+        if obj.total_feedbacks == 0:
+            return 'Нет оценок'
+        return f"5⭐:{obj.rating_5_count} 4⭐:{obj.rating_4_count} 3⭐:{obj.rating_3_count} 2⭐:{obj.rating_2_count} 1⭐:{obj.rating_1_count}"
+    rating_distribution.short_description = 'Распределение'

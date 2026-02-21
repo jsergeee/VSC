@@ -48,16 +48,78 @@
                     <li class="nav-item"><a class="nav-link" href="#pricing">Цены</a></li>
 
                     {% if user.is_authenticated %}
+                    <!-- БЛОК УВЕДОМЛЕНИЙ -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link position-relative" href="#" id="notificationsDropdown" role="button"
+                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fa-regular fa-bell"></i>
+                            <span
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                id="notificationBadge" style="display: none; font-size: 10px;">
+                                0
+                            </span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right notifications-dropdown"
+                            aria-labelledby="notificationsDropdown"
+                            style="width: 350px; max-height: 500px; overflow: hidden; padding: 0;">
+                            <div class="notifications-header"
+                                style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid #dee2e6; background-color: #f8f9fa;">
+                                <h6 class="mb-0" style="font-weight: 600;">Уведомления</h6>
+                                <button class="btn btn-sm btn-link" id="markAllRead"
+                                    style="font-size: 0.85rem; text-decoration: none;">Прочитать все</button>
+                            </div>
+                            <div class="notifications-list" id="notificationsList"
+                                style="max-height: 400px; overflow-y: auto;">
+                                <!-- Уведомления будут загружаться через AJAX -->
+                                <div class="text-center p-3">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                        <span class="visually-hidden">Загрузка...</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="notifications-footer" style="border-top: 1px solid #dee2e6;">
+                                <a href="#" class="dropdown-item text-center small py-2">Все уведомления</a>
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
                             data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             {{ user.first_name }} {{ user.last_name }}
                         </a>
                         <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
-                            <a class="dropdown-item" href="{% url 'dashboard' %}">Личный кабинет</a>
-                            <a class="dropdown-item" href="{% url 'profile' %}">Профиль</a>
+                            <a class="dropdown-item" href="{% url 'dashboard' %}">
+                                <i class="fa fa-tachometer-alt"></i> Личный кабинет
+                            </a>
+                            
+                            <!-- СПЕЦИАЛЬНЫЕ ПУНКТЫ ДЛЯ РАЗНЫХ РОЛЕЙ -->
+                            {% if user.role == 'student' %}
+                                <a class="dropdown-item" href="{% url 'student_feedbacks' %}">
+                                    <i class="fa fa-star text-warning"></i> Мои отзывы
+                                </a>
+                            {% elif user.role == 'teacher' %}
+                                <a class="dropdown-item" href="{% url 'teacher_feedbacks' %}">
+                                    <i class="fa fa-star text-warning"></i> Отзывы обо мне
+                                </a>
+                            {% endif %}
+                            
+                            <a class="dropdown-item" href="{% url 'profile' %}">
+                                <i class="fa fa-user"></i> Профиль
+                            </a>
+                            
+                            {% if user.role == 'admin' %}
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="{% url 'admin:index' %}">
+                                    <i class="fa fa-cog"></i> Админ-панель
+                                </a>
+                            {% endif %}
+                            
                             <div class="dropdown-divider"></div>
-                            <a class="dropdown-item" href="{% url 'logout' %}">Выйти</a>
+                            <a class="dropdown-item" href="{% url 'logout' %}">
+                                <i class="fa fa-sign-out-alt"></i> Выйти
+                            </a>
                         </div>
                     </li>
                     {% else %}
