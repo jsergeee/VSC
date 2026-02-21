@@ -137,21 +137,19 @@ class Student(models.Model):
     def __str__(self):
         return self.user.get_full_name() or self.user.username
 
-   
     def get_balance(self):
-        """Возвращает текущий баланс ученика (депозиты - списания за занятия)"""
+        """Рассчитывает баланс ученика (депозиты - оплаченные уроки)"""
         from django.db.models import Sum
-        from .models import Lesson  # Импортируем внутри метода
-        
+
         # Сумма всех депозитов
         total_deposits = self.deposits.aggregate(Sum('amount'))['amount__sum'] or 0
-        
-        # Сумма всех проведенных занятий
-        total_lessons = Lesson.objects.filter(
+
+        # Сумма всех проведенных уроков (через attendance)
+        total_lessons = LessonAttendance.objects.filter(
             student=self,
-            status='completed'
+            status='attended'
         ).aggregate(Sum('cost'))['cost__sum'] or 0
-        
+
         return total_deposits - total_lessons
     
     def get_teacher_notes(self):
@@ -301,8 +299,6 @@ class Lesson(models.Model):
     )
 
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='lessons', verbose_name='Учитель')
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='lessons', verbose_name='Ученик',
-                                null=True, blank=True)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, verbose_name='Предмет')
     format = models.ForeignKey(LessonFormat, on_delete=models.SET_NULL, null=True, verbose_name='Формат')
     schedule = models.ForeignKey(
@@ -314,6 +310,25 @@ class Lesson(models.Model):
         verbose_name='Создано из расписания'
     )
 
+    # ===== ВАЖНО: ВМЕСТО ОДНОГО УЧЕНИКА ТЕПЕРЬ МНОГИЕ =====
+    students = models.ManyToManyField(
+        Student,
+        through='LessonAttendance',
+        related_name='lessons',
+        verbose_name='Ученики'
+    )
+
+    # Временное поле для совместимости (удалим позже)
+    student_old = models.ForeignKey(
+        Student,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lessons_old',
+        verbose_name='Ученик (старое поле)'
+    )
+    # =======================================================
+
     # Поля для отслеживания переносов
     rescheduled_from = models.DateTimeField('Перенесено с', null=True, blank=True)
     rescheduled_to = models.DateTimeField('Перенесено на', null=True, blank=True)
@@ -324,13 +339,26 @@ class Lesson(models.Model):
     end_time = models.TimeField('Время окончания')
     duration = models.IntegerField('Длительность (минут)', default=60)
 
-    cost = models.DecimalField('Стоимость', max_digits=10, decimal_places=2)
-    teacher_payment = models.DecimalField('Выплата учителю', max_digits=10, decimal_places=2)
+    # Базовые финансовые поля (для удобства, могут переопределяться в LessonAttendance)
+    base_cost = models.DecimalField('Базовая стоимость', max_digits=10, decimal_places=2, default=0)
+    base_teacher_payment = models.DecimalField('Базовая выплата учителю', max_digits=10, decimal_places=2, default=0)
+
+    # Поле для типа расчета
+    price_type = models.CharField(
+        'Тип оплаты',
+        max_length=20,
+        choices=[
+            ('fixed', 'Фиксированная за всех'),
+            ('per_student', 'За каждого ученика'),
+            ('individual', 'Индивидуальная для каждого'),
+        ],
+        default='per_student'
+    )
 
     meeting_link = models.URLField('Ссылка на занятие', blank=True)
     meeting_platform = models.CharField('Платформа', max_length=50, blank=True)
 
-    # ===== НОВОЕ ПОЛЕ ДЛЯ ВИДЕО =====
+    # Поле для видео
     video_room = models.CharField(
         'Комната для видео',
         max_length=100,
@@ -338,10 +366,12 @@ class Lesson(models.Model):
         null=True,
         help_text='Уникальный идентификатор комнаты для Jitsi Meet'
     )
-    # =================================
 
     status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='scheduled')
     notes = models.TextField('Заметки', blank=True)
+
+    # Пометка, что урок групповой (для быстрых фильтров)
+    is_group = models.BooleanField('Групповой урок', default=False)
 
     created_at = models.DateTimeField('Создано', auto_now_add=True)
     updated_at = models.DateTimeField('Обновлено', auto_now=True)
@@ -352,8 +382,14 @@ class Lesson(models.Model):
         ordering = ['-date', '-start_time']
 
     def __str__(self):
-        student_name = self.student.user.get_full_name() if self.student else 'Не назначен'
-        return f"{self.subject} - {self.date} {self.start_time} ({student_name})"
+        students_count = self.students.count()
+        if students_count == 0:
+            return f"{self.subject} - {self.date} {self.start_time} (нет учеников)"
+        elif students_count == 1:
+            student = self.students.first()
+            return f"{self.subject} - {self.date} {self.start_time} ({student.user.get_full_name()})"
+        else:
+            return f"{self.subject} - {self.date} {self.start_time} (группа {students_count} чел.)"
 
     def save(self, *args, **kwargs):
         # Автоматически вычисляем длительность
@@ -368,7 +404,31 @@ class Lesson(models.Model):
             import uuid
             self.video_room = f"lesson-{uuid.uuid4().hex[:8]}"
 
+        # Автоматически ставим пометку группового урока
+        if self.pk:
+            if self.students.count() > 1:
+                self.is_group = True
+            else:
+                self.is_group = False
+
         super().save(*args, **kwargs)
+
+    def get_total_cost(self):
+        """Общая стоимость урока для всех учеников"""
+        if self.price_type == 'fixed':
+            return self.base_cost
+        elif self.price_type == 'per_student':
+            return self.base_cost * self.students.count()
+        else:
+            # Индивидуальная - суммируем из записей посещаемости
+            return sum(a.cost for a in self.attendance.all())
+
+    def get_total_teacher_payment(self):
+        """Общая выплата учителю за урок"""
+        if self.price_type == 'individual':
+            return sum(a.teacher_payment_share for a in self.attendance.all())
+        else:
+            return self.base_teacher_payment
 
     def mark_as_completed(self, report_data=None):
         """
@@ -380,10 +440,37 @@ class Lesson(models.Model):
         Returns:
             LessonReport: созданный отчет или None
         """
-        from .models import LessonReport, Payment
+        from .models import LessonReport, Payment, LessonAttendance
 
         self.status = 'completed'
         self.save()
+
+        # Обрабатываем каждого ученика
+        total_teacher_payment = 0
+        for attendance in self.attendance.filter(status='attended'):
+            # Списываем с ученика
+            if attendance.student.user.balance >= attendance.cost:
+                attendance.student.user.balance -= attendance.cost
+                attendance.student.user.save()
+
+                # Создаем запись о платеже
+                Payment.objects.create(
+                    user=attendance.student.user,
+                    amount=attendance.cost,
+                    payment_type='expense',
+                    description=f'Оплата занятия {self.date} ({self.subject.name})',
+                    lesson=self
+                )
+
+                total_teacher_payment += attendance.teacher_payment_share
+                attendance.status = 'attended'
+            else:
+                attendance.status = 'debt'
+            attendance.save()
+
+        # Начисляем выплату учителю
+        self.teacher.wallet_balance += total_teacher_payment
+        self.teacher.save()
 
         # Создаем отчет, если переданы данные
         if report_data:
@@ -395,25 +482,6 @@ class Lesson(models.Model):
                 student_progress=report_data.get('student_progress', ''),
                 next_lesson_plan=report_data.get('next_lesson_plan', '')
             )
-
-            # Начисляем выплату учителю
-            self.teacher.wallet_balance += self.teacher_payment
-            self.teacher.save()
-
-            # Списание с баланса ученика
-            if self.student:
-                self.student.user.balance -= self.cost
-                self.student.user.save()
-
-                # Создаем запись о платеже
-                Payment.objects.create(
-                    user=self.student.user,
-                    amount=self.cost,
-                    payment_type='expense',
-                    description=f'Оплата занятия {self.date} ({self.subject.name})',
-                    lesson=self
-                )
-
             return report
         return None
 
@@ -439,6 +507,7 @@ class Lesson(models.Model):
     def reschedule(self, new_date, new_start_time, new_end_time, reason=''):
         """Перенос занятия на новое время"""
         from datetime import datetime
+        import uuid
 
         # Сохраняем информацию о переносе
         self.rescheduled_from = datetime.combine(self.date, self.start_time)
@@ -448,25 +517,94 @@ class Lesson(models.Model):
         # Создаем новое занятие
         new_lesson = Lesson.objects.create(
             teacher=self.teacher,
-            student=self.student,
             subject=self.subject,
             format=self.format,
             schedule=self.schedule,
             date=new_date,
             start_time=new_start_time,
             end_time=new_end_time,
-            cost=self.cost,
-            teacher_payment=self.teacher_payment,
+            base_cost=self.base_cost,
+            base_teacher_payment=self.base_teacher_payment,
+            price_type=self.price_type,
             meeting_link=self.meeting_link,
             meeting_platform=self.meeting_platform,
-            video_room=f"lesson-{uuid.uuid4().hex[:8]}",  # Новая комната для нового урока
+            video_room=f"lesson-{uuid.uuid4().hex[:8]}",
             status='scheduled',
             notes=f"Перенесено с {self.date} {self.start_time}. Причина: {reason}",
             rescheduled_from=datetime.combine(self.date, self.start_time),
             rescheduled_reason=reason
         )
 
+        # Копируем учеников
+        for attendance in self.attendance.all():
+            LessonAttendance.objects.create(
+                lesson=new_lesson,
+                student=attendance.student,
+                cost=attendance.cost,
+                discount=attendance.discount,
+                teacher_payment_share=attendance.teacher_payment_share,
+                status='registered'
+            )
+
         return new_lesson
+
+
+class LessonAttendance(models.Model):
+    """Посещаемость и оплата ученика на уроке"""
+    STATUS_CHOICES = [
+        ('registered', 'Зарегистрирован'),
+        ('attended', 'Присутствовал'),
+        ('absent', 'Отсутствовал'),
+        ('debt', 'Задолженность'),
+    ]
+
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='attendance', verbose_name='Урок')
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='lesson_attendance',
+                                verbose_name='Ученик')
+
+    # Индивидуальные настройки для этого ученика
+    cost = models.DecimalField('Стоимость для ученика', max_digits=10, decimal_places=2)
+    discount = models.DecimalField('Скидка %', max_digits=5, decimal_places=2, default=0)
+    teacher_payment_share = models.DecimalField(
+        'Доля выплаты учителю',
+        max_digits=10,
+        decimal_places=2,
+        help_text='Сколько учитель получает за этого ученика'
+    )
+
+    # Статусы
+    status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='registered')
+    attendance_confirmed = models.BooleanField('Посещение подтверждено', default=False)
+    registered_at = models.DateTimeField('Зарегистрирован', auto_now_add=True)
+
+    class Meta:
+        unique_together = ['lesson', 'student']
+        verbose_name = 'Посещаемость урока'
+        verbose_name_plural = 'Посещаемость уроков'
+
+    def __str__(self):
+        return f"{self.student} - {self.lesson} [{self.status}]"
+
+    def save(self, *args, **kwargs):
+        # Автоматически рассчитываем стоимость, если не указана
+        if not self.cost:
+            if self.lesson.price_type == 'fixed':
+                total_students = self.lesson.attendance.count() or 1
+                self.cost = self.lesson.base_cost / total_students
+            elif self.lesson.price_type == 'per_student':
+                self.cost = self.lesson.base_cost
+            # Для individual оставляем как есть
+
+        # Автоматически рассчитываем долю учителя, если не указана
+        if not self.teacher_payment_share:
+            if self.lesson.price_type == 'individual':
+                # По умолчанию учитель получает 70% от стоимости урока
+                self.teacher_payment_share = self.cost * Decimal('0.7')
+            else:
+                total_students = self.lesson.attendance.count() or 1
+                self.teacher_payment_share = self.lesson.base_teacher_payment / total_students
+
+        super().save(*args, **kwargs)
 
     
 class LessonReport(models.Model):
@@ -1016,3 +1154,147 @@ class HomeworkSubmission(models.Model):
             notification_type='homework_submitted',
             link=f'/teacher/homework/{self.homework.id}/'
         )
+
+
+class GroupLesson(models.Model):
+    """Групповое занятие"""
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='group_lessons', verbose_name='Учитель')
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, verbose_name='Предмет')
+    format = models.ForeignKey(LessonFormat, on_delete=models.SET_NULL, null=True, verbose_name='Формат')
+
+    date = models.DateField('Дата')
+    start_time = models.TimeField('Время начала')
+    end_time = models.TimeField('Время окончания')
+    duration = models.IntegerField('Длительность (минут)', default=60)
+
+    # Финансовая модель группы
+    price_type = models.CharField(
+        'Тип оплаты',
+        max_length=20,
+        choices=[
+            ('fixed', 'Фиксированная за группу'),
+            ('per_student', 'За каждого ученика'),
+        ],
+        default='per_student'
+    )
+    base_price = models.DecimalField('Базовая стоимость', max_digits=10, decimal_places=2,
+                                     help_text='Для per_student: цена за одного, для fixed: цена за всю группу')
+    teacher_payment = models.DecimalField('Выплата учителю', max_digits=10, decimal_places=2,
+                                          help_text='Базовая выплата (может корректироваться в зависимости от числа учеников)')
+
+    meeting_link = models.URLField('Ссылка на занятие', blank=True)
+    meeting_platform = models.CharField('Платформа', max_length=50, blank=True)
+    video_room = models.CharField('Комната для видео', max_length=100, blank=True, null=True)
+
+    status = models.CharField('Статус', max_length=20, choices=Lesson.STATUS_CHOICES, default='scheduled')
+    notes = models.TextField('Заметки', blank=True)
+
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлено', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Групповое занятие'
+        verbose_name_plural = 'Групповые занятия'
+        ordering = ['-date', '-start_time']
+
+    def __str__(self):
+        return f"{self.subject.name} - {self.date} {self.start_time} ({self.students_count()} уч.)"
+
+    def students_count(self):
+        return self.enrollments.filter(status__in=['registered', 'attended']).count()
+
+    def get_total_cost(self):
+        """Общая стоимость занятия для всех учеников"""
+        if self.price_type == 'fixed':
+            return self.base_price
+        else:
+            return self.base_price * self.students_count()
+
+    def get_teacher_payment(self):
+        """Выплата учителю (может зависеть от числа учеников)"""
+        # Здесь можно добавить логику: например, бонус за большее число учеников
+        return self.teacher_payment
+
+    def save(self, *args, **kwargs):
+        # Автоматически вычисляем длительность
+        if self.start_time and self.end_time:
+            from datetime import datetime
+            start = datetime.combine(datetime.today(), self.start_time)
+            end = datetime.combine(datetime.today(), self.end_time)
+            self.duration = int((end - start).total_seconds() / 60)
+        super().save(*args, **kwargs)
+
+    def mark_as_completed(self):
+        """Завершить групповое занятие"""
+        self.status = 'completed'
+        self.save()
+
+        # Списать деньги с учеников и начислить учителю
+        from .models import Payment
+
+        total_payment = 0
+        for enrollment in self.enrollments.filter(status='attended'):
+            # Списываем с ученика
+            if enrollment.student.user.balance >= enrollment.cost_to_pay:
+                enrollment.student.user.balance -= enrollment.cost_to_pay
+                enrollment.student.user.save()
+
+                Payment.objects.create(
+                    user=enrollment.student.user,
+                    amount=enrollment.cost_to_pay,
+                    payment_type='expense',
+                    description=f'Оплата группового занятия {self.date} ({self.subject.name})',
+                )
+                total_payment += enrollment.cost_to_pay
+            else:
+                enrollment.status = 'debt'
+                enrollment.save()
+
+        # Начисляем учителю (здесь можно определить процент от собранной суммы)
+        teacher_income = total_payment * 0.7  # например, 70% от собранного
+        self.teacher.wallet_balance += teacher_income
+        self.teacher.save()
+
+
+class GroupEnrollment(models.Model):
+    """Запись ученика на групповое занятие"""
+    STATUS_CHOICES = [
+        ('registered', 'Зарегистрирован'),
+        ('attended', 'Присутствовал'),
+        ('absent', 'Отсутствовал'),
+        ('debt', 'Задолженность'),
+    ]
+
+    group_lesson = models.ForeignKey(GroupLesson, on_delete=models.CASCADE, related_name='enrollments',
+                                     verbose_name='Групповое занятие')
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='group_enrollments',
+                                verbose_name='Ученик')
+
+    # Индивидуальные настройки для этого ученика
+    cost_to_pay = models.DecimalField('Стоимость для ученика', max_digits=10, decimal_places=2,
+                                      help_text='Может отличаться от базовой (скидка, акция)')
+    discount = models.DecimalField('Скидка %', max_digits=5, decimal_places=2, default=0)
+
+    status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='registered')
+    attendance_confirmed = models.BooleanField('Посещение подтверждено', default=False)
+
+    registered_at = models.DateTimeField('Зарегистрирован', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Запись на группу'
+        verbose_name_plural = 'Записи на группы'
+        unique_together = ['group_lesson', 'student']
+
+    def __str__(self):
+        return f"{self.student} - {self.group_lesson} [{self.status}]"
+
+    def save(self, *args, **kwargs):
+        # Если не указана индивидуальная стоимость, рассчитываем по правилам группы
+        if not self.cost_to_pay:
+            if self.group_lesson.price_type == 'fixed':
+                # Фиксированная цена делится на всех зарегистрированных
+                total_students = self.group_lesson.enrollments.count()
+                self.cost_to_pay = self.group_lesson.base_price / max(total_students, 1)
+            else:
+                self.cost_to_pay = self.group_lesson.base_price
+        super().save(*args, **kwargs)

@@ -7,6 +7,8 @@ from django.shortcuts import render
 from django import forms
 from django.db import models
 from django.utils import timezone
+from .models import GroupLesson, GroupEnrollment
+from .models import LessonAttendance
 
 from .models import (
     User, Subject, Teacher, Student, Lesson, LessonFormat,
@@ -126,43 +128,68 @@ class LessonFormatAdmin(admin.ModelAdmin):
     search_fields = ('name',)
 
 
+# ==================== INLINE ДЛЯ ПОСЕЩАЕМОСТИ ====================
+class LessonAttendanceInline(admin.TabularInline):
+    model = LessonAttendance
+    extra = 1
+    raw_id_fields = ['student']
+    fields = ['student', 'cost', 'discount', 'teacher_payment_share', 'status']
+
+
 # ==================== LESSON ADMIN ====================
+@admin.register(Lesson)
 class LessonAdmin(admin.ModelAdmin):
     formfield_overrides = {
         models.TimeField: {'widget': forms.TimeInput(format='%H:%M', attrs={'type': 'time'})},
         models.DateField: {'widget': forms.DateInput(attrs={'type': 'date'})},
     }
 
-    list_display = ('id', 'subject', 'teacher', 'student', 'date', 'start_time', 'status', 'cost', 'has_report')
-    list_filter = ('status', 'subject', 'date', 'teacher', 'student')
-    search_fields = ('teacher__user__last_name', 'student__user__last_name', 'subject__name')
+    list_display = ('id', 'subject', 'teacher', 'students_list', 'date', 'start_time', 'status', 'get_total_cost')
+    list_filter = ('status', 'subject', 'date', 'teacher', 'is_group')
+    search_fields = ('teacher__user__last_name', 'students__user__last_name', 'subject__name')
     date_hierarchy = 'date'
-    raw_id_fields = ('teacher', 'student')
+    raw_id_fields = ('teacher',)
+    inlines = [LessonAttendanceInline]
 
     fieldsets = (
         ('Основная информация', {
-            'fields': ('teacher', 'student', 'subject', 'format')
+            'fields': ('teacher', 'subject', 'format', 'is_group')
         }),
         ('Время', {
             'fields': ('date', 'start_time', 'end_time')
         }),
         ('Финансы', {
-            'fields': ('cost', 'teacher_payment')
+            'fields': ('price_type', 'base_cost', 'base_teacher_payment')
         }),
         ('Платформа', {
-            'fields': ('meeting_link',)
+            'fields': ('meeting_link', 'meeting_platform', 'video_room')
         }),
         ('Статус', {
             'fields': ('status', 'notes')
         }),
     )
 
+    def students_list(self, obj):
+        """Отображает список учеников"""
+        students = obj.students.all()
+        if not students:
+            return "—"
+        elif students.count() == 1:
+            return students.first().user.get_full_name()
+        else:
+            return f"{students.count()} учеников"
+    students_list.short_description = 'Ученики'
+
+    def get_total_cost(self, obj):
+        """Общая стоимость урока"""
+        return obj.get_total_cost()
+    get_total_cost.short_description = 'Общая стоимость'
+
     def has_report(self, obj):
         if hasattr(obj, 'report'):
             url = f'/admin/school/lessonreport/{obj.report.id}/change/'
             return format_html('<a href="{}" style="color: #28a745;">✅ Отчет #{}</a>', url, obj.report.id)
         return '❌ Нет отчета'
-
     has_report.short_description = 'Отчет'
 
     def get_urls(self):
@@ -174,8 +201,25 @@ class LessonAdmin(admin.ModelAdmin):
         ]
         return custom_urls + urls
 
+    def changelist_view(self, request, extra_context=None):
+        # Если запрошен календарь
+        if request.GET.get('view') == 'calendar':
+            lessons = self.get_queryset(request).select_related(
+                'teacher__user', 'subject'
+            ).prefetch_related('students__user')
+
+            extra_context = extra_context or {}
+            extra_context['lessons'] = lessons
+            extra_context['title'] = 'Календарь занятий'
+
+            return render(request, 'admin/school/lesson/change_list_calendar.html', extra_context)
+
+        # Обычный список
+        return super().changelist_view(request, extra_context)
+
 
 # ==================== LESSON REPORT ADMIN ====================
+@admin.register(LessonReport)
 class LessonReportAdmin(admin.ModelAdmin):
     list_display = ('id', 'lesson_link', 'topic_preview', 'created_at')
     list_filter = ('created_at', 'lesson__subject')
@@ -196,6 +240,7 @@ class LessonReportAdmin(admin.ModelAdmin):
 
 
 # ==================== PAYMENT ADMIN ====================
+@admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
     list_display = ('user', 'amount', 'payment_type', 'description', 'created_at')
     list_filter = ('payment_type', 'created_at')
@@ -205,6 +250,7 @@ class PaymentAdmin(admin.ModelAdmin):
 
 
 # ==================== SCHEDULE ADMIN ====================
+@admin.register(Schedule)
 class ScheduleAdmin(admin.ModelAdmin):
     formfield_overrides = {
         models.TimeField: {'widget': forms.TimeInput(format='%H:%M', attrs={'type': 'time'})},
@@ -230,6 +276,7 @@ class ScheduleAdmin(admin.ModelAdmin):
 
 
 # ==================== TRIAL REQUEST ADMIN ====================
+@admin.register(TrialRequest)
 class TrialRequestAdmin(admin.ModelAdmin):
     list_display = ('name', 'phone', 'email', 'subject', 'created_at', 'is_processed')
     list_filter = ('is_processed', 'subject', 'created_at')
@@ -383,17 +430,94 @@ class HomeworkSubmissionAdmin(admin.ModelAdmin):
     grade_display.short_description = 'Оценка'
 
 
+# ==================== GROUP LESSON ADMIN ====================
+class GroupEnrollmentInline(admin.TabularInline):
+    model = GroupEnrollment
+    extra = 1
+    raw_id_fields = ['student']
+
+
+@admin.register(GroupLesson)
+class GroupLessonAdmin(admin.ModelAdmin):
+    list_display = ('id', 'subject', 'teacher', 'date', 'start_time', 'students_count', 'status', 'get_total_cost')
+    list_filter = ('status', 'subject', 'teacher', 'date')
+    search_fields = ('subject__name', 'teacher__user__last_name', 'notes')
+    inlines = [GroupEnrollmentInline]
+    fieldsets = (
+        ('Основное', {
+            'fields': ('teacher', 'subject', 'format', 'date', 'start_time', 'end_time')
+        }),
+        ('Финансы', {
+            'fields': ('price_type', 'base_price', 'teacher_payment')
+        }),
+        ('Платформа', {
+            'fields': ('meeting_link', 'meeting_platform', 'video_room')
+        }),
+        ('Статус', {
+            'fields': ('status', 'notes')
+        }),
+    )
+
+    def students_count(self, obj):
+        return obj.enrollments.count()
+    students_count.short_description = 'Учеников'
+
+    def get_total_cost(self, obj):
+        return obj.get_total_cost()
+    get_total_cost.short_description = 'Общая стоимость'
+
+    def changelist_view(self, request, extra_context=None):
+        if request.GET.get('view') == 'calendar':
+            lessons = self.get_queryset(request).select_related(
+                'teacher__user', 'subject'
+            ).prefetch_related('enrollments__student__user')
+
+            extra_context = extra_context or {}
+            extra_context['lessons'] = lessons
+            extra_context['title'] = 'Календарь групповых занятий'
+
+            return render(request, 'admin/school/grouplesson/change_list_calendar.html', extra_context)
+
+        return super().changelist_view(request, extra_context)
+
+
+# ==================== GROUP ENROLLMENT ADMIN ====================
+@admin.register(GroupEnrollment)
+class GroupEnrollmentAdmin(admin.ModelAdmin):
+    list_display = ('id', 'group_lesson', 'student', 'cost_to_pay', 'status')
+    list_filter = ('status', 'group_lesson__subject')
+    search_fields = ('student__user__last_name', 'group_lesson__subject__name')
+    raw_id_fields = ['student', 'group_lesson']
+
+
+# ==================== ATTENDANCE ADMIN ====================
+@admin.register(LessonAttendance)
+class LessonAttendanceAdmin(admin.ModelAdmin):
+    list_display = ('id', 'lesson', 'student', 'cost', 'status')
+    list_filter = ('status', 'lesson__subject')
+    search_fields = ('student__user__last_name', 'lesson__subject__name')
+    raw_id_fields = ['lesson', 'student']
+
+
 # ==================== REGISTER ALL MODELS ====================
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(Subject, SubjectAdmin)
 admin.site.register(Teacher, TeacherAdmin)
 admin.site.register(Student, StudentAdmin)
 admin.site.register(LessonFormat, LessonFormatAdmin)
-admin.site.register(Lesson, LessonAdmin)
-admin.site.register(LessonReport, LessonReportAdmin)
-admin.site.register(Payment, PaymentAdmin)
-admin.site.register(Schedule, ScheduleAdmin)
-admin.site.register(TrialRequest, TrialRequestAdmin)
+# Lesson уже зарегистрирован через @admin.register(Lesson)
+# LessonReport уже зарегистрирован через @admin.register(LessonReport)
+# Payment уже зарегистрирован через @admin.register(Payment)
+# Schedule уже зарегистрирован через @admin.register(Schedule)
+# TrialRequest уже зарегистрирован через @admin.register(TrialRequest)
+# Notification уже зарегистрирован через @admin.register(Notification)
+# LessonFeedback уже зарегистрирован через @admin.register(LessonFeedback)
+# TeacherRating уже зарегистрирован через @admin.register(TeacherRating)
+# Homework уже зарегистрирован через @admin.register(Homework)
+# HomeworkSubmission уже зарегистрирован через @admin.register(HomeworkSubmission)
+# GroupLesson уже зарегистрирован через @admin.register(GroupLesson)
+# GroupEnrollment уже зарегистрирован через @admin.register(GroupEnrollment)
+# LessonAttendance уже зарегистрирован через @admin.register(LessonAttendance)
 
 # Настройка заголовков админки
 admin.site.site_header = 'Плюс Прогресс - Администрирование'

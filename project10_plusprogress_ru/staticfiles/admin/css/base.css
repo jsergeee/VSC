@@ -381,6 +381,7 @@ thead th.sorted .text {
 }
 
 table thead th .text span {
+    color: black;
     padding: 8px 10px;
     display: block;
 }

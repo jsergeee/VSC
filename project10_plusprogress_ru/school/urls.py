@@ -12,8 +12,7 @@ urlpatterns = [
     
     # Student URLs
     path('student/dashboard/', views.student_dashboard, name='student_dashboard'),
-    path('student/calendar/', views.student_calendar, name='student_calendar'),
-    
+
     # Teacher URLs
     path('teacher/dashboard/', views.teacher_dashboard, name='teacher_dashboard'),
     path('admin/school/teacher/<int:teacher_id>/report/', views.teacher_report, name='admin-teacher-report'),
@@ -30,6 +29,12 @@ urlpatterns = [
     path('admin/school/lesson/export/<str:format>/', views.admin_lesson_export, name='admin-lesson-export'),
     path('admin/school/lesson/import/', views.import_lessons, name='admin-lesson-import'),
     path('admin/school/lesson/import/template/', views.download_import_template, name='admin-lesson-import-template'),
+    path('teacher/group-lessons/', views.teacher_group_lessons, name='teacher_group_lessons'),
+    path('teacher/group-lesson/<int:lesson_id>/', views.teacher_group_lesson_detail, name='teacher_group_lesson_detail'),
+    path('teacher/group-lessons/', views.teacher_group_lessons, name='teacher_group_lessons'),
+    path('teacher/group-lesson/<int:lesson_id>/', views.teacher_group_lesson_detail, name='teacher_group_lesson_detail'),
+    path('teacher/group-lesson/<int:lesson_id>/attendance/', views.mark_group_attendance, name='mark_group_attendance'),
+    path('teacher/group-lesson/<int:lesson_id>/complete/', views.complete_group_lesson, name='complete_group_lesson'),
 
     
         # Student URLs
@@ -44,6 +49,9 @@ urlpatterns = [
     path('teacher/dashboard/', views.teacher_dashboard, name='teacher_dashboard'),
     path('teacher/student/<int:student_id>/', views.teacher_student_detail, name='teacher_student_detail'),
     path('teacher/materials/', views.teacher_materials, name='teacher_materials'),
+    path('teacher/lesson/<int:lesson_id>/', views.teacher_lesson_detail, name='teacher_lesson_detail'),
+    path('lesson/<int:lesson_id>/complete/', views.complete_lesson, name='complete_lesson'),
+    path('api/lesson/<int:lesson_id>/create-video-room/', views.create_video_room, name='create_video_room'),
     
         # Уведомления
     path('api/notifications/', views.get_notifications, name='api_notifications'),
@@ -56,10 +64,12 @@ urlpatterns = [
     path('student/feedbacks/', views.student_feedbacks, name='student_feedbacks'),
     
     # Домашние задания
-path('teacher/homeworks/', views.teacher_homeworks, name='teacher_homeworks'),
-path('teacher/homework/create/<int:student_id>/', views.teacher_homework_create, name='teacher_homework_create'),
-path('teacher/homework/<int:homework_id>/', views.teacher_homework_detail, name='teacher_homework_detail'),
+    path('teacher/homeworks/', views.teacher_homeworks, name='teacher_homeworks'),
+    path('teacher/homework/create/<int:student_id>/', views.teacher_homework_create, name='teacher_homework_create'),
+    path('teacher/homework/<int:homework_id>/', views.teacher_homework_detail, name='teacher_homework_detail'),
 
-path('student/homeworks/', views.student_homeworks, name='student_homeworks'),
-path('student/homework/<int:homework_id>/', views.student_homework_detail, name='student_homework_detail'),
+    path('student/homeworks/', views.student_homeworks, name='student_homeworks'),
+    path('student/homework/<int:homework_id>/', views.student_homework_detail, name='student_homework_detail'),
+
+
 ]

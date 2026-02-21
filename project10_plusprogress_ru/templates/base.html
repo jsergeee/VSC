@@ -118,9 +118,171 @@
     <script src="{% static 'js/plugins.js' %}"></script>
     <script>new WOW().init();</script>
 
-    <!-- Скрипт уведомлений (тот же) -->
-    <script>
-        // ... ваш существующий скрипт уведомлений ...
-    </script>
+<!-- ===== СКРИПТ ДЛЯ УВЕДОМЛЕНИЙ ===== -->
+<script>
+    // Функция для получения CSRF-токена из куки
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Устанавливаем CSRF-токен для всех AJAX-запросов
+    $.ajaxSetup({
+        beforeSend: function (xhr, settings) {
+            if (!/^(GET|HEAD|OPTIONS|TRACE)$/.test(settings.type) && !this.crossDomain) {
+                xhr.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
+            }
+        }
+    });
+
+    $(document).ready(function () {
+        // Загружаем уведомления если пользователь авторизован
+        {% if user.is_authenticated %}
+        console.log('Загрузка уведомлений для пользователя');
+        loadNotifications();
+
+        // Обновляем каждые 30 секунд
+        setInterval(loadNotifications, 30000);
+
+        // Обработчик для кнопки "Прочитать все"
+        $('#markAllRead').on('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            $.ajax({
+                url: '/api/notifications/mark-all-read/',
+                type: 'POST',
+                headers: {'X-CSRFToken': getCookie('csrftoken')},
+                success: function (response) {
+                    console.log('✅ Все уведомления прочитаны', response);
+                    $('.notification-item').removeClass('unread');
+                    updateBadge(0);
+                    loadNotifications();
+                },
+                error: function (xhr) {
+                    console.error('❌ Ошибка:', xhr.responseText);
+                }
+            });
+        });
+
+        // Обработчик клика на отдельное уведомление
+        $(document).on('click', '.notification-item', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            var id = $(this).data('id');
+            var link = $(this).data('link');
+
+            $.ajax({
+                url: '/api/notifications/' + id + '/read/',
+                type: 'POST',
+                headers: {'X-CSRFToken': getCookie('csrftoken')},
+                success: function (response) {
+                    console.log('✅ Уведомление отмечено как прочитанное', response);
+                    $('.notification-item[data-id="' + id + '"]').removeClass('unread');
+                    if (response.unread_count !== undefined) {
+                        updateBadge(response.unread_count);
+                    } else {
+                        loadNotifications();
+                    }
+                    if (link && link !== 'None' && link !== '') {
+                        window.location.href = link;
+                    }
+                },
+                error: function (xhr) {
+                    console.error('❌ Ошибка:', xhr.responseText);
+                    if (link && link !== 'None' && link !== '') {
+                        window.location.href = link;
+                    }
+                }
+            });
+        });
+        {% endif %}
+    });
+
+    function loadNotifications() {
+        $.get('/api/notifications/', function (data) {
+            console.log('Получены уведомления:', data);
+            updateBadge(data.unread_count);
+
+            var html = '';
+            if (!data.notifications || data.notifications.length === 0) {
+                html = '<div class="text-center p-4 text-muted">' +
+                    '<i class="fas fa-bell-slash fa-2x mb-2"></i>' +
+                    '<p>Нет уведомлений</p>' +
+                    '</div>';
+            } else {
+                $.each(data.notifications, function (i, n) {
+                    var unreadClass = n.is_read ? '' : 'unread';
+                    var icon = getNotificationIcon(n.type);
+
+                    html += `
+                        <div class="notification-item ${unreadClass}" data-id="${n.id}" data-link="${n.link}">
+                            <div class="d-flex">
+                                <div class="notification-icon">${icon}</div>
+                                <div class="notification-content">
+                                    <div class="notification-title">${n.title}</div>
+                                    <div class="notification-message">${n.message}</div>
+                                    <div class="notification-time">${n.created_ago}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            $('#notificationsList').html(html);
+        }).fail(function (xhr) {
+            console.error('Ошибка загрузки уведомлений:', xhr.responseText);
+            $('#notificationsList').html(`
+                <div class="text-center p-4 text-danger">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                    <p>Ошибка загрузки</p>
+                </div>
+            `);
+        });
+    }
+
+    function updateBadge(count) {
+        var badge = $('#notificationBadge');
+        if (count > 0) {
+            badge.text(count).show();
+            badge.addClass('notification-badge-pulse');
+            setTimeout(function () {
+                badge.removeClass('notification-badge-pulse');
+            }, 1000);
+        } else {
+            badge.hide();
+        }
+    }
+
+    function getNotificationIcon(type) {
+        switch (type) {
+            case 'lesson_reminder':
+                return '<i class="fas fa-bell text-primary"></i>';
+            case 'lesson_canceled':
+                return '<i class="fas fa-times-circle text-danger"></i>';
+            case 'lesson_completed':
+                return '<i class="fas fa-check-circle text-success"></i>';
+            case 'payment_received':
+                return '<i class="fas fa-plus-circle text-success"></i>';
+            case 'payment_withdrawn':
+                return '<i class="fas fa-minus-circle text-warning"></i>';
+            case 'material_added':
+                return '<i class="fas fa-file text-info"></i>';
+            default:
+                return '<i class="fas fa-info-circle text-secondary"></i>';
+        }
+    }
+</script>
 </body>
 </html>

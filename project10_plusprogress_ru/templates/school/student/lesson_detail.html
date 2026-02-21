@@ -30,6 +30,13 @@
         object-fit: cover;
         border: 3px solid #667eea;
     }
+    .student-photo-small {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #667eea;
+    }
     .zoom-link {
         display: inline-block;
         padding: 15px 30px;
@@ -64,6 +71,15 @@
         box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
         color: white;
         text-decoration: none;
+    }
+    .btn-video:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    .btn-video:disabled:hover {
+        transform: none;
+        box-shadow: none;
     }
     .status-badge { padding: 8px 16px; border-radius: 30px; font-size: 0.9rem; font-weight: 600; }
     .status-scheduled { background: #cce5ff; color: #004085; }
@@ -109,6 +125,55 @@
         border-radius: 5px;
         margin-top: 10px;
         font-size: 0.9rem;
+    }
+    .waiting-room {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+    }
+    .students-list {
+        margin-top: 20px;
+    }
+    .student-item {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .student-item:last-child {
+        border-bottom: none;
+    }
+    .student-item .student-info {
+        flex: 1;
+        margin-left: 15px;
+    }
+    .student-item .student-name {
+        font-weight: 600;
+        color: #333;
+    }
+    .student-item .student-status {
+        font-size: 0.85rem;
+    }
+    .student-item .badge {
+        padding: 5px 10px;
+        border-radius: 20px;
+    }
+    .student-item.current-user {
+        background: #e7f5ff;
+        border-radius: 8px;
+    }
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    .section-title i {
+        margin-right: 8px;
+        color: #667eea;
     }
 </style>
 {% endblock %}
@@ -170,45 +235,109 @@
                 <h5><i class="fa fa-info-circle"></i> Информация</h5>
                 <table class="table table-sm table-borderless">
                     <tr><td><strong>Предмет:</strong></td><td>{{ lesson.subject.name }}</td></tr>
-                    <tr><td><strong>Стоимость:</strong></td><td>{{ lesson.cost }} ₽</td></tr>
+                    <tr><td><strong>Стоимость:</strong></td><td>{{ attendance.cost }} ₽</td></tr>
                     <tr><td><strong>Дата:</strong></td><td>{{ lesson.date|date:"d.m.Y" }}</td></tr>
                     <tr><td><strong>Время:</strong></td><td>{{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}</td></tr>
                 </table>
             </div>
 
-            <!-- ===== ВИДЕО-ЗВОНОК JITSI (НОВАЯ ВКЛАДКА) ===== -->
+            <!-- ВИДЕО-ЗВОНОК JITSI ДЛЯ УЧЕНИКА -->
             {% if lesson.status == 'scheduled' %}
             <div class="info-card">
                 <h5><i class="fa fa-video-camera"></i> Видео-урок</h5>
-                <div class="text-center">
-                    {% with room_name="plusprogress-"|add:lesson.id|stringformat:"s"|add:"-"|add:lesson.date|date:"Ymd" %}
-                    <a href="https://meet.jit.si/{{ room_name }}#userInfo.displayName={{ request.user.get_full_name|urlencode }}&userInfo.email={{ request.user.email|urlencode }}&config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false"
-                       target="_blank"
-                       class="btn-video">
-                        <i class="fa fa-video-camera"></i> Начать видео-урок
-                    </a>
-                    {% endwith %}
 
-                    <div class="video-note text-left">
-                        <p><i class="fa fa-info-circle text-primary"></i> <strong>Как работает:</strong></p>
-                        <ul class="pl-3 mb-0">
-                            <li>Откроется новая вкладка с Jitsi Meet</li>
-                            <li>Войдите через Google (один раз)</li>
-                            <li>Учитель и ученик заходят по одной ссылке</li>
-                            <li>Кто первый зашел - тот и начинает урок</li>
-                        </ul>
+                {% if lesson.video_room %}
+                    <!-- Комната создана учителем -->
+                    <div class="alert alert-success">
+                        <i class="fa fa-check-circle"></i> Учитель создал комнату для урока!
                     </div>
 
-                    <p class="text-muted mt-2 small">
-                        <i class="fa fa-user"></i> Вы зайдете как <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
-                    </p>
-                </div>
+                    {% with room_name="plusprogress-"|add:lesson.id|stringformat:"s"|add:"-"|add:lesson.video_room %}
+                        <a href="https://meet.jit.si/{{ room_name }}#userInfo.displayName={{ request.user.get_full_name|urlencode }}&userInfo.email={{ request.user.email|urlencode }}&config.startWithAudioMuted=false"
+                           target="_blank"
+                           class="btn-video">
+                            <i class="fa fa-video-camera"></i> Присоединиться к уроку
+                        </a>
+
+                        <div class="video-note text-left mt-3">
+                            <p><i class="fa fa-info-circle text-primary"></i> <strong>Важно:</strong></p>
+                            <ul class="pl-3 mb-0">
+                                <li>Вы войдете под своим именем: <strong>{{ request.user.get_full_name }}</strong></li>
+                                <li>Если учитель еще не зашел, подождите его в комнате</li>
+                            </ul>
+                        </div>
+                    {% endwith %}
+                {% else %}
+                    <!-- Комната еще не создана -->
+                    <div class="waiting-room">
+                        <i class="fa fa-clock fa-2x text-warning mb-2"></i>
+                        <h6>Ожидание создания комнаты</h6>
+                        <p class="mb-0">Учитель еще не создал комнату для урока. Ссылка появится здесь, как только учитель начнет урок.</p>
+                    </div>
+
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Ожидание...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Ожидаем учителя...</p>
+                    </div>
+
+                    <!-- Автообновление страницы каждые 30 секунд -->
+                    <script>
+                        setTimeout(function() {
+                            location.reload();
+                        }, 30000);
+                    </script>
+                {% endif %}
             </div>
             {% endif %}
         </div>
 
         <!-- Правая колонка -->
         <div class="col-md-8">
+            <!-- Состав группы -->
+            <div class="info-card">
+                <h5 class="section-title"><i class="fa fa-users"></i> Участники урока</h5>
+
+                <div class="students-list">
+                    {% for student_attendance in attendances %}
+                        <div class="student-item {% if student_attendance.student.user == request.user %}current-user{% endif %}">
+                            {% if student_attendance.student.user.photo %}
+                                <img src="{{ student_attendance.student.user.photo.url }}" class="student-photo-small" alt="">
+                            {% else %}
+                                <div class="student-photo-small bg-secondary d-flex align-items-center justify-content-center">
+                                    <i class="fa fa-user fa-lg text-white"></i>
+                                </div>
+                            {% endif %}
+                            <div class="student-info">
+                                <div class="student-name">
+                                    {{ student_attendance.student.user.get_full_name }}
+                                    {% if student_attendance.student.user == request.user %}
+                                        <span class="badge badge-primary ml-2">Это вы</span>
+                                    {% endif %}
+                                </div>
+                                <div class="student-status">
+                                    {% if lesson.status == 'completed' %}
+                                        <span class="badge badge-success">Присутствовал</span>
+                                    {% else %}
+                                        <span class="badge badge-info">Зарегистрирован</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p class="text-muted">Нет участников</p>
+                    {% endfor %}
+                </div>
+
+                {% if attendances.count > 1 %}
+                    <div class="alert alert-info mt-3">
+                        <i class="fa fa-info-circle"></i>
+                        Всего участников: <strong>{{ attendances.count }}</strong>
+                    </div>
+                {% endif %}
+            </div>
+
             {% if lesson.status == 'completed' and lesson.report %}
             <!-- Отчет -->
             <div class="info-card">

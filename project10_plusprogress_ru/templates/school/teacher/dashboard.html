@@ -196,8 +196,6 @@
                             <a href="{% url 'admin-teacher-report' teacher.id %}" class="btn btn-report">
                                 <i class="fa fa-chart-bar"></i> Детальный отчет
                             </a>
-                            <i class="fa fa-chart-bar"></i> Детальный отчет
-                            </a>
                         </div>
                     </div>
                 </div>
@@ -486,8 +484,7 @@
                                         {% for student in material.students.all|slice:":3" %}
                                         {{ student.user.last_name }}{% if not forloop.last %}, {% endif %}
                                         {% endfor %}
-                                        {% if material.students.count > 3 %} и еще {{ material.students.count|add:"-3"
-                                        }}{% endif %}
+                                        {% if material.students.count > 3 %} и еще {{ material.students.count|add:"-3" }}{% endif %}
                                     </small>
                                 </div>
                                 {% endif %}
@@ -532,7 +529,7 @@
                             </div>
                             <div class="col-md-3 text-right">
                                 {% if lesson.report %}
-                                <a href="{% url 'lesson_detail' lesson.id %}" class="btn btn-sm btn-info">
+                                <a href="{% url 'teacher_lesson_detail' lesson.id %}" class="btn btn-sm btn-info">
                                     <i class="fa fa-file-text"></i> Отчет
                                 </a>
                                 {% endif %}
@@ -581,42 +578,43 @@
             events: [
                 {% for lesson in upcoming_lessons %}
                 {
-                title: '{{ lesson.subject.name }} - {{ lesson.student.user.last_name }}',
-                start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
-                end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
-                url: '{{ lesson.meeting_link }}',
-                backgroundColor: '#007bff',
-                borderColor: '#007bff'
-            },
-            {% endfor %}
+                    title: '{{ lesson.subject.name }} - {{ lesson.student.user.last_name }}',
+                    start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
+                    end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
+                    url: "{% url 'teacher_lesson_detail' lesson.id %}",
+                    backgroundColor: '#007bff',
+                    borderColor: '#007bff'
+                },
+                {% endfor %}
                 {% for lesson in today_lessons %}
-    {
-        title: '{{ lesson.subject.name }} - {{ lesson.student.user.last_name }}',
-            start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
-                end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
-                    url: '{{ lesson.meeting_link }}',
-                        backgroundColor: '#fd7e14',
-                            borderColor: '#fd7e14'
-    },
-    {% endfor %}
-    {% for lesson in completed_lessons %}
-    {
-        title: '{{ lesson.subject.name }} - {{ lesson.student.user.last_name }}',
-            start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
-                end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
+                {
+                    title: '{{ lesson.subject.name }} - {{ lesson.student.user.last_name }}',
+                    start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
+                    end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
+                    url: "{% url 'teacher_lesson_detail' lesson.id %}",
+                    backgroundColor: '#fd7e14',
+                    borderColor: '#fd7e14'
+                },
+                {% endfor %}
+                {% for lesson in completed_lessons %}
+                {
+                    title: '{{ lesson.subject.name }} - {{ lesson.student.user.last_name }}',
+                    start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
+                    end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
                     backgroundColor: '#28a745',
-                        borderColor: '#28a745',
-                            url: '{% if lesson.report %}{% url "lesson_detail" lesson.id %}{% endif %}'
-    },
-    {% endfor %}
+                    borderColor: '#28a745',
+                    url: "{% url 'teacher_lesson_detail' lesson.id %}"
+                },
+                {% endfor %}
             ],
-    eventClick: function(info) {
-        if (info.event.url) {
-            window.open(info.event.url, '_blank');
-        }
-    }
+            eventClick: function(info) {
+                if (info.event.url) {
+                    window.location.href = info.event.url;
+                    info.jsEvent.preventDefault();
+                }
+            }
         });
-    calendar.render();
+        calendar.render();
     });
 
     function filterMaterials(type) {

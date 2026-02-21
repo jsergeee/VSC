@@ -118,10 +118,10 @@ img {
 }
 
 .container {
-  padding: 30px;
   width: 100%;
   max-width: var(--container-width);
   margin: 0 auto;
+  padding: 20px;
 }
 
 .row {
@@ -250,7 +250,6 @@ img {
 }
 
 .card {
-  padding: 50px;
   background: white;
   border: 1px solid var(--border-light);
   border-radius: 8px;
@@ -1595,37 +1594,4 @@ img {
 
 .notifications-footer {
   border-top: 1px solid #dee2e6;
-}
-.homework-description {
-    background: #f8f9fa;
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
-    margin-top: 15px;
-    line-height: 1.6;
-}
-
-.homework-description p {
-    margin-bottom: 10px;
-}
-
-.homework-description ul,
-.homework-description ol {
-    padding-left: 20px;
-    margin-bottom: 10px;
-}
-
-.homework-description code {
-    background: #e9ecef;
-    padding: 2px 5px;
-    border-radius: 4px;
-    font-family: monospace;
-}
-
-.homework-description pre {
-    background: #2d2d2d;
-    color: #fff;
-    padding: 15px;
-    border-radius: 8px;
-    overflow-x: auto;
 }
