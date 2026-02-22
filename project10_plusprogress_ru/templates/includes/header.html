@@ -10,14 +10,14 @@
             <!--begin logo и контакты в одну строку -->
             <div class="d-flex align-items-center flex-wrap">
                 <img class="navbar-brand" src="{% static 'images/logo.jpg' %}" alt="Плюс Прогресс"
-                    style="max-width: 80px;">
+                     style="max-width: 80px;">
 
                 <div class="mobile-icons">
                     <a href="https://www.instagram.com/linguaglobal.ru/" target="_blank" class="mx-1">
                         <i class="fa fa-instagram" style="font-size: 30px; color: #FD1D1D;"></i>
                     </a>
                     <a href="https://wa.me/79872736974?text=Здравствуйте, пишу Вам с сайта." target="_blank"
-                        class="mx-1">
+                       class="mx-1">
                         <i class="fa fa-whatsapp" style="color: #25D366; font-size: 30px;"></i>
                     </a>
                     <a href="https://t.me/LinguaGlobal" target="_blank" class="mx-1">
@@ -34,7 +34,7 @@
 
             <!--begin navbar-toggler (гамбургер) -->
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
-                aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+                    aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"><i class="fas fa-bars"></i></span>
             </button>
             <!--end navbar-toggler -->
@@ -51,25 +51,26 @@
                     <!-- БЛОК УВЕДОМЛЕНИЙ -->
                     <li class="nav-item dropdown">
                         <a class="nav-link position-relative" href="#" id="notificationsDropdown" role="button"
-                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                           data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             <i class="fa-regular fa-bell"></i>
                             <span
-                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                id="notificationBadge" style="display: none; font-size: 10px;">
+                                    class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                    id="notificationBadge" style="display: none; font-size: 10px;">
                                 0
                             </span>
                         </a>
                         <div class="dropdown-menu dropdown-menu-right notifications-dropdown"
-                            aria-labelledby="notificationsDropdown"
-                            style="width: 350px; max-height: 500px; overflow: hidden; padding: 0;">
+                             aria-labelledby="notificationsDropdown"
+                             style="width: 350px; max-height: 500px; overflow: hidden; padding: 0;">
                             <div class="notifications-header"
-                                style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid #dee2e6; background-color: #f8f9fa;">
+                                 style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid #dee2e6; background-color: #f8f9fa;">
                                 <h6 class="mb-0" style="font-weight: 600;">Уведомления</h6>
                                 <button class="btn btn-sm btn-link" id="markAllRead"
-                                    style="font-size: 0.85rem; text-decoration: none;">Прочитать все</button>
+                                        style="font-size: 0.85rem; text-decoration: none;">Прочитать все
+                                </button>
                             </div>
                             <div class="notifications-list" id="notificationsList"
-                                style="max-height: 400px; overflow-y: auto;">
+                                 style="max-height: 400px; overflow-y: auto;">
                                 <!-- Уведомления будут загружаться через AJAX -->
                                 <div class="text-center p-3">
                                     <div class="spinner-border spinner-border-sm text-primary" role="status">
@@ -86,36 +87,40 @@
                     <!-- ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
-                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                           data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             {{ user.first_name }} {{ user.last_name }}
                         </a>
                         <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
                             <a class="dropdown-item" href="{% url 'dashboard' %}">
                                 <i class="fa fa-tachometer-alt"></i> Личный кабинет
                             </a>
-                            
+
                             <!-- СПЕЦИАЛЬНЫЕ ПУНКТЫ ДЛЯ РАЗНЫХ РОЛЕЙ -->
                             {% if user.role == 'student' %}
-                                <a class="dropdown-item" href="{% url 'student_feedbacks' %}">
-                                    <i class="fa fa-star text-warning"></i> Мои отзывы
-                                </a>
+                            <a class="dropdown-item" href="{% url 'student_feedbacks' %}">
+                                <i class="fa fa-star text-warning"></i> Мои отзывы
+                            </a>
                             {% elif user.role == 'teacher' %}
-                                <a class="dropdown-item" href="{% url 'teacher_feedbacks' %}">
-                                    <i class="fa fa-star text-warning"></i> Отзывы обо мне
-                                </a>
+                            <a class="dropdown-item" href="{% url 'teacher_feedbacks' %}">
+                                <i class="fa fa-star text-warning"></i> Отзывы обо мне
+                            </a>
+                            <!-- ===== НОВАЯ ССЫЛКА НА ШАБЛОНЫ ===== -->
+                            <a class="dropdown-item" href="{% url 'teacher_schedule_templates' %}">
+                                <i class="fa fa-calendar-plus"></i> Шаблоны расписания
+                            </a>
                             {% endif %}
-                            
+
                             <a class="dropdown-item" href="{% url 'profile' %}">
                                 <i class="fa fa-user"></i> Профиль
                             </a>
-                            
+
                             {% if user.role == 'admin' %}
-                                <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="{% url 'admin:index' %}">
-                                    <i class="fa fa-cog"></i> Админ-панель
-                                </a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="{% url 'admin:index' %}">
+                                <i class="fa fa-cog"></i> Админ-панель
+                            </a>
                             {% endif %}
-                            
+
                             <div class="dropdown-divider"></div>
                             <a class="dropdown-item" href="{% url 'logout' %}">
                                 <i class="fa fa-sign-out-alt"></i> Выйти

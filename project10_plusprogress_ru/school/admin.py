@@ -9,6 +9,7 @@ from django.db import models
 from django.utils import timezone
 from .models import GroupLesson, GroupEnrollment
 from .models import LessonAttendance
+from .models import ScheduleTemplate, ScheduleTemplateStudent
 
 from .models import (
     User, Subject, Teacher, Student, Lesson, LessonFormat,
@@ -178,11 +179,13 @@ class LessonAdmin(admin.ModelAdmin):
             return students.first().user.get_full_name()
         else:
             return f"{students.count()} учеников"
+
     students_list.short_description = 'Ученики'
 
     def get_total_cost(self, obj):
         """Общая стоимость урока"""
         return obj.get_total_cost()
+
     get_total_cost.short_description = 'Общая стоимость'
 
     def has_report(self, obj):
@@ -190,6 +193,7 @@ class LessonAdmin(admin.ModelAdmin):
             url = f'/admin/school/lessonreport/{obj.report.id}/change/'
             return format_html('<a href="{}" style="color: #28a745;">✅ Отчет #{}</a>', url, obj.report.id)
         return '❌ Нет отчета'
+
     has_report.short_description = 'Отчет'
 
     def get_urls(self):
@@ -460,10 +464,12 @@ class GroupLessonAdmin(admin.ModelAdmin):
 
     def students_count(self, obj):
         return obj.enrollments.count()
+
     students_count.short_description = 'Учеников'
 
     def get_total_cost(self, obj):
         return obj.get_total_cost()
+
     get_total_cost.short_description = 'Общая стоимость'
 
     def changelist_view(self, request, extra_context=None):
@@ -523,3 +529,59 @@ admin.site.register(LessonFormat, LessonFormatAdmin)
 admin.site.site_header = 'Плюс Прогресс - Администрирование'
 admin.site.site_title = 'Плюс Прогресс'
 admin.site.index_title = 'Управление онлайн школой'
+
+
+class ScheduleTemplateStudentInline(admin.TabularInline):
+    model = ScheduleTemplateStudent
+    extra = 1
+    raw_id_fields = ['student']
+
+
+@admin.register(ScheduleTemplate)
+class ScheduleTemplateAdmin(admin.ModelAdmin):
+    list_display = ('id', 'teacher', 'subject', 'start_time', 'repeat_type', 'get_days', 'start_date', 'is_active')
+    list_filter = ('repeat_type', 'is_active', 'teacher', 'subject')
+    search_fields = ('teacher__user__last_name', 'subject__name')
+    inlines = [ScheduleTemplateStudentInline]
+    fieldsets = (
+        ('Основное', {
+            'fields': ('teacher', 'subject', 'format', 'start_time', 'end_time')
+        }),
+        ('Расписание', {
+            'fields': ('repeat_type', 'start_date', 'end_date', 'max_occurrences')
+        }),
+        ('Дни недели', {
+            'fields': ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'),
+            'classes': ('wide',)
+        }),
+        ('Финансы', {
+            'fields': ('price_type', 'base_cost', 'base_teacher_payment')
+        }),
+        ('Платформа', {
+            'fields': ('meeting_link', 'meeting_platform')
+        }),
+    )
+
+    def get_days(self, obj):
+        days = []
+        if obj.monday: days.append('Пн')
+        if obj.tuesday: days.append('Вт')
+        if obj.wednesday: days.append('Ср')
+        if obj.thursday: days.append('Чт')
+        if obj.friday: days.append('Пт')
+        if obj.saturday: days.append('Сб')
+        if obj.sunday: days.append('Вс')
+        return ', '.join(days) if days else 'Все'
+
+    get_days.short_description = 'Дни'
+
+    actions = ['generate_lessons']
+
+    def generate_lessons(self, request, queryset):
+        count = 0
+        for template in queryset:
+            lessons = template.generate_lessons()
+            count += len(lessons)
+        self.message_user(request, f'Создано {count} уроков')
+
+    generate_lessons.short_description = 'Создать уроки по шаблону'

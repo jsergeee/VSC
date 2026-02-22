@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ template.subject.name }} - шаблон расписания{% endblock %}
+
+{% block extra_css %}
+<style>
+    .template-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        padding: 30px;
+        color: white;
+        margin-bottom: 30px;
+    }
+    .info-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        border: 1px solid #f0f0f0;
+    }
+    .student-item {
+        padding: 10px;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        align-items: center;
+    }
+    .student-item:last-child {
+        border-bottom: none;
+    }
+    .student-checkbox {
+        margin-right: 15px;
+    }
+    .btn-generate {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        border-radius: 50px;
+        font-weight: bold;
+        width: 100%;
+    }
+    .btn-generate:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Заголовок -->
+    <div class="template-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1>{{ template.subject.name }}</h1>
+                <p class="mb-2">
+                    <i class="fa fa-clock"></i> {{ template.start_time|time:"H:i" }} - {{ template.end_time|time:"H:i" }}
+                </p>
+                <p class="mb-0">
+                    <span class="badge badge-light">{{ template.get_repeat_type_display }}</span>
+                </p>
+            </div>
+            <div class="col-md-4 text-right">
+                <a href="{% url 'teacher_schedule_templates' %}" class="btn btn-light">
+                    <i class="fa fa-arrow-left"></i> К списку
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Левая колонка - информация -->
+        <div class="col-md-5">
+            <div class="info-card">
+                <h5 class="mb-3"><i class="fa fa-calendar"></i> Расписание</h5>
+                <table class="table table-sm table-borderless">
+                    <tr>
+                        <td><strong>Тип повторения:</strong></td>
+                        <td>{{ template.get_repeat_type_display }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Дата начала:</strong></td>
+                        <td>{{ template.start_date|date:"d.m.Y" }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Дата окончания:</strong></td>
+                        <td>{% if template.end_date %}{{ template.end_date|date:"d.m.Y" }}{% else %}Бессрочно{% endif %}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Макс. занятий:</strong></td>
+                        <td>{% if template.max_occurrences %}{{ template.max_occurrences }}{% else %}Не ограничено{% endif %}</td>
+                    </tr>
+                </table>
+            </div>
+
+<!--            <div class="info-card">
+                <h5 class="mb-3"><i class="fa fa-ruble-sign"></i> Финансы</h5>
+                <table class="table table-sm table-borderless">
+                    <tr>
+                        <td><strong>Тип оплаты:</strong></td>
+                        <td>{{ template.get_price_type_display }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Базовая стоимость:</strong></td>
+                        <td>{{ template.base_cost }} ₽</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Базовая выплата:</strong></td>
+                        <td>{{ template.base_teacher_payment }} ₽</td>
+                    </tr>
+                </table>
+            </div>-->
+
+            <div class="info-card">
+                <h5 class="mb-3"><i class="fa fa-video-camera"></i> Платформа</h5>
+                {% if template.meeting_link %}
+                <p><strong>Ссылка:</strong> <a href="{{ template.meeting_link }}" target="_blank">{{ template.meeting_link }}</a></p>
+                {% endif %}
+                {% if template.meeting_platform %}
+                <p><strong>Платформа:</strong> {{ template.meeting_platform }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Правая колонка - ученики и генерация -->
+        <div class="col-md-7">
+            <div class="info-card">
+                <h5 class="mb-3"><i class="fa fa-users"></i> Выберите учеников для создания уроков</h5>
+
+                <form method="post" action="{% url 'teacher_schedule_template_detail' template.id %}">
+                    {% csrf_token %}
+
+                    <div class="student-list" style="max-height: 400px; overflow-y: auto;">
+                        {% for student in students %}
+                        <div class="student-item">
+                            <div class="student-checkbox">
+                                <input type="checkbox" name="students" value="{{ student.id }}"
+                                       id="student_{{ student.id }}"
+                                       {% if student in template.students.all %}checked{% endif %}>
+                            </div>
+                            <div class="student-info">
+                                <label for="student_{{ student.id }}" style="cursor: pointer;">
+                                    <strong>{{ student.user.get_full_name }}</strong><br>
+                                    <small class="text-muted">{{ student.user.email }}</small>
+                                </label>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted">У вас пока нет учеников</p>
+                        {% endfor %}
+                    </div>
+
+                    <button type="submit" name="generate" class="btn-generate mt-3">
+                        <i class="fa fa-magic"></i> Создать уроки для выбранных учеников
+                    </button>
+                </form>
+
+                <hr class="mt-4">
+
+                <h6 class="mb-2">Уже созданные уроки по этому шаблону:</h6>
+                <p class="text-muted small">
+                    <i class="fa fa-info-circle"></i> Уроки создаются по мере необходимости.
+                    Шаблон не создает уроки автоматически, только по вашему запросу.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -51,6 +51,8 @@ from django.views.decorators.http import require_POST
 from django.contrib import messages
 import uuid
 import urllib.parse
+from .models import ScheduleTemplate, ScheduleTemplateStudent
+from .forms import ScheduleTemplateForm
 
 from .models import (
     User, Teacher, Student, Lesson, Subject,
@@ -347,7 +349,7 @@ def teacher_dashboard(request):
     # Получаем всех учеников учителя
     students = teacher.student_set.all().select_related('user')
 
-    # Получаем ближайшие занятия - упрощаем запрос
+    # Получаем ближайшие занятия
     upcoming_lessons = Lesson.objects.filter(
         teacher=teacher,
         date__gte=today,
@@ -367,6 +369,11 @@ def teacher_dashboard(request):
         status='completed'
     ).select_related('subject').order_by('-date')[:20]
 
+    # Получаем ВСЕ уроки учителя для календаря (без ограничений)
+    all_lessons = Lesson.objects.filter(
+        teacher=teacher
+    ).select_related('subject').order_by('date', 'start_time')
+
     # Получаем методические материалы учителя
     materials = Material.objects.filter(
         Q(teachers=teacher) | Q(created_by=request.user)
@@ -381,55 +388,47 @@ def teacher_dashboard(request):
         payment_type='teacher_payment'
     ).order_by('-created_at')[:10]
 
-    # Подготовка событий для календаря
+    # Подготовка событий для календаря (ВСЕ УРОКИ)
     calendar_events = []
 
-    # Запланированные уроки
-    for lesson in upcoming_lessons:
-        # Получаем учеников для этого урока
+    # Добавляем ВСЕ уроки учителя
+    for lesson in all_lessons:
+        # Определяем цвет в зависимости от статуса и даты
+        if lesson.status == 'completed':
+            bg_color = '#28a745'  # зеленый
+            text_color = 'white'
+        elif lesson.status == 'cancelled':
+            bg_color = '#dc3545'  # красный
+            text_color = 'white'
+        elif lesson.status == 'overdue':
+            bg_color = '#fd7e14'  # оранжевый
+            text_color = 'white'
+        elif lesson.date < today and lesson.status == 'scheduled':
+            bg_color = '#ffc107'  # желтый (просрочен, но не отмечен)
+            text_color = 'black'
+        elif lesson.date == today:
+            bg_color = '#007bff'  # синий (сегодня)
+            text_color = 'white'
+        else:
+            bg_color = '#6c757d'  # серый (будущие)
+            text_color = 'white'
+
+        # Формируем заголовок
         students_list = ", ".join([a.student.user.last_name for a in lesson.attendance.all()[:2]])
         if lesson.attendance.count() > 2:
             students_list += f" и еще {lesson.attendance.count() - 2}"
+        elif lesson.attendance.count() == 0:
+            students_list = "нет учеников"
 
         calendar_events.append({
             'title': f"{lesson.subject.name} - {students_list}",
             'start': f"{lesson.date}T{lesson.start_time}",
             'end': f"{lesson.date}T{lesson.end_time}",
             'url': f"/teacher/lesson/{lesson.id}/",
-            'backgroundColor': '#007bff',
-            'borderColor': '#007bff',
-            'textColor': 'white',
+            'backgroundColor': bg_color,
+            'borderColor': bg_color,
+            'textColor': text_color,
         })
-
-    # Прошедшие уроки
-    for lesson in past_lessons:
-        students_list = ", ".join([a.student.user.last_name for a in lesson.attendance.all()[:2]])
-        if lesson.attendance.count() > 2:
-            students_list += f" и еще {lesson.attendance.count() - 2}"
-
-        calendar_events.append({
-            'title': f"{lesson.subject.name} - {students_list}",
-            'start': f"{lesson.date}T{lesson.start_time}",
-            'end': f"{lesson.date}T{lesson.end_time}",
-            'url': f"/teacher/lesson/{lesson.id}/",
-            'backgroundColor': '#28a745',
-            'borderColor': '#28a745',
-            'textColor': 'white',
-        })
-
-    # Сегодняшние уроки
-    for lesson in today_lessons:
-        if not any(e['start'] == f"{lesson.date}T{lesson.start_time}" for e in calendar_events):
-            students_list = ", ".join([a.student.user.last_name for a in lesson.attendance.all()[:2]])
-            calendar_events.append({
-                'title': f"{lesson.subject.name} - {students_list} (сегодня)",
-                'start': f"{lesson.date}T{lesson.start_time}",
-                'end': f"{lesson.date}T{lesson.end_time}",
-                'url': f"/teacher/lesson/{lesson.id}/",
-                'backgroundColor': '#ffc107',
-                'borderColor': '#ffc107',
-                'textColor': 'black',
-            })
 
     context = {
         'teacher': teacher,
@@ -437,10 +436,11 @@ def teacher_dashboard(request):
         'upcoming_lessons': upcoming_lessons,
         'today_lessons': today_lessons,
         'past_lessons': past_lessons,
+        'all_lessons': all_lessons,
         'materials': materials,
         'wallet_balance': wallet_balance,
         'recent_payments': recent_payments,
-        'calendar_events': calendar_events,
+        'calendar_events': calendar_events,  # теперь здесь ВСЕ уроки
     }
 
     return render(request, 'school/teacher/dashboard.html', context)
@@ -2694,3 +2694,106 @@ def complete_group_lesson(request, lesson_id):
 
     messages.success(request, 'Групповой урок завершен')
     return redirect('teacher_group_lessons')
+
+
+
+
+
+@login_required
+def teacher_schedule_templates(request):
+    """Список шаблонов расписания учителя"""
+    if request.user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+
+    teacher = request.user.teacher_profile
+    templates = ScheduleTemplate.objects.filter(teacher=teacher).order_by('-created_at')
+
+    context = {
+        'templates': templates,
+    }
+    return render(request, 'school/teacher/schedule_templates.html', context)
+
+
+@login_required
+def teacher_schedule_template_create(request):
+    """Создание шаблона расписания"""
+    if request.user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+
+    teacher = request.user.teacher_profile
+
+    if request.method == 'POST':
+        form = ScheduleTemplateForm(request.POST)
+        if form.is_valid():
+            template = form.save(commit=False)
+            template.teacher = teacher
+            template.save()
+            form.save_m2m()  # сохраняем учеников
+
+            messages.success(request, 'Шаблон расписания создан')
+            return redirect('teacher_schedule_templates')
+    else:
+        form = ScheduleTemplateForm()
+        form.fields['students'].queryset = teacher.student_set.all()
+
+    context = {
+        'form': form,
+        'teacher': teacher,
+    }
+    return render(request, 'school/teacher/schedule_template_form.html', context)
+
+
+@login_required
+def teacher_schedule_template_detail(request, template_id):
+    """Детали шаблона и генерация уроков"""
+    if request.user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+
+    teacher = request.user.teacher_profile
+    template = get_object_or_404(ScheduleTemplate, id=template_id, teacher=teacher)
+
+    if request.method == 'POST' and 'generate' in request.POST:
+        # Генерируем уроки для выбранных учеников
+        student_ids = request.POST.getlist('students')
+        students = Student.objects.filter(id__in=student_ids, teachers=teacher)
+
+        lessons = template.generate_lessons(students)
+        messages.success(request, f'Создано {len(lessons)} уроков')
+        return redirect('teacher_schedule_template_detail', template_id=template.id)
+
+    context = {
+        'template': template,
+        'students': teacher.student_set.all(),
+    }
+    return render(request, 'school/teacher/schedule_template_detail.html', context)
+
+
+@login_required
+def teacher_edit_lesson(request, lesson_id):
+    """Редактирование урока учителем"""
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+
+    if request.user.role != 'teacher' or lesson.teacher.user != request.user:
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        # Обновляем поля урока
+        lesson.date = request.POST.get('date')
+        lesson.start_time = request.POST.get('start_time')
+        lesson.end_time = request.POST.get('end_time')
+        lesson.meeting_link = request.POST.get('meeting_link')
+        lesson.meeting_platform = request.POST.get('meeting_platform')
+        lesson.notes = request.POST.get('notes')
+        lesson.save()
+
+        messages.success(request, 'Урок обновлен')
+        return redirect('teacher_lesson_detail', lesson_id=lesson.id)
+
+    context = {
+        'lesson': lesson,
+    }
+    return render(request, 'school/teacher/edit_lesson.html', context)

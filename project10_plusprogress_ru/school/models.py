@@ -1,5 +1,6 @@
 # school/models.py
 import uuid
+from decimal import Decimal
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
@@ -14,13 +15,13 @@ class User(AbstractUser):
         ('teacher', 'Учитель'),
         ('admin', 'Администратор'),
     )
-    
+
     role = models.CharField('Роль', max_length=20, choices=ROLE_CHOICES, default='student')
     phone = models.CharField('Телефон', max_length=20, blank=True)
     photo = models.ImageField('Фото', upload_to='users/', null=True, blank=True)
     patronymic = models.CharField('Отчество', max_length=50, blank=True)
     balance = models.DecimalField('Баланс', max_digits=10, decimal_places=2, default=0)
-    
+
     # Добавьте эти строки для решения конфликта
     groups = models.ManyToManyField(
         'auth.Group',
@@ -38,17 +39,17 @@ class User(AbstractUser):
         related_name='custom_user_set',
         related_query_name='custom_user',
     )
-    
+
     class Meta:
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
-    
+
     def __str__(self):
         full_name = self.get_full_name().strip()
         if full_name:
             return full_name
         return self.username
-    
+
     def set_full_name(self, full_name):
         """Разделяет полное имя на фамилию, имя и отчество"""
         parts = full_name.strip().split()
@@ -58,7 +59,7 @@ class User(AbstractUser):
             self.last_name = parts[1]
         if len(parts) >= 3:
             self.patronymic = ' '.join(parts[2:])
-    
+
     def get_full_name(self):
         """Возвращает полное имя с отчеством"""
         full_name = super().get_full_name()
@@ -70,11 +71,11 @@ class User(AbstractUser):
 class Subject(models.Model):
     name = models.CharField('Название', max_length=100)
     description = models.TextField('Описание', blank=True)
-    
+
     class Meta:
         verbose_name = 'Предмет'
         verbose_name_plural = 'Предметы'
-    
+
     def __str__(self):
         return self.name
 
@@ -88,14 +89,15 @@ class Teacher(models.Model):
     certificate = models.FileField('Сертификат', upload_to='certificates/', null=True, blank=True)
     payment_details = models.TextField('Данные для выплат', blank=True)
     wallet_balance = models.DecimalField('Баланс кошелька', max_digits=10, decimal_places=2, default=0)
-    
+
     class Meta:
         verbose_name = 'Учитель'
         verbose_name_plural = 'Учителя'
-    
+
     def __str__(self):
         return self.user.get_full_name() or self.user.username
-    
+
+
 def get_available_slots(self, date):
     """Возвращает доступные временные слоты учителя на указанную дату"""
     schedules = Schedule.objects.filter(
@@ -103,7 +105,7 @@ def get_available_slots(self, date):
         date=date,  # Фильтруем по конкретной дате
         is_active=True
     )
-    
+
     available_slots = []
     for schedule in schedules:
         existing_lessons = Lesson.objects.filter(
@@ -112,14 +114,14 @@ def get_available_slots(self, date):
             start_time=schedule.start_time,
             status__in=['scheduled', 'completed']
         )
-        
+
         if not existing_lessons.exists():
             available_slots.append({
                 'start': schedule.start_time,
                 'end': schedule.end_time,
                 'schedule_id': schedule.id
             })
-    
+
     return available_slots
 
 
@@ -129,11 +131,11 @@ class Student(models.Model):
     parent_name = models.CharField('Имя родителя', max_length=200, blank=True)
     parent_phone = models.CharField('Телефон родителя', max_length=20, blank=True)
     notes = models.TextField('Заметки', blank=True)
-    
+
     class Meta:
         verbose_name = 'Ученик'
         verbose_name_plural = 'Ученики'
-    
+
     def __str__(self):
         return self.user.get_full_name() or self.user.username
 
@@ -151,34 +153,36 @@ class Student(models.Model):
         ).aggregate(Sum('cost'))['cost__sum'] or 0
 
         return total_deposits - total_lessons
-    
+
     def get_teacher_notes(self):
         """Возвращает заметки учителей об этом ученике"""
         return self.teacher_notes.all()
+
+
 class LessonFormat(models.Model):
     name = models.CharField('Название', max_length=100)
     description = models.TextField('Описание', blank=True)
-    
+
     class Meta:
         verbose_name = 'Формат занятия'
         verbose_name_plural = 'Форматы занятий'
-    
+
     def __str__(self):
         return self.name
-    
+
     def get_balance(self):
         """Возвращает текущий баланс ученика (депозиты - списания за занятия)"""
         from django.db.models import Sum
-        
+
         total_deposits = self.deposits.aggregate(Sum('amount'))['amount__sum'] or 0
-        
+
         total_lessons = Lesson.objects.filter(
             student=self,
             status='completed'
         ).aggregate(Sum('cost'))['cost__sum'] or 0
-        
+
         return total_deposits - total_lessons
-    
+
     def get_teacher_notes(self):
         """Возвращает заметки учителей об этом ученике"""
         return self.notes.all()
@@ -189,7 +193,7 @@ class Schedule(models.Model):
         (0, 'Понедельник'), (1, 'Вторник'), (2, 'Среда'), (3, 'Четверг'),
         (4, 'Пятница'), (5, 'Суббота'), (6, 'Воскресенье')
     ]
-    
+
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='schedules', verbose_name='Учитель')
     date = models.DateField('Дата', null=True, blank=True)
     start_time = models.TimeField('Время начала')
@@ -197,17 +201,17 @@ class Schedule(models.Model):
     is_active = models.BooleanField('Активно', default=True)
     created_at = models.DateTimeField('Создано', auto_now_add=True)
     updated_at = models.DateTimeField('Обновлено', auto_now=True)
-    
+
     class Meta:
         verbose_name = 'Расписание'
         verbose_name_plural = 'Расписания'
         ordering = ['date', 'start_time']
         unique_together = ['teacher', 'date', 'start_time']  # Защита от дубликатов
-    
+
     def __str__(self):
         days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
         return f"{self.teacher} - {days[self.day_of_week]} {self.start_time}-{self.end_time}"
-    
+
     def generate_lessons(self, start_date, end_date, student=None, subject=None, cost=None):
         """
         Генерирует занятия из расписания на указанный период
@@ -223,18 +227,18 @@ class Schedule(models.Model):
             list: список созданных занятий
         """
         from datetime import timedelta
-        
+
         if isinstance(start_date, str):
             start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
         if isinstance(end_date, str):
             end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-        
+
         if not subject:
             subject = self.teacher.subjects.first()
-        
+
         lessons = []
         current_date = start_date
-        
+
         while current_date <= end_date:
             if current_date.weekday() == self.day_of_week:
                 # Проверяем, нет ли уже занятия на это время
@@ -244,7 +248,7 @@ class Schedule(models.Model):
                     start_time=self.start_time,
                     schedule=self
                 ).exists()
-                
+
                 if not existing:
                     lesson = Lesson(
                         teacher=self.teacher,
@@ -261,25 +265,25 @@ class Schedule(models.Model):
                         schedule=self  # связываем с расписанием
                     )
                     lessons.append(lesson)
-            
+
             current_date += timedelta(days=1)
-        
+
         # Массовое создание
         if lessons:
             return Lesson.objects.bulk_create(lessons)
         return []
-    
+
     def get_duration_minutes(self):
         """Возвращает длительность занятия в минутах"""
         start = datetime.combine(datetime.today(), self.start_time)
         end = datetime.combine(datetime.today(), self.end_time)
         return int((end - start).total_seconds() / 60)
-    
+
     def get_default_cost(self):
         """Возвращает стоимость по умолчанию (можно настроить под свои нужды)"""
         # Здесь можно добавить логику расчета стоимости
         return 1000
-    
+
     def get_teacher_payment(self, cost=None):
         """Возвращает выплату учителю"""
         if cost is None:
@@ -606,7 +610,7 @@ class LessonAttendance(models.Model):
 
         super().save(*args, **kwargs)
 
-    
+
 class LessonReport(models.Model):
     lesson = models.OneToOneField(Lesson, on_delete=models.CASCADE, related_name='report', verbose_name='Занятие')
     topic = models.CharField('Тема занятия', max_length=200)
@@ -614,17 +618,15 @@ class LessonReport(models.Model):
     homework = models.TextField('Домашнее задание')
     student_progress = models.TextField('Прогресс ученика')
     next_lesson_plan = models.TextField('План следующего занятия', blank=True)
-    
+
     created_at = models.DateTimeField('Создано', auto_now_add=True)
-    
+
     class Meta:
         verbose_name = 'Отчет о занятии'
         verbose_name_plural = 'Отчеты о занятиях'
-    
+
     def __str__(self):
         return f"Отчет: {self.lesson}"
-
-
 
 
 class Payment(models.Model):
@@ -633,20 +635,20 @@ class Payment(models.Model):
         ('expense', 'Списание'),
         ('teacher_payment', 'Выплата учителю'),
     )
-    
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payments', verbose_name='Пользователь')
     amount = models.DecimalField('Сумма', max_digits=10, decimal_places=2)
     payment_type = models.CharField('Тип', max_length=20, choices=PAYMENT_TYPE_CHOICES)
     description = models.CharField('Описание', max_length=200)
     lesson = models.ForeignKey(Lesson, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Занятие')
-    
+
     created_at = models.DateTimeField('Дата', auto_now_add=True)
-    
+
     class Meta:
         verbose_name = 'Платеж'
         verbose_name_plural = 'Платежи'
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.get_payment_type_display()} - {self.amount} руб."
 
@@ -658,50 +660,50 @@ class TrialRequest(models.Model):
     subject = models.CharField('Предмет', max_length=50)
     created_at = models.DateTimeField('Дата заявки', auto_now_add=True)
     is_processed = models.BooleanField('Обработано', default=False)
-    
+
     class Meta:
         verbose_name = 'Заявка на пробный урок'
         verbose_name_plural = 'Заявки на пробный урок'
-    
+
     def __str__(self):
         return f"{self.name} - {self.subject}"
 
-    
+
 class Material(models.Model):
     """Методические материалы"""
     MATERIAL_TYPES = (
         ('file', 'Файл'),
         ('link', 'Ссылка'),
     )
-    
+
     title = models.CharField('Название', max_length=200)
     description = models.TextField('Описание', blank=True)
     material_type = models.CharField('Тип', max_length=10, choices=MATERIAL_TYPES, default='file')
     file = models.FileField('Файл', upload_to='materials/', null=True, blank=True)
     link = models.URLField('Ссылка', blank=True)
-    
+
     # Кто добавил
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_materials')
-    
+
     # Для кого (связь многие-ко-многим)
     teachers = models.ManyToManyField(Teacher, blank=True, verbose_name='Учителя')
     students = models.ManyToManyField(Student, blank=True, verbose_name='Ученики')
     subjects = models.ManyToManyField(Subject, blank=True, verbose_name='Предметы')
-    
+
     # Для всех или нет
     is_public = models.BooleanField('Публичный', default=False)
-    
+
     created_at = models.DateTimeField('Создано', auto_now_add=True)
     updated_at = models.DateTimeField('Обновлено', auto_now=True)
-    
+
     class Meta:
         verbose_name = 'Методический материал'
         verbose_name_plural = 'Методические материалы'
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return self.title
-    
+
     def get_absolute_url(self):
         return f"/media/{self.file}" if self.file else self.link
 
@@ -713,12 +715,12 @@ class Deposit(models.Model):
     description = models.CharField('Описание', max_length=200, blank=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_deposits')
     created_at = models.DateTimeField('Дата', auto_now_add=True)
-    
+
     class Meta:
         verbose_name = 'Депозит'
         verbose_name_plural = 'Депозиты'
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.student.user.get_full_name()} - {self.amount} руб."
 
@@ -730,15 +732,16 @@ class StudentNote(models.Model):
     text = models.TextField('Заметка')
     created_at = models.DateTimeField('Создано', auto_now_add=True)
     updated_at = models.DateTimeField('Обновлено', auto_now=True)
-    
+
     class Meta:
         verbose_name = 'Заметка об ученике'
         verbose_name_plural = 'Заметки об учениках'
         ordering = ['-created_at']
-    
+
     def __str__(self):
-        return f"{self.teacher.user.get_full_name} -> {self.student.user.get_full_name}: {self.text[:50]}"    
-    
+        return f"{self.teacher.user.get_full_name} -> {self.student.user.get_full_name}: {self.text[:50]}"
+
+
 def save(self, *args, **kwargs):
     # Автоматически вычисляем длительность
     if self.start_time and self.end_time:
@@ -746,7 +749,7 @@ def save(self, *args, **kwargs):
         start = datetime.combine(datetime.today(), self.start_time)
         end = datetime.combine(datetime.today(), self.end_time)
         self.duration = int((end - start).total_seconds() / 60)
-    
+
     # Автоматически связываем с расписанием при создании
     if not self.pk and not self.schedule:  # Новое занятие без расписания
         schedule = Schedule.objects.filter(
@@ -756,10 +759,10 @@ def save(self, *args, **kwargs):
         ).first()
         if schedule:
             self.schedule = schedule
-    
+
     super().save(*args, **kwargs)
-    
-    
+
+
 class Notification(models.Model):
     """Система уведомлений для пользователей"""
     NOTIFICATION_TYPES = (
@@ -776,9 +779,9 @@ class Notification(models.Model):
         ('homework_submitted', '📤 Задание сдано'),
         ('homework_checked', '✅ Задание проверено'),
     )
-    
+
     user = models.ForeignKey(
-        User, 
+        User,
         on_delete=models.CASCADE,
         related_name='notifications',
         verbose_name='Пользователь'
@@ -810,11 +813,11 @@ class Notification(models.Model):
         verbose_name='Создано'
     )
     expires_at = models.DateTimeField(
-        null=True, 
+        null=True,
         blank=True,
         verbose_name='Истекает'
     )
-    
+
     class Meta:
         ordering = ['-created_at']
         verbose_name = 'Уведомление'
@@ -823,22 +826,21 @@ class Notification(models.Model):
             models.Index(fields=['user', '-created_at']),
             models.Index(fields=['user', 'is_read']),
         ]
-    
+
     def __str__(self):
         return f"{self.user.username}: {self.title}"
-    
+
     def mark_as_read(self):
         """Отметить как прочитанное"""
         self.is_read = True
         self.save()
-    
+
     @classmethod
     def get_unread_count(cls, user):
         """Количество непрочитанных уведомлений для пользователя"""
         return cls.objects.filter(user=user, is_read=False).count()
-    
-    
-    
+
+
 class LessonFeedback(models.Model):
     """Обратная связь по уроку от ученика"""
     RATING_CHOICES = [
@@ -848,9 +850,9 @@ class LessonFeedback(models.Model):
         (4, '⭐⭐⭐⭐ Хорошо'),
         (5, '⭐⭐⭐⭐⭐ Отлично'),
     ]
-    
+
     lesson = models.OneToOneField(
-        Lesson, 
+        Lesson,
         on_delete=models.CASCADE,
         related_name='feedback',
         verbose_name='Урок'
@@ -889,7 +891,7 @@ class LessonFeedback(models.Model):
         auto_now=True,
         verbose_name='Дата обновления'
     )
-    
+
     class Meta:
         verbose_name = 'Оценка урока'
         verbose_name_plural = 'Оценки уроков'
@@ -899,22 +901,22 @@ class LessonFeedback(models.Model):
             models.Index(fields=['student', '-created_at']),
             models.Index(fields=['rating']),
         ]
-    
+
     def __str__(self):
         return f"{self.student} оценил {self.teacher} на {self.rating}⭐"
-    
+
     def save(self, *args, **kwargs):
         # При создании оценки создаем уведомление
         is_new = self.pk is None
         super().save(*args, **kwargs)
-        
+
         if is_new:
             self.create_notifications()
-    
+
     def create_notifications(self):
         """Создает уведомления для учителя и админа"""
         from .models import Notification
-        
+
         # Уведомление учителю
         Notification.objects.create(
             user=self.teacher.user,
@@ -923,7 +925,7 @@ class LessonFeedback(models.Model):
             notification_type='feedback_received',
             link=f'/teacher/feedbacks/#feedback-{self.id}'
         )
-        
+
         # Уведомление админам
         admin_users = User.objects.filter(role='admin')
         for admin in admin_users:
@@ -958,19 +960,19 @@ class TeacherRating(models.Model):
     rating_2_count = models.IntegerField(default=0, verbose_name='2⭐')
     rating_1_count = models.IntegerField(default=0, verbose_name='1⭐')
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         verbose_name = 'Рейтинг учителя'
         verbose_name_plural = 'Рейтинги учителей'
-    
+
     def __str__(self):
         return f"{self.teacher}: {self.average_rating:.1f}⭐ ({self.total_feedbacks} оценок)"
-    
+
     def update_stats(self):
         """Обновляет статистику из всех оценок"""
         feedbacks = LessonFeedback.objects.filter(teacher=self.teacher)
         self.total_feedbacks = feedbacks.count()
-        
+
         if self.total_feedbacks > 0:
             self.average_rating = feedbacks.aggregate(Avg('rating'))['rating__avg'] or 0
             self.rating_5_count = feedbacks.filter(rating=5).count()
@@ -981,14 +983,14 @@ class TeacherRating(models.Model):
         else:
             self.average_rating = 0
             self.rating_5_count = self.rating_4_count = self.rating_3_count = self.rating_2_count = self.rating_1_count = 0
-        
+
         self.save()
-        
-        
+
+
 class Homework(models.Model):
     """Домашнее задание"""
     lesson = models.ForeignKey(
-        Lesson, 
+        Lesson,
         on_delete=models.CASCADE,
         related_name='homeworks',
         verbose_name='Урок'
@@ -1038,7 +1040,7 @@ class Homework(models.Model):
         default=True,
         verbose_name='Активно'
     )
-    
+
     class Meta:
         verbose_name = 'Домашнее задание'
         verbose_name_plural = 'Домашние задания'
@@ -1047,10 +1049,10 @@ class Homework(models.Model):
             models.Index(fields=['student', 'deadline']),
             models.Index(fields=['teacher', '-created_at']),
         ]
-    
+
     def __str__(self):
         return f"{self.title} - {self.student.user.get_full_name()} ({self.deadline.strftime('%d.%m.%Y')})"
-    
+
     def get_status(self):
         """Возвращает статус задания для ученика"""
         try:
@@ -1061,11 +1063,11 @@ class Homework(models.Model):
                 return 'checked'
         except HomeworkSubmission.DoesNotExist:
             pass
-        
+
         if timezone.now() > self.deadline:
             return 'overdue'
         return 'pending'
-    
+
     def get_status_display(self):
         status = self.get_status()
         statuses = {
@@ -1083,7 +1085,7 @@ class HomeworkSubmission(models.Model):
         ('submitted', 'Отправлено на проверку'),
         ('checked', 'Проверено'),
     ]
-    
+
     homework = models.OneToOneField(
         Homework,
         on_delete=models.CASCADE,
@@ -1130,20 +1132,20 @@ class HomeworkSubmission(models.Model):
         blank=True,
         verbose_name='Дата проверки'
     )
-    
+
     class Meta:
         verbose_name = 'Выполненное задание'
         verbose_name_plural = 'Выполненные задания'
-    
+
     def __str__(self):
         return f"Решение: {self.homework.title} - {self.student}"
-    
+
     def save(self, *args, **kwargs):
         if self.pk is None:
             # Создание уведомления при сдаче
             self.create_notification()
         super().save(*args, **kwargs)
-    
+
     def create_notification(self):
         """Уведомление учителю о сданном задании"""
         from .models import Notification
@@ -1298,3 +1300,390 @@ class GroupEnrollment(models.Model):
             else:
                 self.cost_to_pay = self.group_lesson.base_price
         super().save(*args, **kwargs)
+
+
+class ScheduleTemplate(models.Model):
+    """Шаблон расписания для создания повторяющихся уроков"""
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='schedule_templates',
+                                verbose_name='Учитель')
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, verbose_name='Предмет')
+    format = models.ForeignKey(LessonFormat, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Формат')
+
+    # Время урока
+    start_time = models.TimeField('Время начала')
+    end_time = models.TimeField('Время окончания')
+    duration = models.IntegerField('Длительность (минут)', default=60, editable=False)
+
+    # Повторение
+    repeat_type = models.CharField(
+        'Тип повторения',
+        max_length=20,
+        choices=[
+            ('daily', 'Каждый день'),
+            ('weekly', 'Каждую неделю'),
+            ('biweekly', 'Раз в две недели'),
+            ('monthly', 'Каждый месяц'),
+        ],
+        default='weekly'
+    )
+
+    # Дни недели
+    monday = models.BooleanField('Понедельник', default=False)
+    tuesday = models.BooleanField('Вторник', default=False)
+    wednesday = models.BooleanField('Среда', default=False)
+    thursday = models.BooleanField('Четверг', default=False)
+    friday = models.BooleanField('Пятница', default=False)
+    saturday = models.BooleanField('Суббота', default=False)
+    sunday = models.BooleanField('Воскресенье', default=False)
+
+    # Дата начала и окончания
+    start_date = models.DateField('Дата начала')
+    end_date = models.DateField('Дата окончания', null=True, blank=True,
+                                help_text='Оставьте пустым для бесконечного повторения')
+    max_occurrences = models.PositiveIntegerField('Максимальное количество занятий', null=True, blank=True)
+
+    # Ученики
+    students = models.ManyToManyField(Student, through='ScheduleTemplateStudent', verbose_name='Ученики')
+
+    # Финансы
+    base_cost = models.DecimalField(
+        'Базовая стоимость',
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        null=True, blank=True
+    )
+    base_teacher_payment = models.DecimalField(
+        'Базовая выплата учителю',
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        null=True, blank=True
+    )
+    price_type = models.CharField(
+        'Тип оплаты',
+        max_length=20,
+        choices=[
+            ('fixed', 'Фиксированная за всех'),
+            ('per_student', 'За каждого ученика'),
+            ('individual', 'Индивидуальная для каждого'),
+        ],
+        default='per_student',
+        null=True, blank=True
+    )
+
+    meeting_link = models.URLField('Ссылка на занятие', blank=True)
+    meeting_platform = models.CharField('Платформа', max_length=50, blank=True)
+
+    is_active = models.BooleanField('Активно', default=True)
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлено', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Шаблон расписания'
+        verbose_name_plural = 'Шаблоны расписания'
+
+    def __str__(self):
+        days = []
+        if self.monday: days.append('Пн')
+        if self.tuesday: days.append('Вт')
+        if self.wednesday: days.append('Ср')
+        if self.thursday: days.append('Чт')
+        if self.friday: days.append('Пт')
+        if self.saturday: days.append('Сб')
+        if self.sunday: days.append('Вс')
+        days_str = ', '.join(days) if days else 'Все дни'
+        return f"{self.subject.name} - {self.start_time} ({days_str})"
+
+    def save(self, *args, **kwargs):
+        # Автоматически вычисляем длительность
+        if self.start_time and self.end_time:
+            from datetime import datetime
+            start = datetime.combine(datetime.today(), self.start_time)
+            end = datetime.combine(datetime.today(), self.end_time)
+            self.duration = int((end - start).total_seconds() / 60)
+        super().save(*args, **kwargs)
+
+    def generate_lessons(self, students=None):
+        """Генерирует уроки по шаблону"""
+        from datetime import timedelta, date
+
+        target_students = students if students is not None else self.students.all()
+        if not target_students:
+            return []
+
+        generated = []
+        current_date = self.start_date
+        end_date = self.end_date or date(2099, 12, 31)
+        count = 0
+
+        # Значения по умолчанию для финансов
+        base_cost = self.base_cost if self.base_cost is not None else 0
+        base_teacher_payment = self.base_teacher_payment if self.base_teacher_payment is not None else 0
+        price_type = self.price_type if self.price_type else 'per_student'
+
+        while current_date <= end_date:
+            weekday = current_date.weekday()
+
+            day_matches = False
+            if self.repeat_type == 'daily':
+                day_matches = True
+            elif self.repeat_type == 'weekly':
+                day_matches = (
+                        (weekday == 0 and self.monday) or
+                        (weekday == 1 and self.tuesday) or
+                        (weekday == 2 and self.wednesday) or
+                        (weekday == 3 and self.thursday) or
+                        (weekday == 4 and self.friday) or
+                        (weekday == 5 and self.saturday) or
+                        (weekday == 6 and self.sunday)
+                )
+            elif self.repeat_type == 'biweekly':
+                weeks_diff = (current_date - self.start_date).days // 7
+                if weeks_diff % 2 == 0:
+                    day_matches = (
+                            (weekday == 0 and self.monday) or
+                            (weekday == 1 and self.tuesday) or
+                            (weekday == 2 and self.wednesday) or
+                            (weekday == 3 and self.thursday) or
+                            (weekday == 4 and self.friday) or
+                            (weekday == 5 and self.saturday) or
+                            (weekday == 6 and self.sunday)
+                    )
+            elif self.repeat_type == 'monthly':
+                if current_date.day == self.start_date.day:
+                    day_matches = True
+
+            if day_matches:
+                lesson = Lesson.objects.create(
+                    teacher=self.teacher,
+                    subject=self.subject,
+                    format=self.format,
+                    date=current_date,
+                    start_time=self.start_time,
+                    end_time=self.end_time,
+                    base_cost=base_cost,
+                    base_teacher_payment=base_teacher_payment,
+                    price_type=price_type,
+                    meeting_link=self.meeting_link,
+                    meeting_platform=self.meeting_platform,
+                    status='scheduled',
+                    notes=f'Создано из шаблона #{self.id}'
+                )
+
+                for student in target_students:
+                    LessonAttendance.objects.create(
+                        lesson=lesson,
+                        student=student,
+                        cost=base_cost,
+                        teacher_payment_share=base_teacher_payment
+                    )
+
+                generated.append(lesson)
+                count += 1
+
+                if self.max_occurrences and count >= self.max_occurrences:
+                    break
+
+            current_date += timedelta(days=1)
+
+        return generated
+
+
+def generate_lessons(self, students=None):
+    """Генерирует уроки по шаблону"""
+    from datetime import timedelta, date
+
+    target_students = students if students is not None else self.students.all()
+    if not target_students:
+        return []
+
+    generated = []
+    current_date = self.start_date
+    end_date = self.end_date or date(2099, 12, 31)
+    count = 0
+
+    # Значения по умолчанию для финансов
+    base_cost = self.base_cost if self.base_cost is not None else 0
+    base_teacher_payment = self.base_teacher_payment if self.base_teacher_payment is not None else 0
+    price_type = self.price_type if self.price_type else 'per_student'
+
+    while current_date <= end_date:
+        # Проверяем, подходит ли текущая дата по дню недели
+        weekday = current_date.weekday()  # 0 - понедельник, 6 - воскресенье
+
+        day_matches = False
+        if self.repeat_type == 'daily':
+            day_matches = True
+        elif self.repeat_type == 'weekly':
+            day_matches = (
+                    (weekday == 0 and self.monday) or
+                    (weekday == 1 and self.tuesday) or
+                    (weekday == 2 and self.wednesday) or
+                    (weekday == 3 and self.thursday) or
+                    (weekday == 4 and self.friday) or
+                    (weekday == 5 and self.saturday) or
+                    (weekday == 6 and self.sunday)
+            )
+        elif self.repeat_type == 'biweekly':
+            # Каждые две недели, начиная с start_date
+            weeks_diff = (current_date - self.start_date).days // 7
+            if weeks_diff % 2 == 0:
+                day_matches = (
+                        (weekday == 0 and self.monday) or
+                        (weekday == 1 and self.tuesday) or
+                        (weekday == 2 and self.wednesday) or
+                        (weekday == 3 and self.thursday) or
+                        (weekday == 4 and self.friday) or
+                        (weekday == 5 and self.saturday) or
+                        (weekday == 6 and self.sunday)
+                )
+        elif self.repeat_type == 'monthly':
+            # Каждый месяц в тот же день
+            if current_date.day == self.start_date.day:
+                day_matches = True
+
+        if day_matches:
+            # Создаем урок
+            lesson = Lesson.objects.create(
+                teacher=self.teacher,
+                subject=self.subject,
+                format=self.format,
+                date=current_date,
+                start_time=self.start_time,
+                end_time=self.end_time,
+                base_cost=base_cost,
+                base_teacher_payment=base_teacher_payment,
+                price_type=price_type,
+                meeting_link=self.meeting_link,
+                meeting_platform=self.meeting_platform,
+                status='scheduled',
+                notes=f'Создано из шаблона #{self.id}'
+            )
+
+            # Добавляем учеников
+            for student in target_students:
+                LessonAttendance.objects.create(
+                    lesson=lesson,
+                    student=student,
+                    cost=base_cost,
+                    teacher_payment_share=base_teacher_payment
+                )
+
+            generated.append(lesson)
+            count += 1
+
+            if self.max_occurrences and count >= self.max_occurrences:
+                break
+
+        current_date += timedelta(days=1)
+
+    return generated
+
+
+def generate_lessons(self, students=None):
+    """Генерирует уроки по шаблону"""
+    from datetime import timedelta, date
+
+    target_students = students if students is not None else self.students.all()
+    if not target_students:
+        return []
+
+    generated = []
+    current_date = self.start_date
+    end_date = self.end_date or date(2099, 12, 31)
+    count = 0
+
+    # Значения по умолчанию для финансов
+    base_cost = self.base_cost if self.base_cost is not None else 0
+    base_teacher_payment = self.base_teacher_payment if self.base_teacher_payment is not None else 0
+    price_type = self.price_type if self.price_type else 'per_student'
+
+    while current_date <= end_date:
+        # Проверяем, подходит ли текущая дата по дню недели
+        weekday = current_date.weekday()  # 0 - понедельник, 6 - воскресенье
+
+        day_matches = False
+        if self.repeat_type == 'daily':
+            day_matches = True
+        elif self.repeat_type == 'weekly':
+            day_matches = (
+                    (weekday == 0 and self.monday) or
+                    (weekday == 1 and self.tuesday) or
+                    (weekday == 2 and self.wednesday) or
+                    (weekday == 3 and self.thursday) or
+                    (weekday == 4 and self.friday) or
+                    (weekday == 5 and self.saturday) or
+                    (weekday == 6 and self.sunday)
+            )
+        elif self.repeat_type == 'biweekly':
+            # Каждые две недели, начиная с start_date
+            weeks_diff = (current_date - self.start_date).days // 7
+            if weeks_diff % 2 == 0:
+                day_matches = (
+                        (weekday == 0 and self.monday) or
+                        (weekday == 1 and self.tuesday) or
+                        (weekday == 2 and self.wednesday) or
+                        (weekday == 3 and self.thursday) or
+                        (weekday == 4 and self.friday) or
+                        (weekday == 5 and self.saturday) or
+                        (weekday == 6 and self.sunday)
+                )
+        elif self.repeat_type == 'monthly':
+            # Каждый месяц в тот же день
+            if current_date.day == self.start_date.day:
+                day_matches = True
+
+        if day_matches:
+            # Создаем урок
+            lesson = Lesson.objects.create(
+                teacher=self.teacher,
+                subject=self.subject,
+                format=self.format,
+                date=current_date,
+                start_time=self.start_time,
+                end_time=self.end_time,
+                base_cost=base_cost,
+                base_teacher_payment=base_teacher_payment,
+                price_type=price_type,
+                meeting_link=self.meeting_link,
+                meeting_platform=self.meeting_platform,
+                status='scheduled',
+                notes=f'Создано из шаблона #{self.id}'
+            )
+
+            # Добавляем учеников
+            for student in target_students:
+                LessonAttendance.objects.create(
+                    lesson=lesson,
+                    student=student,
+                    cost=base_cost,
+                    teacher_payment_share=base_teacher_payment
+                )
+
+            generated.append(lesson)
+            count += 1
+
+            if self.max_occurrences and count >= self.max_occurrences:
+                break
+
+        current_date += timedelta(days=1)
+
+    return generated
+
+
+class ScheduleTemplateStudent(models.Model):
+    """Связь шаблона с учеником (с возможностью индивидуальных настроек)"""
+    template = models.ForeignKey(ScheduleTemplate, on_delete=models.CASCADE, related_name='student_settings')
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='schedule_templates')
+
+    # Индивидуальные настройки для ученика
+    individual_cost = models.DecimalField('Индивидуальная стоимость', max_digits=10, decimal_places=2, null=True,
+                                          blank=True)
+    individual_payment = models.DecimalField('Индивидуальная выплата', max_digits=10, decimal_places=2, null=True,
+                                             blank=True)
+
+    class Meta:
+        unique_together = ['template', 'student']
+        verbose_name = 'Настройка ученика в шаблоне'
+        verbose_name_plural = 'Настройки учеников в шаблоне'

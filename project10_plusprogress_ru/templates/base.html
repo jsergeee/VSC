@@ -23,10 +23,10 @@
 
     <!-- Шрифты -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Roboto+Slab:wght@600&display=swap"
-        rel="stylesheet">
+          rel="stylesheet">
 
     <!-- FullCalendar -->
-    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet'/>
 
     <style>
         /* ГЛАВНЫЙ FLEX-КОНТЕЙНЕР */
@@ -78,45 +78,45 @@
 </head>
 
 <body>
-    <!-- ГЛАВНЫЙ FLEX-КОНТЕЙНЕР СТРАНИЦЫ -->
+<!-- ГЛАВНЫЙ FLEX-КОНТЕЙНЕР СТРАНИЦЫ -->
 
-    <!-- ШАПКА -->
-    <header class="header">
-        {% include 'includes/header.html' %}
-    </header>
+<!-- ШАПКА -->
+<header class="header">
+    {% include 'includes/header.html' %}
+</header>
 
-    <!-- ОСНОВНОЙ КОНТЕНТ -->
-    <main class="main-content">
-        {% if messages %}
-        <div class="container mt-3">
-            {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-            {% endfor %}
+<!-- ОСНОВНОЙ КОНТЕНТ -->
+<main class="main-content">
+    {% if messages %}
+    <div class="container mt-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-        {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
 
-        <div class="content-wrapper">
-            {% block content %}{% endblock %}
-        </div>
-    </main>
+    <div class="content-wrapper">
+        {% block content %}{% endblock %}
+    </div>
+</main>
 
-    <!-- ПОДВАЛ -->
-    <footer class="footer">
-        {% include 'includes/footer.html' %}
-    </footer>
+<!-- ПОДВАЛ -->
+<footer class="footer">
+    {% include 'includes/footer.html' %}
+</footer>
 
-    <!-- Скрипты (без изменений) -->
-    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-    <script src="{% static 'js/bootstrap.min.js' %}"></script>
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/ru.js'></script>
-    <script src="{% static 'js/jquery.magnific-popup.min.js' %}"></script>
-    <script src="{% static 'js/wow.js' %}"></script>
-    <script src="{% static 'js/plugins.js' %}"></script>
-    <script>new WOW().init();</script>
+<!-- Скрипты (без изменений) -->
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<script src="{% static 'js/bootstrap.min.js' %}"></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/ru.js'></script>
+<script src="{% static 'js/jquery.magnific-popup.min.js' %}"></script>
+<script src="{% static 'js/wow.js' %}"></script>
+<script src="{% static 'js/plugins.js' %}"></script>
+<script>new WOW().init();</script>
 
 <!-- ===== СКРИПТ ДЛЯ УВЕДОМЛЕНИЙ ===== -->
 <script>

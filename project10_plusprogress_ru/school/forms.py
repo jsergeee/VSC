@@ -260,3 +260,28 @@ class HomeworkCheckForm(forms.ModelForm):
             'grade': 'Оценка',
             'teacher_comment': 'Комментарий учителя',
         }
+
+
+from .models import ScheduleTemplate
+
+class ScheduleTemplateForm(forms.ModelForm):
+    class Meta:
+        model = ScheduleTemplate
+        fields = [
+            'subject', 'format', 'start_time', 'end_time',
+            'repeat_type', 'start_date', 'end_date', 'max_occurrences',
+            'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+            'price_type', 'base_cost', 'base_teacher_payment',
+            'meeting_link', 'meeting_platform', 'students'
+        ]
+        widgets = {
+            'start_time': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+            'end_time': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+            'start_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'end_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'max_occurrences': forms.NumberInput(attrs={'class': 'form-control'}),
+            'base_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'base_teacher_payment': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'meeting_link': forms.URLInput(attrs={'class': 'form-control'}),
+            'meeting_platform': forms.TextInput(attrs={'class': 'form-control'}),
+        }

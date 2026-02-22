@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Мои шаблоны расписания{% endblock %}
+
+{% block extra_css %}
+<style>
+    .templates-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        padding: 30px;
+        color: white;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    .template-card {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        border: 1px solid #f0f0f0;
+        transition: all 0.3s;
+    }
+    .template-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    .template-badge {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-right: 5px;
+        margin-bottom: 5px;
+    }
+    .badge-daily { background: #e3f2fd; color: #1565c0; }
+    .badge-weekly { background: #e8f5e8; color: #2e7d32; }
+    .badge-biweekly { background: #fff3e0; color: #e65100; }
+    .badge-monthly { background: #f3e5f5; color: #6a1b9a; }
+    .day-chip {
+        display: inline-block;
+        width: 35px;
+        height: 35px;
+        line-height: 35px;
+        text-align: center;
+        background: #f0f0f0;
+        border-radius: 50%;
+        margin-right: 5px;
+        font-weight: 600;
+    }
+    .day-chip.active {
+        background: #667eea;
+        color: white;
+    }
+    .btn-create {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 50px;
+        font-weight: bold;
+        text-decoration: none;
+        display: inline-block;
+    }
+    .btn-create:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Заголовок -->
+    <div class="templates-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">Шаблоны расписания</h1>
+                <p class="mb-0">Создавайте шаблоны для быстрого создания повторяющихся уроков</p>
+            </div>
+            <div class="col-md-4 text-right">
+                <a href="{% url 'teacher_schedule_template_create' %}" class="btn-create">
+                    <i class="fa fa-plus-circle"></i> Новый шаблон
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Список шаблонов -->
+    <div class="row">
+        {% if templates %}
+        {% for template in templates %}
+        <div class="col-md-6">
+            <div class="template-card">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h4>{{ template.subject.name }}</h4>
+                    <span class="badge {% if template.repeat_type == 'daily' %}badge-daily{% elif template.repeat_type == 'weekly' %}badge-weekly{% elif template.repeat_type == 'biweekly' %}badge-biweekly{% else %}badge-monthly{% endif %} template-badge">
+                            {{ template.get_repeat_type_display }}
+                        </span>
+                </div>
+
+                <p class="text-muted mb-2">
+                    <i class="fa fa-clock"></i> {{ template.start_time|time:"H:i" }} - {{ template.end_time|time:"H:i"
+                    }}
+                </p>
+
+                <!-- Дни недели -->
+                <div class="mb-3">
+                    <span class="day-chip {% if template.monday %}active{% endif %}">Пн</span>
+                    <span class="day-chip {% if template.tuesday %}active{% endif %}">Вт</span>
+                    <span class="day-chip {% if template.wednesday %}active{% endif %}">Ср</span>
+                    <span class="day-chip {% if template.thursday %}active{% endif %}">Чт</span>
+                    <span class="day-chip {% if template.friday %}active{% endif %}">Пт</span>
+                    <span class="day-chip {% if template.saturday %}active{% endif %}">Сб</span>
+                    <span class="day-chip {% if template.sunday %}active{% endif %}">Вс</span>
+                </div>
+
+                <!-- Даты -->
+                <p class="mb-2">
+                    <i class="fa fa-calendar"></i>
+                    с {{ template.start_date|date:"d.m.Y" }}
+                    {% if template.end_date %}
+                    до {{ template.end_date|date:"d.m.Y" }}
+                    {% endif %}
+                </p>
+
+                <!-- Ученики -->
+                <p class="mb-3">
+                    <i class="fa fa-users"></i>
+                    Учеников: {{ template.students.count }}
+                </p>
+
+                <!-- Кнопки -->
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'teacher_schedule_template_detail' template.id %}" class="btn btn-outline-primary">
+                        <i class="fa fa-eye"></i> Подробнее
+                    </a>
+                    <div>
+                            <span class="badge {% if template.is_active %}badge-success{% else %}badge-secondary{% endif %}">
+                                {% if template.is_active %}Активен{% else %}Неактивен{% endif %}
+                            </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="col-12">
+            <div class="empty-state">
+                <i class="fa fa-calendar-plus fa-4x text-muted mb-3"></i>
+                <h5>У вас пока нет шаблонов расписания</h5>
+                <p class="text-muted">Создайте шаблон, чтобы быстро генерировать уроки на месяц вперед</p>
+                <a href="{% url 'teacher_schedule_template_create' %}" class="btn btn-primary">
+                    <i class="fa fa-plus-circle"></i> Создать первый шаблон
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
