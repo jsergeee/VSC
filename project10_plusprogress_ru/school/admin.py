@@ -10,6 +10,8 @@ from django.utils import timezone
 from .models import GroupLesson, GroupEnrollment
 from .models import LessonAttendance
 from .models import ScheduleTemplate, ScheduleTemplateStudent
+from .models import StudentSubjectPrice
+from datetime import datetime
 
 from .models import (
     User, Subject, Teacher, Student, Lesson, LessonFormat,
@@ -24,6 +26,13 @@ try:
     admin.site.unregister(AuthUser)
 except admin.sites.NotRegistered:
     pass
+
+
+class StudentSubjectPriceInline(admin.TabularInline):
+    model = StudentSubjectPrice
+    extra = 1
+    fields = ['subject', 'cost', 'teacher_payment', 'discount', 'is_active']
+    autocomplete_fields = ['subject']
 
 
 # ==================== CUSTOM USER ADMIN ====================
@@ -73,7 +82,7 @@ class SubjectAdmin(admin.ModelAdmin):
 
 # ==================== TEACHER ADMIN ====================
 class TeacherAdmin(admin.ModelAdmin):
-    list_display = ('user', 'display_subjects', 'experience', 'created')
+    list_display = ('id', 'user', 'display_subjects', 'experience', 'created')
     list_filter = ('subjects',)
     search_fields = ('user__first_name', 'user__last_name', 'user__email')
     filter_horizontal = ('subjects',)
@@ -97,15 +106,73 @@ class TeacherAdmin(admin.ModelAdmin):
         return obj.user.date_joined.strftime('%d.%m.%Y')
 
     created.short_description = 'Дата регистрации'
+    change_list_template = "admin/school/teacher/change_list.html"
+    actions = ['export_teachers_excel']
+
+    def export_teachers_excel(self, request, queryset):
+        """Экспорт выбранных учителей в Excel"""
+        import openpyxl
+        from openpyxl.styles import Font, Alignment, PatternFill
+        from django.http import HttpResponse
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Учителя"
+
+        # Заголовки
+        headers = ['ID', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон',
+                   'Предметы', 'Опыт', 'Баланс кошелька']
+
+        # Стиль заголовков
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="417690", end_color="417690", fill_type="solid")
+
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+
+        # Данные
+        for row, teacher in enumerate(queryset, start=2):
+            subjects = ", ".join([s.name for s in teacher.subjects.all()])
+
+            ws.cell(row=row, column=1, value=teacher.id)
+            ws.cell(row=row, column=2, value=teacher.user.last_name)
+            ws.cell(row=row, column=3, value=teacher.user.first_name)
+            ws.cell(row=row, column=4, value=teacher.user.patronymic)
+            ws.cell(row=row, column=5, value=teacher.user.email)
+            ws.cell(row=row, column=6, value=teacher.user.phone)
+            ws.cell(row=row, column=7, value=subjects)
+            ws.cell(row=row, column=8, value=teacher.experience)
+            ws.cell(row=row, column=9, value=float(teacher.wallet_balance))
+
+        # Настройка ширины колонок
+        column_widths = [8, 15, 15, 15, 25, 15, 30, 8, 12]
+        for i, width in enumerate(column_widths, 1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
+
+        # Создаем response
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = f"teachers_export_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        wb.save(response)
+        return response
+
+    export_teachers_excel.short_description = "📥 Экспорт выбранных учителей в Excel"
 
 
 # ==================== STUDENT ADMIN ====================
 class StudentAdmin(admin.ModelAdmin):
-    list_display = ('user', 'parent_name', 'parent_phone', 'get_teachers_count', 'get_balance_display')
+    list_display = ('id', 'user', 'parent_name', 'parent_phone', 'get_teachers_count', 'get_balance_display')
     search_fields = ('user__first_name', 'user__last_name', 'user__email', 'parent_name')
     filter_horizontal = ('teachers',)
     list_filter = ('teachers',)
     raw_id_fields = ('user',)
+    inlines = [StudentSubjectPriceInline]
 
     def get_teachers_count(self, obj):
         return obj.teachers.count()
@@ -121,6 +188,67 @@ class StudentAdmin(admin.ModelAdmin):
         return format_html('<span style="color: #6c757d;">⚪ 0.00</span>')
 
     get_balance_display.short_description = 'Баланс'
+    change_list_template = "admin/school/student/change_list.html"
+
+    actions = ['export_students_excel']
+
+    def export_students_excel(self, request, queryset):
+        """Экспорт выбранных учеников в Excel"""
+        import openpyxl
+        from openpyxl.styles import Font, Alignment, PatternFill
+        from django.http import HttpResponse
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Ученики"
+
+        # Заголовки
+        headers = ['ID', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон',
+                   'Родитель', 'Телефон родителя', 'Баланс', 'Учителя']
+
+        # Стиль заголовков
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="417690", end_color="417690", fill_type="solid")
+
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+
+        # Данные
+        for row, student in enumerate(queryset, start=2):
+            teachers = ", ".join([t.user.get_full_name() for t in student.teachers.all()[:3]])
+            if student.teachers.count() > 3:
+                teachers += f" и еще {student.teachers.count() - 3}"
+
+            ws.cell(row=row, column=1, value=student.id)
+            ws.cell(row=row, column=2, value=student.user.last_name)
+            ws.cell(row=row, column=3, value=student.user.first_name)
+            ws.cell(row=row, column=4, value=student.user.patronymic)
+            ws.cell(row=row, column=5, value=student.user.email)
+            ws.cell(row=row, column=6, value=student.user.phone)
+            ws.cell(row=row, column=7, value=student.parent_name)
+            ws.cell(row=row, column=8, value=student.parent_phone)
+            ws.cell(row=row, column=9, value=float(student.user.balance))
+            ws.cell(row=row, column=10, value=teachers)
+
+        # Настройка ширины колонок
+        column_widths = [8, 15, 15, 15, 25, 15, 20, 15, 12, 30]
+        for i, width in enumerate(column_widths, 1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
+
+        # Создаем response
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = f"students_export_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        wb.save(response)
+        return response
+
+    export_students_excel.short_description = "📥 Экспорт выбранных учеников в Excel"
 
 
 # ==================== LESSON FORMAT ADMIN ====================
@@ -220,6 +348,23 @@ class LessonAdmin(admin.ModelAdmin):
 
         # Обычный список
         return super().changelist_view(request, extra_context)
+
+    def save_model(self, request, obj, form, change):
+        if not change:  # только для новых уроков
+            # Используем функцию с ценами
+            from .models import StudentSubjectPrice
+
+            cost, teacher_payment = StudentSubjectPrice.get_price_for(
+                obj.student,
+                obj.subject
+            )
+
+            if cost:
+                obj.base_cost = cost
+            if teacher_payment:
+                obj.base_teacher_payment = teacher_payment
+
+        super().save_model(request, obj, form, change)
 
 
 # ==================== LESSON REPORT ADMIN ====================
@@ -585,3 +730,13 @@ class ScheduleTemplateAdmin(admin.ModelAdmin):
         self.message_user(request, f'Создано {count} уроков')
 
     generate_lessons.short_description = 'Создать уроки по шаблону'
+
+
+@admin.register(StudentSubjectPrice)
+class StudentSubjectPriceAdmin(admin.ModelAdmin):
+    list_display = ['student', 'subject', 'cost', 'teacher_payment', 'discount', 'is_active']
+    list_filter = ['subject', 'is_active']
+    search_fields = ['student__user__last_name', 'student__user__first_name', 'subject__name']
+    list_editable = ['cost', 'teacher_payment', 'is_active']
+    autocomplete_fields = ['student', 'subject']
+    date_hierarchy = 'created_at'

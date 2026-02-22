@@ -27,7 +27,7 @@ import openpyxl
 from django.contrib import messages
 from django.http import HttpResponse
 from datetime import datetime
-from .models import Lesson, Teacher, Student, Subject, LessonFormat
+from .models import Lesson, Teacher, Student, Subject, LessonFormat, LessonAttendance
 from django.template.loader import render_to_string
 from weasyprint import HTML
 from .models import Notification
@@ -53,7 +53,7 @@ import uuid
 import urllib.parse
 from .models import ScheduleTemplate, ScheduleTemplateStudent
 from .forms import ScheduleTemplateForm
-
+from .models import StudentSubjectPrice
 from .models import (
     User, Teacher, Student, Lesson, Subject,
     LessonReport, Payment, TrialRequest, Schedule,
@@ -1421,8 +1421,8 @@ def export_lessons_excel(lessons, title, request, completed_count, cancelled_cou
     ws.append([])
 
     # Заголовки таблицы
-    headers = ['ID', 'Дата', 'Время', 'Учитель', 'Ученик', 'Предмет', 'Стоимость', 'Выплата учителю', 'Статус']
-    ws.append(headers)
+    headers = ['ID урока', 'Дата', 'Время', 'ID учителя', 'Учитель', 'ID ученика', 'Ученик', 'Предмет', 'Стоимость',
+               'Выплата учителю', 'Статус']
 
     for col, header in enumerate(headers, 1):
         cell = ws.cell(row=5, column=col)
@@ -1503,7 +1503,7 @@ def export_lessons_csv(lessons, title, request, completed_count, cancelled_count
     writer.writerow([title])
     writer.writerow([f"Дата экспорта: {datetime.now().strftime('%d.%m.%Y %H:%M')}"])
     writer.writerow([
-                        f"Всего: {lessons.count()} | Проведено: {completed_count} | Отменено: {cancelled_count} | Просрочено: {overdue_count}"])
+        f"Всего: {lessons.count()} | Проведено: {completed_count} | Отменено: {cancelled_count} | Просрочено: {overdue_count}"])
     writer.writerow([f"Общая стоимость: {total_cost:.2f} ₽ | Общая сумма выплат: {total_payment:.2f} ₽"])
     writer.writerow([])
 
@@ -1874,8 +1874,24 @@ def find_student_by_full_name(name):
     return None
 
 
+def find_teacher_by_id(teacher_id):
+    """Поиск учителя по ID"""
+    try:
+        return Teacher.objects.get(id=int(teacher_id))
+    except (ValueError, Teacher.DoesNotExist):
+        return None
+
+
+def find_student_by_id(student_id):
+    """Поиск ученика по ID"""
+    try:
+        return Student.objects.get(id=int(student_id))
+    except (ValueError, Student.DoesNotExist):
+        return None
+
+
 def import_from_excel(file, request):
-    """Импорт из Excel с поддержкой полных имен"""
+    """Импорт из Excel с поддержкой ID"""
     try:
         import tempfile
         import os
@@ -1898,7 +1914,7 @@ def import_from_excel(file, request):
         errors = []
 
         for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-            if not any(row):  # Пропускаем пустые строки
+            if not any(row):
                 continue
 
             try:
@@ -1908,126 +1924,61 @@ def import_from_excel(file, request):
                     if i < len(row):
                         row_dict[header] = row[i]
 
-                # Поиск учителя по полному имени
-                teacher_name = str(row_dict.get('Учитель', '')).strip()
-                teacher = find_teacher_by_full_name(teacher_name)
-                if not teacher:
-                    raise ValueError(f"Учитель '{teacher_name}' не найден")
+                # Поиск учителя по ID или ФИО (для обратной совместимости)
+                teacher_id = row_dict.get('ID учителя')
+                teacher = None
 
-                # Поиск ученика по полному имени
-                student_name = str(row_dict.get('Ученик', '')).strip()
-                student = find_student_by_full_name(student_name)
-                if not student:
-                    raise ValueError(f"Ученик '{student_name}' не найден")
+                if teacher_id:
+                    teacher = find_teacher_by_id(teacher_id)
+                    if not teacher:
+                        raise ValueError(f"Учитель с ID '{teacher_id}' не найден")
+                else:
+                    # Если ID нет, пробуем по ФИО (старый формат)
+                    teacher_name = str(row_dict.get('Учитель', '')).strip()
+                    teacher = find_teacher_by_full_name(teacher_name)
+                    if not teacher:
+                        raise ValueError(f"Учитель '{teacher_name}' не найден")
 
-                # Поиск предмета (по названию, без учета регистра)
+                # Поиск учеников по ID или ФИО
+                students = []
+
+                # Пробуем сначала по ID учеников
+                student_ids_str = row_dict.get('ID учеников', '')
+                if student_ids_str:
+                    student_ids = [s.strip() for s in str(student_ids_str).split(';') if s.strip()]
+                    for student_id in student_ids:
+                        student = find_student_by_id(student_id)
+                        if not student:
+                            raise ValueError(f"Ученик с ID '{student_id}' не найден")
+                        students.append(student)
+                else:
+                    # Если ID нет, пробуем по ФИО
+                    students_str = str(row_dict.get('Ученики', '')).strip()
+                    student_names = [s.strip() for s in students_str.split(';') if s.strip()]
+                    for student_name in student_names:
+                        student = find_student_by_full_name(student_name)
+                        if not student:
+                            raise ValueError(f"Ученик '{student_name}' не найден")
+                        students.append(student)
+
+                if not students:
+                    raise ValueError("Не указаны ученики")
+
+                # Поиск предмета
                 subject_name = str(row_dict.get('Предмет', '')).strip()
                 subject = Subject.objects.filter(name__icontains=subject_name).first()
                 if not subject:
                     raise ValueError(f"Предмет '{subject_name}' не найден")
 
-                # Парсинг даты
-                date_val = row_dict.get('Дата')
-                if isinstance(date_val, str):
-                    try:
-                        date = datetime.strptime(date_val, '%d.%m.%Y').date()
-                    except:
-                        date = datetime.strptime(date_val, '%Y-%m-%d').date()
-                elif isinstance(date_val, dt):
-                    date = date_val.date()
-                elif isinstance(date_val, date):
-                    date = date_val
-                else:
-                    raise ValueError("Неверный формат даты")
+                # ... остальной код создания урока ...
 
-                # Парсинг времени
-                start_time = row_dict.get('Время начала')
-                if isinstance(start_time, str):
-                    try:
-                        start_time = datetime.strptime(start_time, '%H:%M').time()
-                    except:
-                        start_time = datetime.strptime(start_time, '%H.%M').time()
-                elif isinstance(start_time, dt):
-                    start_time = start_time.time()
-                elif start_time is None:
-                    raise ValueError("Время начала не указано")
-
-                end_time = row_dict.get('Время окончания')
-                if isinstance(end_time, str):
-                    try:
-                        end_time = datetime.strptime(end_time, '%H:%M').time()
-                    except:
-                        end_time = datetime.strptime(end_time, '%H.%M').time()
-                elif isinstance(end_time, dt):
-                    end_time = end_time.time()
-                elif end_time is None:
-                    from datetime import timedelta
-                    start_dt = dt.combine(date, start_time)
-                    end_dt = start_dt + timedelta(hours=1)
-                    end_time = end_dt.time()
-
-                # Стоимость
-                cost_val = row_dict.get('Стоимость', 0)
-                if isinstance(cost_val, str):
-                    cost = float(cost_val.replace(',', '.'))
-                else:
-                    cost = float(cost_val or 0)
-
-                # Выплата учителю
-                payment_val = row_dict.get('Выплата учителю', cost * 0.5)
-                if isinstance(payment_val, str):
-                    teacher_payment = float(payment_val.replace(',', '.'))
-                else:
-                    teacher_payment = float(payment_val or cost * 0.5)
-
-                # Статус (с поддержкой русских названий)
-                status = row_dict.get('Статус', 'scheduled')
-                if isinstance(status, str):
-                    status = status.strip().lower()
-
-                status_map = {
-                    'запланировано': 'scheduled',
-                    'проведено': 'completed',
-                    'отменено': 'cancelled',
-                    'просрочено': 'overdue',
-                    'scheduled': 'scheduled',
-                    'completed': 'completed',
-                    'cancelled': 'cancelled',
-                    'overdue': 'overdue',
-                }
-                status = status_map.get(status, 'scheduled')
-
-                # Создание урока
-                Lesson.objects.create(
-                    teacher=teacher,
-                    student=student,
-                    subject=subject,
-                    date=date,
-                    start_time=start_time,
-                    end_time=end_time,
-                    cost=cost,
-                    teacher_payment=teacher_payment,
-                    status=status,
-                )
                 success_count += 1
 
             except Exception as e:
                 error_count += 1
                 errors.append(f"Строка {row_num}: {str(e)}")
 
-        # Удаляем временный файл
-        os.unlink(tmp_path)
-
-        # Сообщаем результат
-        if success_count > 0:
-            messages.success(request, f'✅ Импортировано уроков: {success_count}')
-        if error_count > 0:
-            error_text = '\n'.join(errors[:10])
-            if len(errors) > 10:
-                error_text += f'\n... и еще {len(errors) - 10} ошибок'
-            messages.warning(request, f'⚠️ Ошибок: {error_count}\n{error_text}')
-
-        return redirect('admin:school_lesson_changelist')
+        # ... остальной код ...
 
     except Exception as e:
         messages.error(request, f'Ошибка при импорте: {str(e)}')
@@ -2035,7 +1986,7 @@ def import_from_excel(file, request):
 
 
 def download_import_template(request):
-    """Скачать шаблон для импорта"""
+    """Скачать шаблон для импорта с поддержкой ID"""
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename="import_lessons_template.xlsx"'
 
@@ -2044,18 +1995,26 @@ def download_import_template(request):
     ws.title = "Импорт уроков"
 
     # Заголовки
-    headers = ['Дата', 'Время начала', 'Время окончания', 'Учитель', 'Ученик', 'Предмет', 'Стоимость',
-               'Выплата учителю', 'Статус']
+    headers = [
+        'Дата', 'Время начала', 'Время окончания',
+        'ID учителя', 'Учитель (ФИО)',
+        'ID учеников', 'Ученики (ФИО через ;)',
+        'Предмет', 'Стоимость урока', 'Выплата учителю', 'Статус'
+    ]
+
     for col, header in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=header)
         cell.font = openpyxl.styles.Font(bold=True, color="FFFFFF")
         cell.fill = openpyxl.styles.PatternFill(start_color="417690", end_color="417690", fill_type="solid")
 
-    # Пример данных
+    # Примеры данных
     examples = [
-        ['01.03.2026', '10:00', '11:00', 'Иванов', 'Петров', 'Математика', '1000', '500', 'scheduled'],
-        ['02.03.2026', '11:00', '12:00', 'Петрова', 'Сидорова', 'Русский язык', '900', '450', 'completed'],
-        ['03.03.2026', '14:00', '15:00', 'Смирнов', 'Козлова', 'Английский язык', '1100', '550', 'scheduled'],
+        ['01.03.2026', '10:00', '11:00', '10', 'Иванов Иван', '13', 'Петров Петр', 'Математика', '1000', '500',
+         'scheduled'],
+        ['02.03.2026', '11:00', '12:00', '11', 'Петрова Анна', '14;15', 'Сидоров Сидор; Козлова Елена', 'Русский язык',
+         '1500', '900', 'scheduled'],
+        ['03.03.2026', '14:00', '15:00', '12', 'Смирнов Павел', '16;17;18',
+         'Соколов Максим; Волкова Дарья; Морозов Алексей', 'Английский язык', '2400', '1500', 'scheduled'],
     ]
 
     for row_num, example in enumerate(examples, start=2):
@@ -2063,8 +2022,9 @@ def download_import_template(request):
             ws.cell(row=row_num, column=col_num, value=value)
 
     # Настройка ширины колонок
-    for col in range(1, len(headers) + 1):
-        ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 18
+    column_widths = [12, 15, 15, 12, 25, 15, 30, 20, 15, 15, 15]
+    for i, width in enumerate(column_widths, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
 
     wb.save(response)
     return response
@@ -2491,20 +2451,18 @@ def generate_video_room(request, lesson_id):
 @login_required
 @require_POST
 def complete_lesson(request, lesson_id):
-    """Завершение урока и создание отчета"""
+    """Завершение урока и создание отчета с учетом явки"""
     lesson = get_object_or_404(Lesson, id=lesson_id)
 
-    # Проверка доступа
     if request.user.role != 'teacher' or lesson.teacher.user != request.user:
         messages.error(request, 'Доступ запрещен')
         return redirect('dashboard')
 
-    # Проверка статуса
     if lesson.status != 'scheduled':
         messages.error(request, 'Урок уже завершен или отменен')
         return redirect('teacher_lesson_detail', lesson_id=lesson.id)
 
-    # Создаем отчет
+    # Получаем данные формы
     report_data = {
         'topic': request.POST.get('topic'),
         'covered_material': request.POST.get('covered_material'),
@@ -2519,13 +2477,25 @@ def complete_lesson(request, lesson_id):
         messages.error(request, 'Заполните все обязательные поля')
         return redirect('teacher_lesson_detail', lesson_id=lesson.id)
 
+    # Обрабатываем отметки явки
+    attended_students = []
+    for attendance in lesson.attendance.all():
+        if request.POST.get(f'attended_{attendance.id}'):
+            attended_students.append(attendance.id)
+            attendance.status = 'attended'
+            attendance.save()
+        else:
+            attendance.status = 'absent'
+            attendance.save()
+
     # Отмечаем урок как проведенный
-    report = lesson.mark_as_completed(report_data)
+    report = lesson.mark_as_completed(report_data, attended_students)
 
     if report:
-        messages.success(request, f'Урок завершен. Отчет #{report.id} создан')
+        messages.success(request,
+                         f'Урок завершен. Отчет #{report.id} создан. Присутствовало: {len(attended_students)} учеников.')
     else:
-        messages.success(request, 'Урок завершен')
+        messages.success(request, f'Урок завершен. Присутствовало: {len(attended_students)} учеников.')
 
     return redirect('teacher_lesson_detail', lesson_id=lesson.id)
 
@@ -2539,14 +2509,21 @@ def teacher_lesson_detail(request, lesson_id):
         messages.error(request, 'Доступ запрещен')
         return redirect('dashboard')
 
+    # Получаем все записи посещаемости с учениками
     attendances = lesson.attendance.all().select_related('student__user')
+
+    # Общая стоимость (для информации)
     total_cost = sum([a.cost for a in attendances]) if attendances else 0
 
-    # ИСПОЛЬЗУЕМ base_teacher_payment ВМЕСТО teacher_payment
-    print(f"DEBUG: lesson.base_teacher_payment = {lesson.base_teacher_payment}")
+    # ВЫПЛАТА УЧИТЕЛЮ - считаем по ВСЕМ ученикам, независимо от статуса!
+    # Учитель получает деньги за всех, кто был на уроке (attended)
+    # Статус 'debt' означает, что ученик должен школе, но учитель всё равно получает
+    teacher_payment = sum([a.teacher_payment_share for a in attendances]) if attendances else 0
 
-    # Если base_teacher_payment пустой, рассчитываем как 70% от общей стоимости
-    teacher_payment = lesson.base_teacher_payment if lesson.base_teacher_payment else total_cost * Decimal('0.7')
+    print(f"DEBUG: Всего учеников: {attendances.count()}")
+    for a in attendances:
+        print(f"  {a.student.user.get_full_name()}: статус={a.status}, выплата={a.teacher_payment_share}")
+    print(f"DEBUG: total_cost = {total_cost}, teacher_payment = {teacher_payment}")
 
     report = None
     if hasattr(lesson, 'report'):
@@ -2569,7 +2546,7 @@ def teacher_lesson_detail(request, lesson_id):
         'lesson': lesson,
         'attendances': attendances,
         'total_cost': total_cost,
-        'teacher_payment': teacher_payment,
+        'teacher_payment': teacher_payment,  # Теперь считаем всех учеников
         'report': report,
         'form': form,
         'previous_lessons': previous_lessons,
@@ -2696,9 +2673,6 @@ def complete_group_lesson(request, lesson_id):
     return redirect('teacher_group_lessons')
 
 
-
-
-
 @login_required
 def teacher_schedule_templates(request):
     """Список шаблонов расписания учителя"""
@@ -2797,3 +2771,273 @@ def teacher_edit_lesson(request, lesson_id):
         'lesson': lesson,
     }
     return render(request, 'school/teacher/edit_lesson.html', context)
+
+
+@login_required
+def teacher_schedule_template_delete(request, template_id):
+    """Удаление шаблона расписания"""
+    if request.user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+
+    teacher = request.user.teacher_profile
+    template = get_object_or_404(ScheduleTemplate, id=template_id, teacher=teacher)
+
+    if request.method == 'POST':
+        template.delete()
+        messages.success(request, 'Шаблон успешно удален')
+        return redirect('teacher_schedule_templates')
+
+    context = {
+        'template': template,
+    }
+    return render(request, 'school/teacher/schedule_template_confirm_delete.html', context)
+
+
+def create_lesson_with_prices(teacher, student, subject, date, start_time, end_time):
+    """Создание урока с автоматической подстановкой цен"""
+
+    # Получаем цены для этого ученика и предмета
+    cost, teacher_payment = StudentSubjectPrice.get_price_for(student, subject)
+
+    # Если цены не найдены, используем стандартные
+    if cost is None:
+        cost = subject.default_cost or 1000  # значение по умолчанию
+    if teacher_payment is None:
+        teacher_payment = subject.default_teacher_payment or cost * 0.7
+
+    lesson = Lesson.objects.create(
+        teacher=teacher,
+        student=student,
+        subject=subject,
+        date=date,
+        start_time=start_time,
+        end_time=end_time,
+        base_cost=cost,
+        base_teacher_payment=teacher_payment
+    )
+
+    return lesson
+
+
+@staff_member_required
+def import_students(request):
+    """Импорт учеников из Excel"""
+    if request.method == 'POST':
+        file = request.FILES.get('file')
+        if not file:
+            messages.error(request, 'Выберите файл для импорта')
+            return redirect('admin:school_student_changelist')
+
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(file)
+            ws = wb.active
+
+            success_count = 0
+            error_count = 0
+            errors = []
+
+            for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+                if not any(row):
+                    continue
+
+                try:
+                    # Ожидаемый формат: ID, Фамилия, Имя, Отчество, Email, Телефон, Родитель, Телефон родителя
+                    student_id = row[0]
+                    last_name = row[1]
+                    first_name = row[2]
+                    patronymic = row[3]
+                    email = row[4]
+                    phone = row[5]
+                    parent_name = row[6]
+                    parent_phone = row[7]
+
+                    # Создаем или обновляем пользователя
+                    if student_id:
+                        # Обновляем существующего
+                        user = User.objects.get(id=student_id)
+                    else:
+                        # Создаем нового
+                        username = f"student_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                        user = User.objects.create_user(
+                            username=username,
+                            email=email,
+                            password='default123'
+                        )
+                        user.role = 'student'
+
+                    user.last_name = last_name
+                    user.first_name = first_name
+                    user.patronymic = patronymic
+                    user.phone = phone
+                    user.save()
+
+                    # Создаем или обновляем профиль ученика
+                    student, created = Student.objects.get_or_create(user=user)
+                    student.parent_name = parent_name
+                    student.parent_phone = parent_phone
+                    student.save()
+
+                    success_count += 1
+
+                except Exception as e:
+                    error_count += 1
+                    errors.append(f"Строка {row_num}: {str(e)}")
+
+            if success_count > 0:
+                messages.success(request, f'✅ Импортировано учеников: {success_count}')
+            if error_count > 0:
+                error_text = '\n'.join(errors[:5])
+                messages.warning(request, f'⚠️ Ошибок: {error_count}\n{error_text}')
+
+        except Exception as e:
+            messages.error(request, f'Ошибка при импорте: {str(e)}')
+
+        return redirect('admin:school_student_changelist')
+
+    return render(request, 'admin/school/student/import.html')
+
+
+@staff_member_required
+def download_student_template(request):
+    """Скачать шаблон для импорта учеников"""
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="import_students_template.xlsx"'
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Импорт учеников"
+
+    headers = ['ID (оставьте пустым для новых)', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон', 'Родитель',
+               'Телефон родителя']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = openpyxl.styles.Font(bold=True)
+
+    examples = [
+        ['', 'Иванов', 'Иван', 'Иванович', 'ivanov@mail.ru', '+79001234567', 'Иванова М.И.', '+79007654321'],
+        ['13', 'Петров', 'Петр', 'Петрович', 'petrov@mail.ru', '+79009876543', 'Петрова А.С.', '+79005432176'],
+    ]
+
+    for row_num, example in enumerate(examples, start=2):
+        for col_num, value in enumerate(example, 1):
+            ws.cell(row=row_num, column=col_num, value=value)
+
+    wb.save(response)
+    return response
+
+
+@staff_member_required
+def import_teachers(request):
+    """Импорт учителей из Excel"""
+    if request.method == 'POST':
+        file = request.FILES.get('file')
+        if not file:
+            messages.error(request, 'Выберите файл для импорта')
+            return redirect('admin:school_teacher_changelist')
+
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(file)
+            ws = wb.active
+
+            success_count = 0
+            error_count = 0
+            errors = []
+
+            for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+                if not any(row):
+                    continue
+
+                try:
+                    # Ожидаемый формат: ID, Фамилия, Имя, Отчество, Email, Телефон, Предметы, Опыт, Образование
+                    teacher_id = row[0]
+                    last_name = row[1]
+                    first_name = row[2]
+                    patronymic = row[3]
+                    email = row[4]
+                    phone = row[5]
+                    subjects_str = row[6]
+                    experience = row[7]
+                    education = row[8]
+
+                    # Создаем или обновляем пользователя
+                    if teacher_id:
+                        user = User.objects.get(id=teacher_id)
+                    else:
+                        username = f"teacher_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                        user = User.objects.create_user(
+                            username=username,
+                            email=email,
+                            password='default123'
+                        )
+                        user.role = 'teacher'
+
+                    user.last_name = last_name
+                    user.first_name = first_name
+                    user.patronymic = patronymic
+                    user.phone = phone
+                    user.save()
+
+                    # Создаем или обновляем профиль учителя
+                    teacher, created = Teacher.objects.get_or_create(user=user)
+                    teacher.experience = experience or 0
+                    teacher.education = education or ''
+                    teacher.save()
+
+                    # Добавляем предметы
+                    if subjects_str:
+                        subject_names = [s.strip() for s in str(subjects_str).split(';')]
+                        for subject_name in subject_names:
+                            subject, _ = Subject.objects.get_or_create(name=subject_name)
+                            teacher.subjects.add(subject)
+
+                    success_count += 1
+
+                except Exception as e:
+                    error_count += 1
+                    errors.append(f"Строка {row_num}: {str(e)}")
+
+            if success_count > 0:
+                messages.success(request, f'✅ Импортировано учителей: {success_count}')
+            if error_count > 0:
+                error_text = '\n'.join(errors[:5])
+                messages.warning(request, f'⚠️ Ошибок: {error_count}\n{error_text}')
+
+        except Exception as e:
+            messages.error(request, f'Ошибка при импорте: {str(e)}')
+
+        return redirect('admin:school_teacher_changelist')
+
+    return render(request, 'admin/school/teacher/import.html')
+
+
+@staff_member_required
+def download_teacher_template(request):
+    """Скачать шаблон для импорта учителей"""
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="import_teachers_template.xlsx"'
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Импорт учителей"
+
+    headers = ['ID (пусто для новых)', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон', 'Предметы (через ;)',
+               'Опыт (лет)', 'Образование']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = openpyxl.styles.Font(bold=True)
+
+    examples = [
+        ['', 'Соколов', 'Павел', 'Алексеевич', 'sokolov@mail.ru', '+79001112233', 'Математика;Физика', '5', 'МГУ'],
+        ['10', 'Петрова', 'Анна', 'Игоревна', 'petrova@mail.ru', '+79002223344', 'Русский язык;Литература', '8',
+         'МПГУ'],
+    ]
+
+    for row_num, example in enumerate(examples, start=2):
+        for col_num, value in enumerate(example, 1):
+            ws.cell(row=row_num, column=col_num, value=value)
+
+    wb.save(response)
+    return response

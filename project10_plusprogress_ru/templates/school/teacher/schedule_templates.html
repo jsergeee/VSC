@@ -1,8 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}Мои шаблоны расписания{% endblock %}
-
 {% block extra_css %}
 <style>
     .templates-header {
@@ -71,7 +69,6 @@
     }
 </style>
 {% endblock %}
-
 {% block content %}
 <div class="container mt-4">
     <!-- Заголовок -->
@@ -88,7 +85,6 @@
             </div>
         </div>
     </div>
-
     <!-- Список шаблонов -->
     <div class="row">
         {% if templates %}
@@ -98,15 +94,13 @@
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <h4>{{ template.subject.name }}</h4>
                     <span class="badge {% if template.repeat_type == 'daily' %}badge-daily{% elif template.repeat_type == 'weekly' %}badge-weekly{% elif template.repeat_type == 'biweekly' %}badge-biweekly{% else %}badge-monthly{% endif %} template-badge">
-                            {{ template.get_repeat_type_display }}
-                        </span>
+                        {{ template.get_repeat_type_display }}
+                    </span>
                 </div>
-
                 <p class="text-muted mb-2">
                     <i class="fa fa-clock"></i> {{ template.start_time|time:"H:i" }} - {{ template.end_time|time:"H:i"
                     }}
                 </p>
-
                 <!-- Дни недели -->
                 <div class="mb-3">
                     <span class="day-chip {% if template.monday %}active{% endif %}">Пн</span>
@@ -117,7 +111,6 @@
                     <span class="day-chip {% if template.saturday %}active{% endif %}">Сб</span>
                     <span class="day-chip {% if template.sunday %}active{% endif %}">Вс</span>
                 </div>
-
                 <!-- Даты -->
                 <p class="mb-2">
                     <i class="fa fa-calendar"></i>
@@ -126,22 +119,24 @@
                     до {{ template.end_date|date:"d.m.Y" }}
                     {% endif %}
                 </p>
-
                 <!-- Ученики -->
                 <p class="mb-3">
                     <i class="fa fa-users"></i>
                     Учеников: {{ template.students.count }}
                 </p>
-
                 <!-- Кнопки -->
-                <div class="d-flex justify-content-between">
+                <div class="d-flex justify-content-between align-items-center">
                     <a href="{% url 'teacher_schedule_template_detail' template.id %}" class="btn btn-outline-primary">
                         <i class="fa fa-eye"></i> Подробнее
                     </a>
-                    <div>
-                            <span class="badge {% if template.is_active %}badge-success{% else %}badge-secondary{% endif %}">
-                                {% if template.is_active %}Активен{% else %}Неактивен{% endif %}
-                            </span>
+                    <div class="d-flex align-items-center gap-2">
+                        <!-- Простая ссылка на страницу подтверждения -->
+                        <a href="{% url 'teacher_schedule_template_delete' template.id %}" class="btn btn-outline-danger btn-sm">
+                            <i class="fa fa-trash"></i>
+                        </a>
+                        <span class="badge {% if template.is_active %}badge-success{% else %}badge-secondary{% endif %}">
+        {% if template.is_active %}Активен{% else %}Неактивен{% endif %}
+    </span>
                     </div>
                 </div>
             </div>
@@ -161,4 +156,32 @@
         {% endif %}
     </div>
 </div>
+<!-- Скрипт для подтверждения удаления -->
+<script>
+    function openDeleteModal(id, subject, startTime, endTime, startDate, endDate) {
+        let dateText = endDate ? `до ${endDate}` : '';
+        let message = `Вы уверены, что хотите удалить шаблон "${subject}"?\n\n`;
+        message += `Время: ${startTime} - ${endTime}\n`;
+        message += `Даты: с ${startDate} ${dateText}\n\n`;
+        message += `Уроки, созданные по этому шаблону, останутся в системе.`;
+
+        if (confirm(message)) {
+            // Создаем форму для POST запроса
+            let form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/teacher/schedule-template/${id}/delete/`;
+            form.style.display = 'none';
+
+            // Добавляем CSRF-токен
+            let csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = '{{ csrf_token }}';
+            form.appendChild(csrfInput);
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+</script>
 {% endblock %}

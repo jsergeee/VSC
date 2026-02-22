@@ -1,8 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}Урок {{ lesson.subject.name }} - {{ lesson.date }}{% endblock %}
-
 {% block extra_css %}
 <style>
     .lesson-header {
@@ -178,7 +176,6 @@
     }
 </style>
 {% endblock %}
-
 {% block content %}
 <div class="container mt-4">
     <!-- Заголовок урока -->
@@ -188,7 +185,9 @@
                 <h1>{{ lesson.subject.name }}</h1>
                 <p class="mb-2">
                     <i class="fa fa-calendar"></i> {{ lesson.date|date:"d.m.Y" }}
-                    <i class="fa fa-clock ml-3"></i> {{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}
+                    <i class="fa fa-clock ml-3"></i> <!--
+    --> {{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}<!--
+    -->
                 </p>
                 <p class="mb-0">
                     <span class="badge status-{{ lesson.status }} status-badge">
@@ -210,7 +209,6 @@
             </div>
         </div>
     </div>
-
     <div class="row">
         <!-- Левая колонка - информация об учениках и финансах -->
         <div class="col-md-4">
@@ -237,8 +235,8 @@
                                 <i class="fa fa-envelope"></i> {{ attendance.student.user.email|truncatechars:20 }}
                             </p>
                             <div class="info-row">
-                                <span class="info-label">Стоимость:</span>
-                                <span class="info-value">{{ attendance.cost }} ₽</span>
+                                <!--                                <span class="info-label">Стоимость:</span>
+                                                                <span class="info-value">{{ attendance.cost }} ₽</span>-->
                             </div>
                             <div class="info-row">
                                 <span class="info-label">Статус:</span>
@@ -246,24 +244,23 @@
                                     {{ attendance.get_status_display }}
                                 </span>
                             </div>
-                            <div class="info-row">
-                                <span class="info-label">Баланс:</span>
-                                <span class="info-value {% if attendance.student.user.balance < attendance.cost %}text-danger{% endif %}">
-                                    {{ attendance.student.user.balance|floatformat:0 }} ₽
-                                </span>
-                            </div>
+                            <!--                            <div class="info-row">
+                                                            <span class="info-label">Баланс кошелька ученика:</span>
+                                                            <span class="info-value {% if attendance.student.user.balance < attendance.cost %}text-danger{% endif %}">
+                                                                {{ attendance.student.user.balance|floatformat:0 }} ₽
+                                                            </span>
+                                                        </div>-->
                         </div>
                     </div>
                 </div>
                 {% empty %}
                 <p class="text-muted">Нет учеников</p>
                 {% endfor %}
-
                 <!-- Итого по финансам -->
                 <div class="total-cost">
                     <div class="info-row">
-                        <span class="info-label">Общая стоимость:</span>
-                        <span class="info-value">{{ total_cost }} ₽</span>
+                        <!--<span class="info-label">Общая стоимость:</span>-->
+                        <!--<span class="info-value">{{ total_cost }} ₽</span>-->
                     </div>
                     <div class="info-row">
                         <span class="info-label">Ваш гонорар:</span>
@@ -271,12 +268,10 @@
                     </div>
                 </div>
             </div>
-
             <!-- ВИДЕО-ЗВОНОК JITSI -->
             {% if lesson.status == 'scheduled' %}
             <div class="info-card">
                 <h5><i class="fa fa-video-camera"></i> Видео-урок</h5>
-
                 {% if not lesson.video_room %}
                 <!-- Кнопка создания комнаты -->
                 <button onclick="createVideoRoom()" class="btn-video" id="createRoomBtn">
@@ -292,7 +287,6 @@
                 <div class="alert alert-success">
                     <i class="fa fa-check-circle"></i> Комната создана!
                 </div>
-
                 {% with room_name="plusprogress-"|add:lesson.id|stringformat:"s"|add:"-"|add:lesson.video_room %}
                 <!-- Ссылка для учителя -->
                 <div class="link-box">
@@ -308,7 +302,6 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- Ссылка для учеников -->
                 <div class="link-box">
                     <label><i class="fa fa-users"></i> Ссылка для учеников:</label>
@@ -324,7 +317,6 @@
                     </div>
                     <small class="text-muted">Ученики войдут под своими именами</small>
                 </div>
-
                 <!-- Кнопка начала урока -->
                 <a href="https://meet.jit.si/{{ room_name }}#userInfo.displayName={{ request.user.get_full_name|urlencode }}&userInfo.email={{ request.user.email|urlencode }}&config.startWithAudioMuted=false"
                    target="_blank"
@@ -332,7 +324,6 @@
                     <i class="fa fa-play"></i> Начать урок
                 </a>
                 {% endwith %}
-
                 <!-- Кнопка редактирования (вне блока with) -->
                 <a href="{% url 'teacher_edit_lesson' lesson.id %}" class="btn btn-sm btn-outline-secondary mt-2">
                     <i class="fa fa-edit"></i> Редактировать урок
@@ -340,7 +331,6 @@
                 {% endif %}
             </div>
             {% endif %}
-
             <!-- Кнопка завершения урока -->
             {% if lesson.status == 'scheduled' %}
             <div class="info-card">
@@ -350,7 +340,6 @@
                 </button>
             </div>
             {% endif %}
-
             <!-- Предыдущие уроки -->
             {% if previous_lessons %}
             <div class="info-card">
@@ -371,7 +360,6 @@
             </div>
             {% endif %}
         </div>
-
         <!-- Правая колонка - информация об уроке и отчет -->
         <div class="col-md-8">
             {% if lesson.status == 'completed' and lesson.report %}
@@ -386,7 +374,6 @@
                 <p><strong>План следующего урока:</strong> {{ lesson.report.next_lesson_plan }}</p>
                 {% endif %}
             </div>
-
             <!-- Оценки от учеников -->
             {% if lesson.feedback %}
             <div class="info-card">
@@ -394,7 +381,7 @@
                 <div class="text-center">
                     <div class="rating-stars mb-2">
                         {% for i in "12345"|make_list %}
-                            {% if forloop.counter <= lesson.feedback.rating %}★{% else %}☆{% endif %}
+                        {% if forloop.counter <= lesson.feedback.rating %}★{% else %}☆{% endif %}
                         {% endfor %}
                     </div>
                     {% if lesson.feedback.comment %}
@@ -404,18 +391,20 @@
                 </div>
             </div>
             {% endif %}
-
             {% elif lesson.status == 'scheduled' %}
             <!-- Запланированный урок -->
             <div class="info-card">
                 <h5><i class="fa fa-info-circle"></i> Информация об уроке</h5>
                 <p><i class="fa fa-calendar"></i> <strong>Дата:</strong> {{ lesson.date|date:"d.m.Y" }}</p>
-                <p><i class="fa fa-clock"></i> <strong>Время:</strong> {{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}</p>
+                <p>
+                    <i class="fa fa-clock"></i>
+                    <strong>Время:</strong>
+                    {{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}
+                </p>
                 <p><i class="fa fa-book"></i> <strong>Предмет:</strong> {{ lesson.subject.name }}</p>
                 {% if lesson.format %}
                 <p><i class="fa fa-tag"></i> <strong>Формат:</strong> {{ lesson.format.name }}</p>
                 {% endif %}
-
                 {% if lesson.notes %}
                 <hr>
                 <p><strong>Заметки:</strong><br>{{ lesson.notes }}</p>
@@ -425,7 +414,6 @@
         </div>
     </div>
 </div>
-
 <!-- Простое модальное окно (без Bootstrap) -->
 <div id="simpleModal"
      style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; z-index: 999999; border-radius: 10px; box-shadow: 0 5px 30px rgba(0,0,0,0.3); width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto;">
@@ -435,50 +423,69 @@
                 style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">&times;
         </button>
     </div>
-
-    <form method="post" action="{% url 'complete_lesson' lesson.id %}">
+    <form method="post" action="{% url 'complete_lesson' lesson.id %}" id="completeLessonForm">
         {% csrf_token %}
         <div style="padding: 0 20px;">
             <div style="background: #e8f4fd; border-left: 4px solid #2196f3; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
                 <i class="fa fa-info-circle" style="color: #2196f3;"></i> После завершения урока:
                 <ul style="margin: 10px 0 0 0;">
                     <li>С баланса учеников спишутся суммы согласно их стоимости</li>
-                    <li>На ваш кошелек поступит {{ teacher_payment }} ₽</li>
+                    <li>На ваш кошелек поступит сумма за присутствующих учеников</li>
                     <li>Ученики смогут оценить урок</li>
                 </ul>
             </div>
-
+            <!-- Отметка явки учеников -->
+            <div style="margin-bottom: 20px; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px;">
+                <h4 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1rem;">
+                    <i class="fa fa-check-circle"></i> Отметка присутствия
+                </h4>
+                {% for attendance in attendances %}
+                <div style="display: flex; align-items: center; margin-bottom: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                    <input type="checkbox" name="attended_{{ attendance.id }}" id="attended_{{ attendance.id }}"
+                           checked style="width: 20px; height: 20px; margin-right: 15px;">
+                    <label for="attended_{{ attendance.id }}" style="flex: 1; cursor: pointer;">
+                        <strong>{{ attendance.student.user.get_full_name }}</strong>
+                        <span style="color: #28a745; margin-left: 10px;">
+                +{{ attendance.teacher_payment_share|floatformat:0 }} ₽
+            </span>
+                    </label>
+                </div>
+                {% endfor %}
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #dee2e6; font-weight: bold;">
+                    <span>Максимальная выплата: </span>
+                    <span style="color: #28a745; font-size: 1.2rem;">{{ max_teacher_payment|floatformat:0 }} ₽</span>
+                </div>
+                <p class="text-muted small" style="margin-top: 10px;">
+                    <i class="fa fa-info-circle"></i> Отметьте учеников, которые присутствовали на уроке.
+                    Выплата будет начислена только за отмеченных.
+                </p>
+            </div>
             <div style="margin-bottom: 15px;">
                 <label style="font-weight: 600; display: block; margin-bottom: 5px;">Тема урока *</label>
                 <input type="text" name="topic" required
                        style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
             </div>
-
             <div style="margin-bottom: 15px;">
                 <label style="font-weight: 600; display: block; margin-bottom: 5px;">Что прошли *</label>
                 <textarea name="covered_material" rows="3" required
                           style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;"></textarea>
             </div>
-
             <div style="margin-bottom: 15px;">
                 <label style="font-weight: 600; display: block; margin-bottom: 5px;">Домашнее задание *</label>
                 <textarea name="homework" rows="3" required
                           style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;"></textarea>
             </div>
-
             <div style="margin-bottom: 15px;">
                 <label style="font-weight: 600; display: block; margin-bottom: 5px;">Прогресс ученика *</label>
                 <textarea name="student_progress" rows="2" required
                           style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;"></textarea>
             </div>
-
             <div style="margin-bottom: 15px;">
                 <label style="font-weight: 600; display: block; margin-bottom: 5px;">План следующего урока</label>
                 <textarea name="next_lesson_plan" rows="2"
                           style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;"></textarea>
             </div>
         </div>
-
         <div style="padding: 20px; border-top: 1px solid #dee2e6; text-align: right;">
             <button type="button" onclick="document.getElementById('simpleModal').style.display='none'"
                     style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-right: 10px; cursor: pointer;">
@@ -491,7 +498,6 @@
         </div>
     </form>
 </div>
-
 <!-- Скрипты -->
 <script>
     function getCookie(name) {
@@ -551,18 +557,10 @@
         }, 2000);
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-        // Проверяем авторизацию через JavaScript
-        {% if user.is_authenticated %}
-        const simpleModalForm = document.querySelector('#simpleModal form');
-        if (simpleModalForm) {
-            simpleModalForm.addEventListener('submit', function(e) {
-                if (!confirm('Вы уверены, что хотите завершить урок? Это действие нельзя отменить.')) {
-                    e.preventDefault();
-                }
-            });
-        }
-        {% endif %}
+document.addEventListener('DOMContentLoaded', function() {
+    // Никакого confirm - просто отправляем форму
+    // Модальное окно само по себе уже подтверждение
+});
     });
 </script>
 {% endblock %}

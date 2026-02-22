@@ -60,6 +60,8 @@ urlpatterns = [
          name='teacher_group_lesson_detail'),
     path('teacher/group-lesson/<int:lesson_id>/attendance/', views.mark_group_attendance, name='mark_group_attendance'),
     path('teacher/group-lesson/<int:lesson_id>/complete/', views.complete_group_lesson, name='complete_group_lesson'),
+    path('teacher/schedule-template/<int:template_id>/delete/', views.teacher_schedule_template_delete,
+         name='teacher_schedule_template_delete'),
 
     # Уведомления
     path('api/notifications/', views.get_notifications, name='api_notifications'),
@@ -79,4 +81,9 @@ urlpatterns = [
     path('student/homeworks/', views.student_homeworks, name='student_homeworks'),
     path('student/homework/<int:homework_id>/', views.student_homework_detail, name='student_homework_detail'),
 
+    # Импорты
+    path('admin/school/student/import/', views.import_students, name='import-students'),
+    path('admin/school/student/download-template/', views.download_student_template, name='download-student-template'),
+    path('admin/school/teacher/import/', views.import_teachers, name='import-teachers'),
+    path('admin/school/teacher/download-template/', views.download_teacher_template, name='download-teacher-template'),
 ]

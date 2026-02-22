@@ -66,6 +66,10 @@
                 <a href="{% url 'teacher_schedule_templates' %}" class="btn btn-light">
                     <i class="fa fa-arrow-left"></i> К списку
                 </a>
+                <!-- Кнопка удаления с модальным окном -->
+                <button type="button" class="btn btn-outline-danger" data-toggle="modal" data-target="#deleteModal">
+                    <i class="fa fa-trash"></i> Удалить
+                </button>
             </div>
         </div>
     </div>
@@ -94,24 +98,6 @@
                     </tr>
                 </table>
             </div>
-
-<!--            <div class="info-card">
-                <h5 class="mb-3"><i class="fa fa-ruble-sign"></i> Финансы</h5>
-                <table class="table table-sm table-borderless">
-                    <tr>
-                        <td><strong>Тип оплаты:</strong></td>
-                        <td>{{ template.get_price_type_display }}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Базовая стоимость:</strong></td>
-                        <td>{{ template.base_cost }} ₽</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Базовая выплата:</strong></td>
-                        <td>{{ template.base_teacher_payment }} ₽</td>
-                    </tr>
-                </table>
-            </div>-->
 
             <div class="info-card">
                 <h5 class="mb-3"><i class="fa fa-video-camera"></i> Платформа</h5>
@@ -164,6 +150,41 @@
                     <i class="fa fa-info-circle"></i> Уроки создаются по мере необходимости.
                     Шаблон не создает уроки автоматически, только по вашему запросу.
                 </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно подтверждения удаления -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">Подтверждение удаления</h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите удалить шаблон?</p>
+                <div class="alert alert-light">
+                    <strong>{{ template.subject.name }}</strong><br>
+                    {{ template.start_time|time:"H:i" }} - {{ template.end_time|time:"H:i" }}<br>
+                    с {{ template.start_date|date:"d.m.Y" }}
+                    {% if template.end_date %} до {{ template.end_date|date:"d.m.Y" }}{% endif %}
+                </div>
+                <p class="text-muted small">
+                    <i class="fa fa-info-circle"></i> Уроки, созданные по этому шаблону, останутся в системе.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+                <form method="post" action="{% url 'teacher_schedule_template_delete' template.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fa fa-trash"></i> Удалить
+                    </button>
+                </form>
             </div>
         </div>
     </div>

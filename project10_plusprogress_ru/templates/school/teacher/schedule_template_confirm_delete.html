@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Удаление шаблона{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">Подтверждение удаления</h4>
+                </div>
+                <div class="card-body">
+                    <p class="mb-4">Вы уверены, что хотите удалить шаблон расписания?</p>
+
+                    <div class="alert alert-warning">
+                        <h5 class="mb-2">{{ template.subject.name }}</h5>
+                        <p class="mb-1">
+                            <i class="fa fa-clock"></i> {{ template.start_time|time:"H:i" }} - {{ template.end_time|time:"H:i" }}
+                        </p>
+                        <p class="mb-0">
+                            <i class="fa fa-calendar"></i> с {{ template.start_date|date:"d.m.Y" }}
+                            {% if template.end_date %} до {{ template.end_date|date:"d.m.Y" }}{% endif %}
+                        </p>
+                    </div>
+
+                    <p class="text-danger">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        Это действие нельзя отменить. Все уроки, созданные по этому шаблону, останутся в системе.
+                    </p>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'teacher_schedule_templates' %}" class="btn btn-secondary">
+                                <i class="fa fa-arrow-left"></i> Отмена
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fa fa-trash"></i> Удалить шаблон
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
