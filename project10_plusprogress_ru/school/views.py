@@ -19,6 +19,8 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
+import logging
+from django.urls import reverse
 import io
 import json
 import csv
@@ -54,6 +56,11 @@ import urllib.parse
 from .models import ScheduleTemplate, ScheduleTemplateStudent
 from .forms import ScheduleTemplateForm
 from .models import StudentSubjectPrice
+from django.shortcuts import render, get_object_or_404
+from django.contrib import messages
+from django.utils import timezone
+from .models import EmailVerificationToken
+from .utils import send_verification_email, send_verification_success_email
 from .models import (
     User, Teacher, Student, Lesson, Subject,
     LessonReport, Payment, TrialRequest, Schedule,
@@ -82,18 +89,44 @@ def home(request):
     return render(request, 'school/home.html', context)
 
 
+# school/views.py
+
 def register(request):
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST, request.FILES)
         if form.is_valid():
-            user = form.save()
-            login(request, user)
-            messages.success(request, 'Регистрация прошла успешно!')
-            return redirect('dashboard')
+            try:
+                user = form.save()
+
+                # Отправляем письмо с подтверждением
+                from .utils import send_verification_email
+                if send_verification_email(user, request):
+                    messages.success(
+                        request,
+                        'Регистрация прошла успешно! '
+                        'На ваш email отправлено письмо с подтверждением.'
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        'Регистрация прошла успешно, но не удалось отправить '
+                        'письмо подтверждения. Вы сможете запросить его позже.'
+                    )
+
+                # Не логиним пользователя сразу, требуем подтверждение email
+                return redirect('login')
+
+            except Exception as e:
+                messages.error(request, f'Ошибка при регистрации: {str(e)}')
+        else:
+            messages.error(request, 'Пожалуйста, исправьте ошибки в форме')
     else:
         form = UserRegistrationForm()
+
     return render(request, 'school/register.html', {'form': form})
 
+
+# school/views.py
 
 def user_login(request):
     if request.method == 'POST':
@@ -102,13 +135,33 @@ def user_login(request):
             username = form.cleaned_data['username']
             password = form.cleaned_data['password']
             user = authenticate(username=username, password=password)
+
             if user:
+                # Проверяем, подтвержден ли email
+                if not user.is_email_verified:
+                    messages.warning(
+                        request,
+                        'Пожалуйста, подтвердите ваш email перед входом в систему. '
+                        '<a href="{}" class="alert-link">Отправить письмо повторно</a>'.format(
+                            reverse('resend_verification')
+                        )
+                    )
+                    return redirect('login')
+
                 login(request, user)
-                return redirect('dashboard')
+
+                # Перенаправляем в зависимости от роли
+                if user.role == 'student':
+                    return redirect('student_dashboard')
+                elif user.role == 'teacher':
+                    return redirect('teacher_dashboard')
+                else:
+                    return redirect('admin:index')
             else:
                 messages.error(request, 'Неверное имя пользователя или пароль')
     else:
         form = UserLoginForm()
+
     return render(request, 'school/login.html', {'form': form})
 
 
@@ -3041,3 +3094,129 @@ def download_teacher_template(request):
 
     wb.save(response)
     return response
+
+
+# school/views.py
+
+
+logger = logging.getLogger(__name__)
+
+
+def verify_email(request, token):
+    """Подтверждение email по токену"""
+    print(f"\n{'=' * 50}")
+    print(f"🔍 verify_email вызван с токеном: {token}")
+    print(f"📝 Request path: {request.path}")
+    print(f"👤 User authenticated: {request.user.is_authenticated}")
+    print(f"{'=' * 50}\n")
+
+    try:
+        # Ищем токен
+        print(f"🔎 Ищем токен в БД...")
+        verification_token = get_object_or_404(EmailVerificationToken, token=token)
+
+        print(f"✅ Токен найден!")
+        print(f"   Пользователь: {verification_token.user.username}")
+        print(f"   Email: {verification_token.user.email}")
+        print(f"   Создан: {verification_token.created_at}")
+        print(f"   Истекает: {verification_token.expires_at}")
+        print(f"   Действителен: {verification_token.is_valid()}")
+        print(f"   Email верифицирован сейчас: {verification_token.user.is_email_verified}")
+
+        # Проверяем, не истек ли токен
+        if not verification_token.is_valid():
+            print(f"❌ Токен истек!")
+            messages.error(
+                request,
+                'Срок действия ссылки истек. Запросите повторную отправку письма.'
+            )
+            return redirect('resend_verification')
+
+        user = verification_token.user
+
+        # Проверяем, не подтвержден ли уже email
+        if user.is_email_verified:
+            print(f"ℹ️ Email уже подтвержден")
+            messages.info(request, 'Email уже подтвержден')
+            return redirect('login')
+
+        # Подтверждаем email
+        print(f"🔄 Подтверждаем email...")
+        user.is_email_verified = True
+        user.save(update_fields=['is_email_verified'])
+        print(f"✅ Email подтвержден!")
+
+        # Отправляем письмо об успехе
+        try:
+            print(f"📧 Отправляем письмо об успехе...")
+            from .utils import send_verification_success_email
+            send_verification_success_email(user)
+            print(f"✅ Письмо об успехе отправлено")
+        except Exception as e:
+            print(f"⚠️ Ошибка при отправке письма об успехе: {e}")
+            logger.error(f"Ошибка отправки письма об успехе: {e}")
+
+        # Удаляем использованный токен
+        print(f"🗑️ Удаляем токен...")
+        verification_token.delete()
+        print(f"✅ Токен удален")
+
+        messages.success(
+            request,
+            '✅ Email успешно подтвержден! Теперь вы можете войти в систему.'
+        )
+        print(f"🎉 Процесс завершен успешно!")
+
+    except EmailVerificationToken.DoesNotExist:
+        print(f"❌ Токен не найден в БД!")
+        messages.error(request, '❌ Недействительная ссылка подтверждения')
+    except Exception as e:
+        print(f"❌ Неожиданная ошибка: {e}")
+        import traceback
+        traceback.print_exc()
+        messages.error(request, f'❌ Ошибка при подтверждении: {str(e)}')
+
+    print(f"↩️ Редирект на login\n")
+    return redirect('login')
+
+
+def resend_verification(request):
+    """Повторная отправка письма подтверждения"""
+    if request.method == 'POST':
+        email = request.POST.get('email')
+
+        try:
+            user = User.objects.get(email=email, is_email_verified=False)
+
+            # Проверяем, не отправляли ли письмо недавно
+            if user.email_verification_sent:
+                time_since = timezone.now() - user.email_verification_sent
+                if time_since.total_seconds() < 300:  # 5 минут
+                    minutes_left = 5 - (time_since.total_seconds() // 60)
+                    messages.error(
+                        request,
+                        f'Письмо уже отправлено. Повторная отправка через {int(minutes_left)} минут'
+                    )
+                    return redirect('login')
+
+            # Отправляем письмо повторно
+            if send_verification_email(user, request):
+                messages.success(
+                    request,
+                    'Письмо с подтверждением отправлено повторно. Проверьте вашу почту.'
+                )
+            else:
+                messages.error(
+                    request,
+                    'Ошибка при отправке письма. Попробуйте позже.'
+                )
+
+        except User.DoesNotExist:
+            # Не сообщаем, существует ли пользователь (безопасность)
+            messages.success(
+                request,
+                'Если пользователь с таким email существует и не подтвержден, '
+                'письмо будет отправлено повторно.'
+            )
+
+    return render(request, 'school/resend_verification.html')

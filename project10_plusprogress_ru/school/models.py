@@ -8,6 +8,8 @@ from django.utils import timezone
 from datetime import timedelta, datetime
 from django.db.models import Avg, Sum, Count
 from datetime import timedelta, date
+import uuid
+from datetime import timedelta
 
 
 class User(AbstractUser):
@@ -22,6 +24,10 @@ class User(AbstractUser):
     photo = models.ImageField('Фото', upload_to='users/', null=True, blank=True)
     patronymic = models.CharField('Отчество', max_length=50, blank=True)
     balance = models.DecimalField('Баланс', max_digits=10, decimal_places=2, default=0)
+
+    # ✅ Добавляем значение по умолчанию
+    is_email_verified = models.BooleanField(default=False)
+    email_verification_sent = models.DateTimeField(null=True, blank=True)
 
     # Добавьте эти строки для решения конфликта
     groups = models.ManyToManyField(
@@ -67,6 +73,37 @@ class User(AbstractUser):
         if self.patronymic:
             return f"{full_name} {self.patronymic}".strip()
         return full_name
+
+
+
+
+class EmailVerificationToken(models.Model):
+    """Токен для подтверждения email"""
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='email_verification_token'
+    )
+    token = models.CharField(max_length=64, unique=True, default=uuid.uuid4)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    class Meta:
+        verbose_name = 'Токен подтверждения email'
+        verbose_name_plural = 'Токены подтверждения email'
+
+    def save(self, *args, **kwargs):
+        if not self.expires_at:
+            # Токен действует 48 часов
+            self.expires_at = timezone.now() + timedelta(hours=48)
+        super().save(*args, **kwargs)
+
+    def is_valid(self):
+        """Проверяет, действителен ли токен"""
+        return timezone.now() <= self.expires_at
+
+    def __str__(self):
+        return f"Токен для {self.user.email}"
 
 
 class Subject(models.Model):

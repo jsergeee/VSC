@@ -43,6 +43,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'school.middleware.StudentProfileMiddleware',
+    'school.middleware.EmailVerificationMiddleware',
 ]
 
 ROOT_URLCONF = 'plusprogress.urls'
@@ -87,6 +88,10 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Для разработки можно использовать консольный бэкенд
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
 LANGUAGE_CODE = 'ru-ru'
 TIME_ZONE = 'Europe/Moscow'
 USE_I18N = True
@@ -111,3 +116,12 @@ LOGOUT_REDIRECT_URL = 'home'
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+# Email settings
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.yandex.ru'  # или ваш SMTP
+EMAIL_PORT = 465
+EMAIL_USE_SSL = True
+EMAIL_HOST_USER = 'jserge@yandex.ru'
+EMAIL_HOST_PASSWORD = 'fbbwcoxjkjfkovum'
+DEFAULT_FROM_EMAIL = 'jserge@yandex.ru'

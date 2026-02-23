@@ -5,6 +5,8 @@ from .models import User, TrialRequest, LessonReport
 from django import forms
 from .models import LessonFeedback
 from .models import Homework, HomeworkSubmission
+from django import forms
+from django.core.exceptions import ValidationError
 
 
 
@@ -15,10 +17,10 @@ class UserRegistrationForm(UserCreationForm):
     email = forms.EmailField(required=True, label='Email')
     phone = forms.CharField(max_length=20, required=True, label='Телефон')
     role = forms.ChoiceField(choices=User.ROLE_CHOICES, required=True, label='Роль')
-    
+
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name', 'patronymic', 
+        fields = ('username', 'first_name', 'last_name', 'patronymic',
                  'email', 'phone', 'role', 'photo', 'password1', 'password2')
         labels = {
             'username': 'Имя пользователя',
@@ -32,7 +34,7 @@ class UserRegistrationForm(UserCreationForm):
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
             'patronymic': forms.TextInput(attrs={'class': 'form-control'}),
         }
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Делаем поля обязательными
@@ -40,20 +42,20 @@ class UserRegistrationForm(UserCreationForm):
         self.fields['last_name'].required = True
         self.fields['email'].required = True
         self.fields['phone'].required = True
-        
+
         # Добавляем классы для стилизации
         for field_name, field in self.fields.items():
             field.widget.attrs['class'] = 'form-control'
-    
+
     def save(self, commit=True):
         user = super().save(commit=False)
         user.email = self.cleaned_data['email']
         user.phone = self.cleaned_data['phone']
         user.role = self.cleaned_data['role']
-        
+
         if commit:
             user.save()
-            
+
             # Создаем соответствующий профиль в зависимости от роли
             if user.role == 'student':
                 from .models import Student
@@ -61,8 +63,43 @@ class UserRegistrationForm(UserCreationForm):
             elif user.role == 'teacher':
                 from .models import Teacher
                 Teacher.objects.get_or_create(user=user)
-        
+
         return user
+
+    def clean_email(self):
+        """Проверка уникальности email"""
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exists():
+            raise ValidationError('Пользователь с таким email уже существует')
+        return email
+
+    def clean_phone(self):
+        """Проверка формата телефона"""
+        phone = self.cleaned_data.get('phone')
+        # Простая валидация - можно расширить
+        if phone and not phone.replace('+', '').replace('-', '').replace(' ', '').isdigit():
+            raise ValidationError('Введите корректный номер телефона')
+        return phone
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Добавляем подсказки для полей
+        self.fields['username'].help_text = 'Обязательно. Только буквы, цифры и @/./+/-/_'
+        self.fields['password1'].help_text = 'Пароль должен содержать минимум 8 символов'
+        self.fields['password2'].help_text = 'Введите тот же пароль для подтверждения'
+
+        # Делаем поля обязательными
+        self.fields['first_name'].required = True
+        self.fields['last_name'].required = True
+        self.fields['email'].required = True
+        self.fields['phone'].required = True
+
+        # Добавляем плейсхолдеры
+        self.fields['first_name'].widget.attrs['placeholder'] = 'Введите имя'
+        self.fields['last_name'].widget.attrs['placeholder'] = 'Введите фамилию'
+        self.fields['email'].widget.attrs['placeholder'] = 'example@mail.ru'
+        self.fields['phone'].widget.attrs['placeholder'] = '+7 (999) 123-45-67'
 
 
 class UserLoginForm(forms.Form):
@@ -70,7 +107,7 @@ class UserLoginForm(forms.Form):
     Форма для входа пользователя
     """
     username = forms.CharField(
-        max_length=150, 
+        max_length=150,
         label='Имя пользователя',
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите имя пользователя'})
     )
@@ -89,17 +126,17 @@ class TrialRequestForm(forms.ModelForm):
         fields = ('name', 'email', 'phone', 'subject')
         widgets = {
             'name': forms.TextInput(attrs={
-                'class': 'register-input-home', 
+                'class': 'register-input-home',
                 'placeholder': 'Ваше имя',
                 'required': 'required'
             }),
             'email': forms.EmailInput(attrs={
-                'class': 'register-input-home', 
+                'class': 'register-input-home',
                 'placeholder': 'Адрес электронной почты',
                 'required': 'required'
             }),
             'phone': forms.TextInput(attrs={
-                'class': 'register-input-home', 
+                'class': 'register-input-home',
                 'placeholder': 'Ваш телефон',
                 'required': 'required'
             }),
@@ -170,9 +207,9 @@ class CustomUserCreationForm(UserCreationForm):
     """
     class Meta(UserCreationForm.Meta):
         model = User
-        fields = ('username', 'first_name', 'last_name', 'patronymic', 
+        fields = ('username', 'first_name', 'last_name', 'patronymic',
                  'email', 'phone', 'role')
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['first_name'].required = True
@@ -188,10 +225,10 @@ class CustomUserChangeForm(UserChangeForm):
     class Meta(UserChangeForm.Meta):
         model = User
         fields = ('username', 'first_name', 'last_name', 'patronymic',
-                 'email', 'phone', 'photo', 'role', 'balance', 
+                 'email', 'phone', 'photo', 'role', 'balance',
                  'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')
-        
-        
+
+
 
 
 class LessonFeedbackForm(forms.ModelForm):
@@ -215,7 +252,7 @@ class LessonFeedbackForm(forms.ModelForm):
         help_texts = {
             'is_public': 'Если отметить, ваш отзыв может быть опубликован на сайте школы',
         }
-        
+
 
 class HomeworkForm(forms.ModelForm):
     """Форма создания домашнего задания"""

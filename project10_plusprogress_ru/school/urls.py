@@ -10,6 +10,10 @@ urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),
     path('profile/', views.profile, name='profile'),
 
+    # Email verification
+    path('verify-email/<str:token>/', views.verify_email, name='verify_email'),
+    path('resend-verification/', views.resend_verification, name='resend_verification'),
+
     # Student URLs
     path('student/dashboard/', views.student_dashboard, name='student_dashboard'),
 

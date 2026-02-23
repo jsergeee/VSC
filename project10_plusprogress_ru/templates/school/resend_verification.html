@@ -1,0 +1,41 @@
+<!-- templates/school/resend_verification.html -->
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Подтверждение email{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-6 mx-auto">
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <h4 class="mb-0">📧 Подтверждение email</h4>
+                </div>
+                <div class="card-body">
+                    <p>Введите ваш email, и мы отправим письмо с ссылкой для подтверждения.</p>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-group mb-3">
+                            <label for="email">Email</label>
+                            <input type="email"
+                                   name="email"
+                                   id="email"
+                                   class="form-control"
+                                   required>
+                        </div>
+                        <button type="submit" class="btn btn-warning">
+                            Отправить письмо
+                        </button>
+                        <a href="{% url 'login' %}" class="btn btn-outline-secondary">
+                            Вернуться к входу
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -10,15 +10,51 @@
     <div class="row">
         <div class="col-md-8 mx-auto">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header {% if form.errors %}bg-warning{% endif %}">
                     <h3 class="text-center">Регистрация</h3>
+                    {% if form.errors %}
+                    <div class="alert alert-danger mt-2">
+                        <strong>⚠️ Исправьте ошибки ниже:</strong>
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="card-body">
-                    <form method="post" enctype="multipart/form-data">
+                    <!-- Отображение общих ошибок формы (не связанных с конкретным полем) -->
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data" novalidate>
                         {% csrf_token %}
-                        {{ form|crispy }}
-                        <button type="submit" class="btn btn-primary btn-block">Зарегистрироваться</button>
+
+                        <!-- Ручной вывод полей с ошибками для лучшего контроля -->
+                        {% for field in form %}
+                            <div class="form-group mb-3">
+                                {{ field|as_crispy_field }}
+
+                                <!-- Дополнительное отображение ошибок под полем (crispy уже делает это, но дублирование не помешает) -->
+                                {% if field.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in field.errors %}
+                                            <small class="text-danger">{{ error }}</small><br>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+
+                                <!-- Подсказка для поля -->
+                                {% if field.help_text %}
+                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+
+                        <button type="submit" class="btn btn-primary btn-block w-100">Зарегистрироваться</button>
                     </form>
+
                     <hr>
                     <p class="text-center">
                         Уже есть аккаунт? <a href="{% url 'login' %}">Войти</a>
@@ -28,4 +64,40 @@
         </div>
     </div>
 </div>
+
+<!-- Добавим JavaScript для дополнительной валидации на клиенте -->
+{% block extra_js %}
+<script>
+    // Функция для подсветки полей с ошибками после загрузки страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        // Найти все поля с ошибками и добавить класс
+        document.querySelectorAll('.has-error input, .has-error select, .has-error textarea').forEach(function(element) {
+            element.classList.add('border-danger');
+        });
+
+        // Добавить обработчики для снятия подсветки при исправлении
+        document.querySelectorAll('input, select, textarea').forEach(function(element) {
+            element.addEventListener('input', function() {
+                this.classList.remove('border-danger');
+                const errorDiv = this.closest('.form-group')?.querySelector('.invalid-feedback');
+                if (errorDiv) {
+                    errorDiv.style.display = 'none';
+                }
+            });
+        });
+    });
+
+    // Валидация паролей на клиенте
+    document.querySelector('form')?.addEventListener('submit', function(e) {
+        const password1 = document.getElementById('id_password1');
+        const password2 = document.getElementById('id_password2');
+
+        if (password1 && password2 && password1.value !== password2.value) {
+            e.preventDefault();
+            alert('Пароли не совпадают!');
+            password2.classList.add('border-danger');
+        }
+    });
+</script>
+{% endblock %}
 {% endblock %}
