@@ -5,7 +5,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
 from django.contrib.auth.models import User as AuthUser
 from django.urls import path
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django import forms
 from django.db import models
 from django.utils import timezone
@@ -443,22 +443,14 @@ class LessonAdmin(admin.ModelAdmin):
         # Обычный список
         return super().changelist_view(request, extra_context)
 
-    def save_model(self, request, obj, form, change):
-        if not change:  # только для новых уроков
-            # Используем функцию с ценами
-            from .models import StudentSubjectPrice
+    change_form_template = "admin/school/lesson/change_form.html"
 
-            cost, teacher_payment = StudentSubjectPrice.get_price_for(
-                obj.student,
-                obj.subject
-            )
+    def response_change(self, request, obj):
+        if "_complete-lesson" in request.POST:
+            # Перенаправляем на страницу завершения
+            return redirect('admin-complete-lesson', lesson_id=obj.id)
+        return super().response_change(request, obj)
 
-            if cost:
-                obj.base_cost = cost
-            if teacher_payment:
-                obj.base_teacher_payment = teacher_payment
-
-        super().save_model(request, obj, form, change)
 
 
 # ==================== LESSON REPORT ADMIN ====================
@@ -490,6 +482,39 @@ class PaymentAdmin(admin.ModelAdmin):
     search_fields = ('user__first_name', 'user__last_name', 'description')
     date_hierarchy = 'created_at'
     raw_id_fields = ('user', 'lesson')
+
+    def save_model(self, request, obj, form, change):
+        # Сохраняем платеж
+        super().save_model(request, obj, form, change)
+
+        # Обновляем баланс пользователя
+        if obj.payment_type == 'income':
+            obj.user.balance += obj.amount
+        elif obj.payment_type == 'expense':
+            obj.user.balance -= obj.amount
+
+        obj.user.save()
+
+        # Создаем уведомление
+        from .models import Notification
+
+        if obj.payment_type == 'income':
+            title = '💰 Пополнение баланса'
+            message = f'Ваш баланс пополнен на {obj.amount} ₽'
+        elif obj.payment_type == 'expense':
+            title = '💸 Списание средств'
+            message = f'С вашего баланса списано {obj.amount} ₽'
+        else:
+            title = '💳 Выплата'
+            message = f'Вам начислена выплата {obj.amount} ₽'
+
+        Notification.objects.create(
+            user=obj.user,
+            title=title,
+            message=message,
+            notification_type='payment_received' if obj.payment_type == 'income' else 'payment_withdrawn',
+            link='/profile/'
+        )
 
 
 # ==================== SCHEDULE ADMIN ====================

@@ -1,6 +1,20 @@
 {% extends "admin/change_form.html" %}
 {% load i18n static %}
 
+{% block object-tools-items %}
+    {{ block.super }}
+    {% if original and original.status != 'completed' and original.status != 'cancelled' %}
+    <li>
+        <form method="post" action="{% url 'admin:complete-lesson' original.pk %}" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" style="background: #28a745; color: white; padding: 8px 15px; border-radius: 4px; font-weight: bold; border: none; cursor: pointer;">
+                ✅ Завершить занятие
+            </button>
+        </form>
+    </li>
+    {% endif %}
+{% endblock %}
+
 {% block after_field_sets %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'scss/main.css' %}">
@@ -29,14 +43,14 @@
 {% endif %}
 
 {% if original and original.status != 'completed' and original.status != 'cancelled' %}
-<div class="module" style="margin-top: 20px;">
-    <h2>Завершить занятие</h2>
+<div class="module" style="margin-top: 20px; border: 2px solid #28a745; padding: 15px; background: #f8fff8;">
+    <h2 style="color: #28a745;">✅ Завершить занятие</h2>
 
-    <form id="complete-lesson-form" method="post" action="{% url 'admin:complete-lesson' original.pk %}">
+    <form method="post" action="{% url 'admin:complete-lesson' original.pk %}">
         {% csrf_token %}
         <table style="width: 100%;">
             <tr>
-                <td><label for="topic">Тема занятия:</label></td>
+                <td style="width: 200px;"><label for="topic">Тема занятия:</label></td>
                 <td><input type="text" id="topic" name="topic" class="vTextField" style="width: 100%;" required></td>
             </tr>
             <tr>
@@ -61,39 +75,9 @@
         </table>
 
         <div class="submit-row" style="margin-top: 20px;">
-            <input type="submit" value="Завершить занятие и создать отчет" class="default" style="background: #28a745;">
+            <input type="submit" value="✅ Завершить занятие и списать средства" class="default" style="background: #28a745; font-size: 16px; padding: 10px 20px;">
         </div>
     </form>
 </div>
 {% endif %}
-{% endblock %}
-
-{% block admin_change_form_document_ready %}
-{{ block.super }}
-<script>
-    (function ($) {
-        $('#complete-lesson-form').on('submit', function (e) {
-            e.preventDefault();
-
-            if (confirm('Вы уверены? После завершения занятия баланс ученика будет уменьшен, а учителю начислена выплата.')) {
-                $.ajax({
-                    url: $(this).attr('action'),
-                    method: 'POST',
-                    data: $(this).serialize(),
-                    success: function (response) {
-                        if (response.success) {
-                            alert('Занятие успешно завершено!');
-                            location.reload();
-                        } else {
-                            alert('Ошибка: ' + response.error);
-                        }
-                    },
-                    error: function () {
-                        alert('Произошла ошибка при сохранении');
-                    }
-                });
-            }
-        });
-    })(django.jQuery);
-</script>
 {% endblock %}

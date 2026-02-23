@@ -1,0 +1,269 @@
+{% extends 'admin/base_site.html' %}
+{% load static %}
+
+{% block title %}Финансовый дашборд{% endblock %}
+
+{% block extrastyle %}
+<style>
+    .finance-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .finance-card h3 {
+        margin-top: 0;
+        color: #417690;
+        font-size: 16px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .finance-number {
+        font-size: 32px;
+        font-weight: bold;
+        margin: 10px 0;
+    }
+    .finance-number.positive {
+        color: #28a745;
+    }
+    .finance-number.negative {
+        color: #dc3545;
+    }
+    .finance-number.warning {
+        color: #ffc107;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    .table-responsive {
+        overflow-x: auto;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    th {
+        background: #417690;
+        color: white;
+        padding: 10px;
+        text-align: left;
+    }
+    td {
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    .debt {
+        color: #dc3545;
+        font-weight: bold;
+    }
+    .balance {
+        color: #28a745;
+        font-weight: bold;
+    }
+    .filter-form {
+        background: #f8f8f8;
+        padding: 20px;
+        border-radius: 5px;
+        margin-bottom: 30px;
+    }
+    .filter-form input[type="date"] {
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+    .filter-form button {
+        background: #417690;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .filter-form button:hover {
+        background: #2b4f5c;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>💰 Финансовый дашборд</h1>
+
+<!-- Фильтр по датам -->
+<div class="filter-form">
+    <form method="get">
+        <label for="start_date">С:</label>
+        <input type="date" id="start_date" name="start_date" value="{{ start_date }}">
+
+        <label for="end_date" style="margin-left: 20px;">По:</label>
+        <input type="date" id="end_date" name="end_date" value="{{ end_date }}">
+
+        <button type="submit" style="margin-left: 20px;">Применить</button>
+    </form>
+</div>
+
+<!-- Основные показатели -->
+<div class="stats-grid">
+    <div class="finance-card">
+        <h3>💰 Пополнения</h3>
+        <div class="finance-number positive">{{ income_total|floatformat:2 }} ₽</div>
+        <div>Ученики пополнили баланс</div>
+    </div>
+
+    <div class="finance-card">
+        <h3>💸 Траты учеников</h3>
+        <div class="finance-number positive">{{ expense_total|floatformat:2 }} ₽</div>
+        <div>Оплата занятий</div>
+    </div>
+
+    <div class="finance-card">
+        <h3>👨‍🏫 Выплаты учителям</h3>
+        <div class="finance-number negative">{{ teacher_payments_total|floatformat:2 }} ₽</div>
+        <div>Начислено учителям</div>
+    </div>
+</div>
+
+<!-- Прибыль школы -->
+<div class="stats-grid">
+    <div class="finance-card">
+        <h3>🏫 Доход школы</h3>
+        <div class="finance-number positive">{{ school_income|floatformat:2 }} ₽</div>
+        <div>Все оплаты учеников</div>
+    </div>
+
+    <div class="finance-card">
+        <h3>📤 Расход школы</h3>
+        <div class="finance-number negative">{{ school_expense|floatformat:2 }} ₽</div>
+        <div>Выплаты учителям</div>
+    </div>
+
+    <div class="finance-card">
+        <h3>📊 Прибыль</h3>
+        <div class="finance-number {% if profit >= 0 %}positive{% else %}negative{% endif %}">
+            {{ profit|floatformat:2 }} ₽
+        </div>
+        <div>За выбранный период</div>
+    </div>
+</div>
+
+<!-- Статистика по ученикам -->
+<div class="stats-grid">
+    <div class="finance-card">
+        <h3>⚠️ Должники</h3>
+        <div class="finance-number negative">{{ students_with_debt }}</div>
+        <div>Учеников с отрицательным балансом</div>
+        <div class="finance-number negative">{{ total_debt|floatformat:2 }} ₽</div>
+        <div>Общая сумма долга</div>
+    </div>
+
+    <div class="finance-card">
+        <h3>✅ Платежеспособные</h3>
+        <div class="finance-number positive">{{ students_with_balance }}</div>
+        <div>Учеников с положительным балансом</div>
+        <div class="finance-number positive">{{ total_balance|floatformat:2 }} ₽</div>
+        <div>Средств на счетах</div>
+    </div>
+
+    <div class="finance-card">
+        <h3>👨‍🏫 Учителя</h3>
+        <div class="finance-number warning">{{ teachers_total_balance|floatformat:2 }} ₽</div>
+        <div>Ожидает выплаты учителям</div>
+    </div>
+</div>
+
+<!-- Топ учеников по балансу -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+    <div class="finance-card">
+        <h3>🏆 Богатые ученики</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Ученик</th>
+                    <th>Баланс</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in top_students %}
+                <tr>
+                    <td>{{ student.user.get_full_name }}</td>
+                    <td class="balance">{{ student.user.balance|floatformat:2 }} ₽</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="2">Нет учеников с положительным балансом</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="finance-card">
+        <h3>⚠️ Должники</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Ученик</th>
+                    <th>Долг</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in top_debtors %}
+                <tr>
+                    <td>{{ student.user.get_full_name }}</td>
+                    <td class="debt">{{ student.user.balance|floatformat:2 }} ₽</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="2">Нет должников</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Ежедневная статистика -->
+<div class="finance-card" style="margin-top: 20px;">
+    <h3>📅 Ежедневная статистика</h3>
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Пополнения</th>
+                    <th>Оплаты уроков</th>
+                    <th>Выплаты учителям</th>
+                    <th>Прибыль</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for day in daily_stats %}
+                <tr>
+                    <td>{{ day.date|date:"d.m.Y" }}</td>
+                    <td class="positive">{{ day.income|floatformat:2 }} ₽</td>
+                    <td class="positive">{{ day.expense|floatformat:2 }} ₽</td>
+                    <td class="negative">{{ day.teacher_payments|floatformat:2 }} ₽</td>
+                    <td class="{% if day.profit >= 0 %}positive{% else %}negative{% endif %}">
+                        {{ day.profit|floatformat:2 }} ₽
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">Нет данных за выбранный период</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Общая информация -->
+<div class="finance-card" style="margin-top: 20px;">
+    <h3>ℹ️ Общая информация</h3>
+    <p>Всего платежей за период: <strong>{{ payments_count }}</strong></p>
+    <p>Период: с <strong>{{ start_date }}</strong> по <strong>{{ end_date }}</strong></p>
+</div>
+{% endblock %}

@@ -34,7 +34,8 @@ urlpatterns = [
     path('admin/school/lesson/export/<str:format>/', views.admin_lesson_export, name='admin-lesson-export'),
     path('admin/school/lesson/import/', views.import_lessons, name='admin-lesson-import'),
     path('admin/school/lesson/import/template/', views.download_import_template, name='admin-lesson-import-template'),
-
+    # АДМИН
+    path('admin/finance/dashboard/', views.admin_finance_dashboard, name='admin-finance-dashboard'),
     # Student URLs
     path('student/dashboard/', views.student_dashboard, name='student_dashboard'),
     path('student/materials/', views.student_materials, name='student_materials'),

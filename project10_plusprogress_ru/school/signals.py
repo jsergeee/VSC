@@ -3,7 +3,7 @@ from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 from django.utils import timezone
 from datetime import timedelta
-from .models import Lesson, Notification, User, LessonAttendance
+from .models import Lesson, Notification, User, LessonAttendance, Payment
 
 
 @receiver(post_save, sender=LessonAttendance)
@@ -51,3 +51,4 @@ def send_welcome_notification(sender, instance, created, **kwargs):
             expires_at=timezone.now() + timedelta(days=30)
         )
         print(f"✅ Приветственное уведомление для {instance.username}")
+

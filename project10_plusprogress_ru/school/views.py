@@ -3,12 +3,21 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count, Q, Prefetch, Avg
 from django.utils import timezone
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_GET, require_POST
-from datetime import datetime, date, timedelta
+from django.urls import reverse
+from django.template.loader import render_to_string
+from django.db import connection, transaction
 from decimal import Decimal
+from datetime import datetime, date, timedelta
+import json
+import csv
+import uuid
+import io
+import os
+import tempfile
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from docx import Document
@@ -19,64 +28,30 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
-import logging
-from django.urls import reverse
-import io
-import json
-import csv
-import csv
-import openpyxl
-from django.contrib import messages
-from django.http import HttpResponse
-from .models import Lesson, Teacher, Student, Subject, LessonFormat, LessonAttendance
-from django.template.loader import render_to_string
 from weasyprint import HTML
-from .models import Notification
-from django.utils.timesince import timesince
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.db.models import Avg, Count
-from .models import Lesson, LessonFeedback, TeacherRating
-from .forms import LessonFeedbackForm
-from .models import Homework, HomeworkSubmission
-from .forms import HomeworkForm, HomeworkSubmissionForm, HomeworkCheckForm
-from django.utils import timezone
-import uuid
-from django.http import JsonResponse
-from .forms import LessonReportForm
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
-from django.contrib import messages
-import uuid
-import urllib.parse
-from .models import ScheduleTemplate, ScheduleTemplateStudent
-from .forms import ScheduleTemplateForm
-from .models import StudentSubjectPrice
-from django.shortcuts import render, get_object_or_404
-from django.contrib import messages
-from django.utils import timezone
-from .models import EmailVerificationToken
-from .utils import send_verification_email, send_verification_success_email
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.utils import timezone
-from datetime import datetime, timedelta
-from .models import Lesson, Teacher, Student, Subject, ScheduleTemplate
-from .models import ScheduleTemplate, ScheduleTemplateStudent
+import logging
+import traceback
+
+# Импорты моделей - ТОЛЬКО ОДИН РАЗ!
 from .models import (
-    User, Teacher, Student, Lesson, Subject,
-    LessonReport, Payment, TrialRequest, Schedule,
-    Material, Deposit, StudentNote,
-    GroupLesson, GroupEnrollment,
+    User, Teacher, Student, Subject, LessonFormat, Lesson,
+    LessonAttendance, LessonReport, Payment, Schedule, TrialRequest,
+    Material, Deposit, StudentNote, GroupLesson, GroupEnrollment,
+    Notification, LessonFeedback, TeacherRating, Homework,
+    HomeworkSubmission, ScheduleTemplate, ScheduleTemplateStudent,
+    StudentSubjectPrice, EmailVerificationToken
 )
+
 from .forms import (
     UserRegistrationForm, UserLoginForm, TrialRequestForm,
-    LessonReportForm, ProfileUpdateForm
+    LessonReportForm, ProfileUpdateForm, LessonFeedbackForm,
+    HomeworkForm, HomeworkSubmissionForm, HomeworkCheckForm,
+    ScheduleTemplateForm
 )
+
+from .utils import send_verification_email, send_verification_success_email
+
+logger = logging.getLogger(__name__)
 
 
 def home(request):
@@ -95,8 +70,6 @@ def home(request):
     return render(request, 'school/home.html', context)
 
 
-# school/views.py
-
 def register(request):
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST, request.FILES)
@@ -105,7 +78,6 @@ def register(request):
                 user = form.save()
 
                 # Отправляем письмо с подтверждением
-                from .utils import send_verification_email
                 if send_verification_email(user, request):
                     messages.success(
                         request,
@@ -119,7 +91,6 @@ def register(request):
                         'письмо подтверждения. Вы сможете запросить его позже.'
                     )
 
-                # Не логиним пользователя сразу, требуем подтверждение email
                 return redirect('login')
 
             except Exception as e:
@@ -131,8 +102,6 @@ def register(request):
 
     return render(request, 'school/register.html', {'form': form})
 
-
-# school/views.py
 
 def user_login(request):
     if request.method == 'POST':
@@ -196,7 +165,7 @@ def user_login(request):
                     print(f"   Перенаправление на admin")
                     return redirect('admin:index')
             else:
-                print(f"❌ Аутентификация失败!")
+                print(f"❌ Аутентификация провалилась!")
                 print(f"   Неверный пароль для пользователя {username}")
                 messages.error(request, 'Неверное имя пользователя или пароль')
         else:
@@ -223,7 +192,7 @@ def dashboard(request):
     elif user.role == 'teacher':
         return redirect('teacher_dashboard')
     else:
-        return redirect('admin_dashboard')
+        return redirect('admin:index')
 
 
 @login_required
@@ -245,8 +214,11 @@ def student_dashboard(request):
 
     student.refresh_from_db()
 
-    # Получаем баланс
-    balance = student.get_balance()
+    # ✅ ВАЖНО: берем баланс напрямую из user (может быть отрицательным)
+    balance = user.balance  # ← ИСПРАВЛЕНО!
+
+    # Для отладки (можно удалить потом)
+    print(f"💰 Баланс ученика {user.username}: {balance}")
 
     # Получаем учителей ученика
     teachers = student.teachers.all()
@@ -272,25 +244,23 @@ def student_dashboard(request):
         Q(students=student) | Q(is_public=True) | Q(teachers__in=teachers)
     ).distinct()[:20]
 
-    # ===== НОВЫЙ КОД: ПОЛУЧАЕМ ДОМАШНИЕ ЗАДАНИЯ =====
-    from .models import Homework  # импорт внутри функции
+    # Получаем домашние задания
     recent_homeworks = Homework.objects.filter(
         student=student,
         is_active=True
     ).exclude(
         submission__status='checked'
     ).select_related('teacher__user', 'subject').order_by('deadline')[:4]
-    # ================================================
 
     context = {
         'student': student,
-        'balance': balance,
+        'balance': balance,  # ← теперь правильный баланс
         'recent_deposits': recent_deposits,
         'upcoming_lessons': upcoming_lessons,
         'past_lessons': past_lessons,
         'teachers': teachers,
         'materials': materials,
-        'recent_homeworks': recent_homeworks,  # ← ДОБАВЛЯЕМ В КОНТЕКСТ
+        'recent_homeworks': recent_homeworks,
     }
 
     # Получаем групповые уроки ученика
@@ -320,7 +290,7 @@ def student_dashboard(request):
             'start': f"{lesson.date}T{lesson.start_time}",
             'end': f"{lesson.date}T{lesson.end_time}",
             'url': f"/student/group-lesson/{lesson.id}/",
-            'backgroundColor': '#9b59b6',  # фиолетовый для групп
+            'backgroundColor': '#9b59b6',
         })
 
     context['calendar_events'] = calendar_events
@@ -465,9 +435,7 @@ def teacher_dashboard(request):
         status='completed'
     ).select_related('subject').order_by('-date')[:20]
 
-    # ✅ ИСПРАВЛЕННЫЙ КОД: получаем ВСЕ уроки с учениками
-    from django.db.models import Prefetch
-
+    # Получаем ВСЕ уроки с учениками
     all_lessons = Lesson.objects.filter(
         teacher=teacher
     ).select_related(
@@ -511,7 +479,7 @@ def teacher_dashboard(request):
         else:
             bg_color = '#6c757d'
 
-        # Формируем заголовок (ИМЯ И ПЕРВА БУКВА ФАМИЛИИ)
+        # Формируем заголовок (ИМЯ И ПЕРВАЯ БУКВА ФАМИЛИИ)
         attendance_count = lesson.attendance.count()
         if attendance_count == 0:
             title = "Нет учеников"
@@ -539,7 +507,7 @@ def teacher_dashboard(request):
         'upcoming_lessons': upcoming_lessons,
         'today_lessons': today_lessons,
         'past_lessons': past_lessons,
-        'all_lessons': all_lessons,  # ← передаем в шаблон
+        'all_lessons': all_lessons,
         'materials': materials,
         'wallet_balance': wallet_balance,
         'recent_payments': recent_payments,
@@ -562,8 +530,8 @@ def teacher_student_detail(request, student_id):
     # Получаем занятия с этим учеником
     lessons = Lesson.objects.filter(
         teacher=teacher,
-        student=student
-    ).select_related('subject', 'format').order_by('-date')
+        attendance__student=student
+    ).select_related('subject', 'format').distinct().order_by('-date')
 
     # Получаем заметки учителя об этом ученике
     notes = StudentNote.objects.filter(teacher=teacher, student=student).order_by('-created_at')
@@ -576,7 +544,11 @@ def teacher_student_detail(request, student_id):
     # Статистика
     total_lessons = lessons.count()
     completed_lessons = lessons.filter(status='completed').count()
-    total_cost = lessons.filter(status='completed').aggregate(Sum('cost'))['cost__sum'] or 0
+    total_cost = 0
+    for lesson in lessons.filter(status='completed'):
+        attendance = lesson.attendance.filter(student=student).first()
+        if attendance:
+            total_cost += attendance.cost
 
     context = {
         'student': student,
@@ -668,8 +640,6 @@ def lesson_detail(request, lesson_id):
         is_public = request.POST.get('is_public') == 'on'
 
         if rating and rating.isdigit():
-            from .models import LessonFeedback, TeacherRating
-
             # Создаем оценку
             feedback = LessonFeedback.objects.create(
                 lesson=lesson,
@@ -691,8 +661,8 @@ def lesson_detail(request, lesson_id):
 
     context = {
         'lesson': lesson,
-        'attendance': attendance,  # текущий ученик
-        'attendances': attendances,  # ВСЕ ученики (для отображения группы)
+        'attendance': attendance,
+        'attendances': attendances,
         'report': report,
         'previous_lessons': previous_lessons,
     }
@@ -783,13 +753,13 @@ def overdue_report(request):
     date_to = request.GET.get('date_to')
 
     lessons = Lesson.objects.filter(status='overdue').select_related(
-        'teacher__user', 'student__user', 'subject'
-    )
+        'teacher__user', 'subject'
+    ).prefetch_related('attendance__student__user')
 
     if teacher_id:
         lessons = lessons.filter(teacher_id=teacher_id)
     if student_id:
-        lessons = lessons.filter(student_id=student_id)
+        lessons = lessons.filter(attendance__student_id=student_id)
     if date_from:
         lessons = lessons.filter(date__gte=date_from)
     if date_to:
@@ -865,8 +835,10 @@ def schedule_calendar_data(request):
             if lesson:
                 event['lesson_id'] = lesson.id
                 event['title'] = f"{schedule.teacher.user.last_name} - {lesson.subject.name}"
-                if lesson.student:
-                    event['title'] += f" ({lesson.student.user.last_name})"
+                # Получаем первого ученика
+                first_attendance = lesson.attendance.first()
+                if first_attendance:
+                    event['title'] += f" ({first_attendance.student.user.last_name})"
             else:
                 event['title'] = f"{schedule.teacher.user.last_name} - свободно"
 
@@ -879,36 +851,170 @@ def schedule_calendar_data(request):
 @require_POST
 def admin_complete_lesson(request, lesson_id):
     """Завершает занятие из админ-панели"""
+    print(f"\n{'🔥' * 30}")
+    print(f"🔥🔥🔥 ЗАПУСК ЗАВЕРШЕНИЯ УРОКА #{lesson_id} 🔥🔥🔥")
+    print(f"{'🔥' * 30}\n")
+
     try:
-        lesson = Lesson.objects.get(pk=lesson_id)
+        lesson = Lesson.objects.select_related('teacher__user', 'subject').get(pk=lesson_id)
+        print(f"📌 Урок: {lesson.subject.name} (ID: {lesson.id})")
+        print(f"📌 Дата: {lesson.date}")
+        print(f"📌 Текущий статус: {lesson.status}")
+        print(f"📌 Учитель: {lesson.teacher.user.get_full_name()} (ID: {lesson.teacher.id})")
+        print(f"📌 Баланс учителя ДО: {lesson.teacher.wallet_balance}")
 
         if lesson.status == 'completed':
+            print("❌ Урок уже завершен!")
             return JsonResponse({'success': False, 'error': 'Занятие уже завершено'})
 
+        # Получаем посещаемость
+        attendances = lesson.attendance.select_related('student__user').all()
+        print(f"\n👥 Найдено учеников на уроке: {attendances.count()}")
+
+        if attendances.count() == 0:
+            print("❌ Нет учеников на уроке!")
+            return JsonResponse({'success': False, 'error': 'Нет учеников на уроке'})
+
+        # Проверяем POST данные
+        print(f"\n📨 POST данные:")
+        for key, value in request.POST.items():
+            print(f"   {key}: {value}")
+
+        # Собираем данные отчета
         report_data = {
-            'topic': request.POST.get('topic'),
-            'covered_material': request.POST.get('covered_material'),
-            'homework': request.POST.get('homework'),
-            'student_progress': request.POST.get('student_progress'),
-            'next_lesson_plan': request.POST.get('next_lesson_plan', '')
+            'topic': request.POST.get('topic', '').strip(),
+            'covered_material': request.POST.get('covered_material', '').strip(),
+            'homework': request.POST.get('homework', '').strip(),
+            'student_progress': request.POST.get('student_progress', '').strip(),
+            'next_lesson_plan': request.POST.get('next_lesson_plan', '').strip()
         }
 
         # Проверяем обязательные поля
-        if not all([report_data['topic'], report_data['covered_material'],
-                    report_data['homework'], report_data['student_progress']]):
-            return JsonResponse({'success': False, 'error': 'Заполните все обязательные поля'})
+        required_fields = ['topic', 'covered_material', 'homework', 'student_progress']
+        missing = [f for f in required_fields if not report_data[f]]
+        if missing:
+            print(f"❌ Не заполнены поля: {missing}")
+            return JsonResponse({
+                'success': False,
+                'error': f'Заполните обязательные поля: {", ".join(missing)}'
+            })
 
-        report = lesson.mark_as_completed(report_data)
+        # НАЧИНАЕМ ТРАНЗАКЦИЮ
+        print(f"\n{'🚀' * 20} НАЧАЛО ТРАНЗАКЦИИ {'🚀' * 20}")
+
+        with transaction.atomic():
+            total_teacher_payment = Decimal('0')
+            processed_students = []
+
+            for idx, attendance in enumerate(attendances, 1):
+                student = attendance.student
+                user = student.user
+
+                print(f"\n--- Ученик #{idx}: {user.get_full_name()} (ID: {user.id}) ---")
+                print(f"   Баланс ДО: {user.balance}")
+                print(f"   Стоимость урока: {attendance.cost}")
+                print(f"   Выплата учителю: {attendance.teacher_payment_share}")
+
+                # Проверяем достаточно ли средств
+                if user.balance >= attendance.cost:
+                    # СПИСЫВАЕМ ДЕНЬГИ
+                    old_balance = user.balance
+                    user.balance -= attendance.cost
+                    user.save()
+
+                    print(f"   ✅ Деньги списаны: {old_balance} → {user.balance}")
+
+                    # СОЗДАЕМ ПЛАТЕЖ
+                    payment = Payment.objects.create(
+                        user=user,
+                        amount=attendance.cost,
+                        payment_type='expense',
+                        description=f'Оплата занятия {lesson.date} ({lesson.subject.name})',
+                        lesson=lesson
+                    )
+                    print(f"   ✅ Платеж создан: #{payment.id}")
+
+                    # СТАВИМ СТАТУС ATTENDED
+                    attendance.status = 'attended'
+                    print(f"   ✅ Статус изменен на: attended")
+
+                    processed_students.append({
+                        'name': user.get_full_name(),
+                        'old_balance': float(old_balance),
+                        'new_balance': float(user.balance),
+                        'payment_id': payment.id
+                    })
+                else:
+                    # НЕ ХВАТАЕТ ДЕНЕГ
+                    print(f"   ❌ Недостаточно средств! Баланс: {user.balance}, нужно: {attendance.cost}")
+                    attendance.status = 'debt'
+                    processed_students.append({
+                        'name': user.get_full_name(),
+                        'old_balance': float(user.balance),
+                        'new_balance': float(user.balance),
+                        'debt': True
+                    })
+
+                attendance.save()
+
+                # Учитель получает выплату в любом случае
+                total_teacher_payment += attendance.teacher_payment_share
+                print(f"   💰 Накоплено выплат учителю: {total_teacher_payment}")
+
+            # НАЧИСЛЯЕМ УЧИТЕЛЮ
+            print(f"\n💰 ВСЕГО К ВЫПЛАТЕ УЧИТЕЛЮ: {total_teacher_payment}")
+            print(f"   Баланс учителя ДО: {lesson.teacher.wallet_balance}")
+
+            old_teacher_balance = lesson.teacher.wallet_balance
+            lesson.teacher.wallet_balance += total_teacher_payment
+            lesson.teacher.save()
+
+            print(f"   Баланс учителя ПОСЛЕ: {lesson.teacher.wallet_balance} (+{total_teacher_payment})")
+
+            # СОЗДАЕМ ВЫПЛАТУ УЧИТЕЛЮ
+            if total_teacher_payment > 0:
+                teacher_payment = Payment.objects.create(
+                    user=lesson.teacher.user,
+                    amount=total_teacher_payment,
+                    payment_type='teacher_payment',
+                    description=f'Выплата за урок {lesson.date} ({lesson.subject.name})',
+                    lesson=lesson
+                )
+                print(f"   ✅ Выплата учителю создана: #{teacher_payment.id}")
+
+            # МЕНЯЕМ СТАТУС УРОКА
+            lesson.status = 'completed'
+            lesson.save()
+            print(f"\n✅ Статус урока изменен на: {lesson.status}")
+
+            # СОЗДАЕМ ОТЧЕТ
+            report = LessonReport.objects.create(
+                lesson=lesson,
+                topic=report_data['topic'],
+                covered_material=report_data['covered_material'],
+                homework=report_data['homework'],
+                student_progress=report_data['student_progress'],
+                next_lesson_plan=report_data['next_lesson_plan']
+            )
+            print(f"✅ Отчет создан: #{report.id}")
+
+        # ВСЕ УСПЕШНО
+        print(f"\n{'🎉' * 20} ТРАНЗАКЦИЯ ЗАВЕРШЕНА УСПЕШНО {'🎉' * 20}")
 
         return JsonResponse({
             'success': True,
             'report_id': report.id,
-            'message': f'Занятие завершено. Создан отчет #{report.id}'
+            'processed': processed_students,
+            'teacher_payment': float(total_teacher_payment),
+            'message': f'✅ Урок завершен! Обработано учеников: {len(processed_students)}'
         })
 
     except Lesson.DoesNotExist:
+        print(f"❌ ОШИБКА: Урок #{lesson_id} не найден")
         return JsonResponse({'success': False, 'error': 'Занятие не найдено'})
     except Exception as e:
+        print(f"❌ КРИТИЧЕСКАЯ ОШИБКА: {e}")
+        traceback.print_exc()
         return JsonResponse({'success': False, 'error': str(e)})
 
 
@@ -920,8 +1026,10 @@ def student_report(request, student_id):
     date_from = request.GET.get('date_from')
     date_to = request.GET.get('date_to')
 
-    # Базовый queryset
-    lessons = Lesson.objects.filter(student=student)
+    # Базовый queryset через attendance
+    lessons = Lesson.objects.filter(
+        attendance__student=student
+    ).distinct().select_related('subject', 'teacher__user')
 
     # Применяем фильтры по датам
     if date_from:
@@ -945,8 +1053,12 @@ def student_report(request, student_id):
         subject_total = 0
 
         for date in dates:
-            day_lessons = subject_lessons.filter(date=date)
-            day_total = day_lessons.aggregate(Sum('cost'))['cost__sum'] or 0
+            # Получаем стоимость для этого ученика на эту дату через attendance
+            day_total = 0
+            for lesson in subject_lessons.filter(date=date):
+                attendance = lesson.attendance.filter(student=student).first()
+                if attendance:
+                    day_total += attendance.cost
             daily_costs.append(day_total)
             subject_total += day_total
             daily_totals[date] += day_total
@@ -958,16 +1070,30 @@ def student_report(request, student_id):
         })
 
     # Агрегация по предметам (для статистики)
-    subject_stats = lessons.values(
-        'subject__name'
-    ).annotate(
-        lesson_count=Count('id'),
-        total_cost=Sum('cost')
-    ).order_by('-total_cost')
+    subject_stats = []
+    for subject_name in subjects:
+        total = 0
+        count = 0
+        for lesson in lessons.filter(subject__name=subject_name):
+            attendance = lesson.attendance.filter(student=student).first()
+            if attendance:
+                total += attendance.cost
+                count += 1
+        subject_stats.append({
+            'subject__name': subject_name,
+            'lesson_count': count,
+            'total_cost': total
+        })
+
+    subject_stats = sorted(subject_stats, key=lambda x: x['total_cost'], reverse=True)
 
     # Общие итоги
     total_lessons = lessons.count()
-    total_cost = lessons.aggregate(Sum('cost'))['cost__sum'] or 0
+    total_cost = sum([
+        attendance.cost
+        for lesson in lessons
+        for attendance in lesson.attendance.filter(student=student)
+    ])
 
     context = {
         'student': student,
@@ -976,7 +1102,7 @@ def student_report(request, student_id):
         'total_cost': total_cost,
         'dates': dates,
         'subjects_data': subjects_data,
-        'daily_totals': [daily_totals[date] for date in dates],
+        'daily_totals': [float(daily_totals[date]) for date in dates],
     }
 
     return render(request, 'admin/school/student/report.html', context)
@@ -991,7 +1117,7 @@ def teacher_report(request, teacher_id):
     date_to = request.GET.get('date_to')
 
     # Базовый queryset уроков учителя
-    lessons = Lesson.objects.filter(teacher=teacher)
+    lessons = Lesson.objects.filter(teacher=teacher).prefetch_related('attendance')
 
     # Применяем фильтры по датам
     if date_from:
@@ -1002,87 +1128,34 @@ def teacher_report(request, teacher_id):
     # Получаем все уникальные даты занятий
     dates = lessons.dates('date', 'day').order_by('date')
 
-    # Получаем всех уникальных учеников с их предметами
-    students_lessons = lessons.values(
-        'student', 'student__user__last_name', 'student__user__first_name', 'subject__name'
-    ).distinct()
-
-    # Подготавливаем данные для таблицы занятий (стоимость для ученика)
+    # Получаем всех уникальных учеников с их предметами через attendance
     students_data = []
     daily_totals_lessons = {date: Decimal('0') for date in dates}
 
-    for item in students_lessons:
-        student_id = item['student']
-        student_name = f"{item['student__user__last_name']} {item['student__user__first_name']}"
-        subject_name = item['subject__name']
-
-        student_lessons = lessons.filter(
-            student_id=student_id,
-            subject__name=subject_name
-        )
-
-        daily_costs = []
-        student_total = Decimal('0')
-
-        for date in dates:
-            day_lessons = student_lessons.filter(date=date)
-            day_total = day_lessons.aggregate(Sum('cost'))['cost__sum'] or Decimal('0')
-            daily_costs.append(day_total)
-            student_total += day_total
-            daily_totals_lessons[date] += day_total
-
-        students_data.append({
-            'name': f"{student_name} ({subject_name})",
-            'daily_costs': daily_costs,
-            'total': student_total
-        })
-
-    # Подготавливаем данные для таблицы выплат (БЕРЕМ ИЗ ПОЛЯ teacher_payment)
-    payments_data = []
-    daily_totals_payments = {date: Decimal('0') for date in dates}
-
-    for item in students_lessons:
-        student_id = item['student']
-        student_name = f"{item['student__user__last_name']} {item['student__user__first_name']}"
-        subject_name = item['subject__name']
-
-        student_lessons = lessons.filter(
-            student_id=student_id,
-            subject__name=subject_name
-        )
-
-        daily_payments = []
-        student_payment_total = Decimal('0')
-
-        for date in dates:
-            day_lessons = student_lessons.filter(date=date)
-            # Берем сумму выплаты учителю из поля teacher_payment
-            day_payment = day_lessons.aggregate(Sum('teacher_payment'))['teacher_payment__sum'] or Decimal('0')
-            daily_payments.append(day_payment)
-            student_payment_total += day_payment
-            daily_totals_payments[date] += day_payment
-
-        payments_data.append({
-            'name': f"{student_name} ({subject_name})",
-            'daily_payments': daily_payments,
-            'total': student_payment_total
-        })
+    for lesson in lessons:
+        for attendance in lesson.attendance.all():
+            student_name = attendance.student.user.get_full_name()
+            subject_name = lesson.subject.name
+            students_data.append({
+                'name': f"{student_name} ({subject_name})",
+                'date': lesson.date,
+                'cost': attendance.cost
+            })
+            daily_totals_lessons[lesson.date] += attendance.cost
 
     # Общие итоги
     total_lessons = lessons.count()
-    total_income = lessons.aggregate(Sum('cost'))['cost__sum'] or Decimal('0')
-    total_payment = lessons.aggregate(Sum('teacher_payment'))['teacher_payment__sum'] or Decimal('0')
+    total_income = sum([a.cost for lesson in lessons for a in lesson.attendance.all()])
+    total_payment = sum([a.teacher_payment_share for lesson in lessons for a in lesson.attendance.all()])
 
     context = {
         'teacher': teacher,
         'total_lessons': total_lessons,
-        'total_income': total_income,
-        'total_payment': total_payment,
+        'total_income': float(total_income),
+        'total_payment': float(total_payment),
         'dates': dates,
         'students_data': students_data,
-        'payments_data': payments_data,
-        'daily_totals_lessons': [daily_totals_lessons[date] for date in dates],
-        'daily_totals_payments': [daily_totals_payments[date] for date in dates],
+        'daily_totals_lessons': [float(daily_totals_lessons[date]) for date in dates],
     }
 
     return render(request, 'admin/school/teacher/report.html', context)
@@ -1126,25 +1199,45 @@ def calculate_teacher_payment(request):
             status='completed',
             date__gte=start_date,
             date__lte=end_date
-        ).select_related('student__user', 'subject').order_by('date')
+        ).prefetch_related('attendance__student__user', 'subject')
 
         # Агрегация по предметам
-        subject_stats = completed_lessons.values(
-            'subject__name'
-        ).annotate(
-            lesson_count=Count('id'),
-            total_payment=Sum('teacher_payment')
-        ).order_by('-total_payment')
+        subject_stats = []
+        subject_totals = {}
+        for lesson in completed_lessons:
+            subject_name = lesson.subject.name
+            if subject_name not in subject_totals:
+                subject_totals[subject_name] = {'count': 0, 'payment': 0}
+            for attendance in lesson.attendance.all():
+                subject_totals[subject_name]['count'] += 1
+                subject_totals[subject_name]['payment'] += attendance.teacher_payment_share
+
+        for name, stats in subject_totals.items():
+            subject_stats.append({
+                'subject__name': name,
+                'lesson_count': stats['count'],
+                'total_payment': float(stats['payment'])
+            })
 
         # Агрегация по ученикам
-        student_stats = completed_lessons.values(
-            'student__user__last_name',
-            'student__user__first_name',
-            'student__user__patronymic'
-        ).annotate(
-            lesson_count=Count('id'),
-            total_payment=Sum('teacher_payment')
-        ).order_by('-total_payment')
+        student_stats = []
+        student_totals = {}
+        for lesson in completed_lessons:
+            for attendance in lesson.attendance.all():
+                student_name = attendance.student.user.get_full_name()
+                if student_name not in student_totals:
+                    student_totals[student_name] = {'count': 0, 'payment': 0}
+                student_totals[student_name]['count'] += 1
+                student_totals[student_name]['payment'] += attendance.teacher_payment_share
+
+        for name, stats in student_totals.items():
+            student_stats.append({
+                'student__user__last_name': name.split()[0] if name else '',
+                'student__user__first_name': name.split()[1] if len(name.split()) > 1 else '',
+                'student__user__patronymic': '',
+                'lesson_count': stats['count'],
+                'total_payment': float(stats['payment'])
+            })
 
         # Данные для таблицы по дням
         dates = []
@@ -1155,20 +1248,24 @@ def calculate_teacher_payment(request):
 
         # Собираем данные для сводной таблицы
         lessons_data = []
+        total_cost = Decimal('0')
+        total_payment = Decimal('0')
+
         for lesson in completed_lessons:
-            lessons_data.append({
-                'date': lesson.date.strftime('%d.%m.%Y'),
-                'student': lesson.student.user.get_full_name(),
-                'subject': lesson.subject.name,
-                'cost': float(lesson.cost),
-                'teacher_payment': float(lesson.teacher_payment),
-                'status': lesson.status
-            })
+            for attendance in lesson.attendance.all():
+                lessons_data.append({
+                    'date': lesson.date.strftime('%d.%m.%Y'),
+                    'student': attendance.student.user.get_full_name(),
+                    'subject': lesson.subject.name,
+                    'cost': float(attendance.cost),
+                    'teacher_payment': float(attendance.teacher_payment_share),
+                    'status': lesson.status
+                })
+                total_cost += attendance.cost
+                total_payment += attendance.teacher_payment_share
 
         # Итоги
         total_lessons = completed_lessons.count()
-        total_cost = completed_lessons.aggregate(Sum('cost'))['cost__sum'] or Decimal('0')
-        total_payment = completed_lessons.aggregate(Sum('teacher_payment'))['teacher_payment__sum'] or Decimal('0')
 
         response_data = {
             'teacher': {
@@ -1184,8 +1281,8 @@ def calculate_teacher_payment(request):
                 'cost': float(total_cost),
                 'payment': float(total_payment),
             },
-            'subject_stats': list(subject_stats),
-            'student_stats': list(student_stats),
+            'subject_stats': subject_stats,
+            'student_stats': sorted(student_stats, key=lambda x: x['total_payment'], reverse=True),
             'lessons_data': lessons_data,
             'dates': dates,
         }
@@ -1210,9 +1307,13 @@ def export_teacher_payment(request, format, teacher_id, start_date, end_date):
         status='completed',
         date__gte=start,
         date__lte=end
-    ).select_related('student__user', 'subject').order_by('date')
+    ).prefetch_related('attendance__student__user', 'subject').order_by('date')
 
-    total_payment = lessons.aggregate(Sum('teacher_payment'))['teacher_payment__sum'] or Decimal('0')
+    total_payment = sum([
+        a.teacher_payment_share
+        for lesson in lessons
+        for a in lesson.attendance.all()
+    ])
 
     if format == 'excel':
         return export_to_excel(teacher, lessons, start, end, total_payment)
@@ -1277,17 +1378,18 @@ def export_to_excel(teacher, lessons, start, end, total_payment):
     # Данные
     row = 5
     for lesson in lessons:
-        ws.cell(row=row, column=1, value=lesson.date.strftime('%d.%m.%Y')).border = thin_border
-        ws.cell(row=row, column=2, value=lesson.student.user.get_full_name()).border = thin_border
-        ws.cell(row=row, column=3, value=lesson.subject.name).border = thin_border
-        ws.cell(row=row, column=4, value=float(lesson.cost)).border = thin_border
-        ws.cell(row=row, column=5, value=float(lesson.teacher_payment)).border = thin_border
-        ws.cell(row=row, column=6, value=lesson.get_status_display()).border = thin_border
+        for attendance in lesson.attendance.all():
+            ws.cell(row=row, column=1, value=lesson.date.strftime('%d.%m.%Y')).border = thin_border
+            ws.cell(row=row, column=2, value=attendance.student.user.get_full_name()).border = thin_border
+            ws.cell(row=row, column=3, value=lesson.subject.name).border = thin_border
+            ws.cell(row=row, column=4, value=float(attendance.cost)).border = thin_border
+            ws.cell(row=row, column=5, value=float(attendance.teacher_payment_share)).border = thin_border
+            ws.cell(row=row, column=6, value=lesson.get_status_display()).border = thin_border
 
-        # Форматирование чисел
-        ws.cell(row=row, column=4).number_format = '#,##0.00 ₽'
-        ws.cell(row=row, column=5).number_format = '#,##0.00 ₽'
-        row += 1
+            # Форматирование чисел
+            ws.cell(row=row, column=4).number_format = '#,##0.00 ₽'
+            ws.cell(row=row, column=5).number_format = '#,##0.00 ₽'
+            row += 1
 
     # Итог
     row += 1
@@ -1304,7 +1406,8 @@ def export_to_excel(teacher, lessons, start, end, total_payment):
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    response['Content-Disposition'] = f'attachment; filename="teacher_payment_{teacher.id}_{start}_{end}.xlsx"'
+    filename = f"teacher_payment_{teacher.id}_{start}_{end}.xlsx"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
     wb.save(response)
     return response
@@ -1343,12 +1446,13 @@ def export_to_word(teacher, lessons, start, end, total_payment):
 
     # Данные
     for lesson in lessons:
-        row_cells = table.add_row().cells
-        row_cells[0].text = lesson.date.strftime('%d.%m.%Y')
-        row_cells[1].text = lesson.student.user.get_full_name()
-        row_cells[2].text = lesson.subject.name
-        row_cells[3].text = f"{lesson.cost:.2f} ₽"
-        row_cells[4].text = f"{lesson.teacher_payment:.2f} ₽"
+        for attendance in lesson.attendance.all():
+            row_cells = table.add_row().cells
+            row_cells[0].text = lesson.date.strftime('%d.%m.%Y')
+            row_cells[1].text = attendance.student.user.get_full_name()
+            row_cells[2].text = lesson.subject.name
+            row_cells[3].text = f"{attendance.cost:.2f} ₽"
+            row_cells[4].text = f"{attendance.teacher_payment_share:.2f} ₽"
 
     # Итог
     doc.add_paragraph()
@@ -1384,13 +1488,14 @@ def export_to_pdf(teacher, lessons, start, end, total_payment):
     data = [['Дата', 'Ученик', 'Предмет', 'Стоимость', 'Выплата']]
 
     for lesson in lessons:
-        data.append([
-            lesson.date.strftime('%d.%m.%Y'),
-            lesson.student.user.get_full_name(),
-            lesson.subject.name,
-            f"{lesson.cost:.2f} ₽",
-            f"{lesson.teacher_payment:.2f} ₽"
-        ])
+        for attendance in lesson.attendance.all():
+            data.append([
+                lesson.date.strftime('%d.%m.%Y'),
+                attendance.student.user.get_full_name(),
+                lesson.subject.name,
+                f"{attendance.cost:.2f} ₽",
+                f"{attendance.teacher_payment_share:.2f} ₽"
+            ])
 
     # Итог
     data.append(['', '', '', 'ИТОГО:', f"{total_payment:.2f} ₽"])
@@ -1427,8 +1532,8 @@ def admin_lesson_export(request, format):
     """Экспорт уроков из админки"""
     # Получаем все уроки с фильтрацией (как в админке)
     lessons = Lesson.objects.all().select_related(
-        'teacher__user', 'student__user', 'subject', 'format'
-    ).order_by('-date', 'start_time')
+        'teacher__user', 'subject', 'format'
+    ).prefetch_related('attendance__student__user').order_by('-date', 'start_time')
 
     # Применяем фильтры из GET-параметров (как в админке)
     teacher_id = request.GET.get('teacher__id__exact')
@@ -1441,7 +1546,7 @@ def admin_lesson_export(request, format):
     if teacher_id:
         lessons = lessons.filter(teacher_id=teacher_id)
     if student_id:
-        lessons = lessons.filter(student_id=student_id)
+        lessons = lessons.filter(attendance__student_id=student_id)
     if subject_id:
         lessons = lessons.filter(subject_id=subject_id)
     if status:
@@ -1455,30 +1560,30 @@ def admin_lesson_export(request, format):
     completed_count = lessons.filter(status='completed').count()
     cancelled_count = lessons.filter(status='cancelled').count()
     overdue_count = lessons.filter(status='overdue').count()
-    total_cost = lessons.aggregate(Sum('cost'))['cost__sum'] or 0
-    total_payment = lessons.aggregate(Sum('teacher_payment'))['teacher_payment__sum'] or 0
+    total_cost = sum([a.cost for lesson in lessons for a in lesson.attendance.all()])
+    total_payment = sum([a.teacher_payment_share for lesson in lessons for a in lesson.attendance.all()])
 
     title = f"Экспорт уроков"
 
     # Выбор формата экспорта
     if format == 'excel':
-        return export_lessons_excel(lessons, title, request, completed_count, cancelled_count, overdue_count,
+        return export_lessons_excel(lessons, title, completed_count, cancelled_count, overdue_count,
                                     total_cost, total_payment)
     elif format == 'csv':
-        return export_lessons_csv(lessons, title, request, completed_count, cancelled_count, overdue_count, total_cost,
+        return export_lessons_csv(lessons, title, completed_count, cancelled_count, overdue_count, total_cost,
                                   total_payment)
     elif format == 'html':
-        return export_lessons_html(lessons, title, request, completed_count, cancelled_count, overdue_count, total_cost,
+        return export_lessons_html(lessons, title, completed_count, cancelled_count, overdue_count, total_cost,
                                    total_payment)
     elif format == 'pdf':
-        return export_lessons_pdf(lessons, title, request, completed_count, cancelled_count, overdue_count, total_cost,
+        return export_lessons_pdf(lessons, title, completed_count, cancelled_count, overdue_count, total_cost,
                                   total_payment)
     else:
         messages.error(request, 'Неподдерживаемый формат')
         return redirect(request.META.get('HTTP_REFERER', 'admin:school_lesson_changelist'))
 
 
-def export_lessons_excel(lessons, title, request, completed_count, cancelled_count, overdue_count, total_cost,
+def export_lessons_excel(lessons, title, completed_count, cancelled_count, overdue_count, total_cost,
                          total_payment):
     """Экспорт уроков в Excel"""
     wb = openpyxl.Workbook()
@@ -1524,7 +1629,7 @@ def export_lessons_excel(lessons, title, request, completed_count, cancelled_cou
     ws.append([])
 
     # Заголовки таблицы
-    headers = ['ID урока', 'Дата', 'Время', 'ID учителя', 'Учитель', 'ID ученика', 'Ученик', 'Предмет', 'Стоимость',
+    headers = ['ID урока', 'Дата', 'Время', 'Учитель', 'Ученик', 'Предмет', 'Стоимость',
                'Выплата учителю', 'Статус']
 
     for col, header in enumerate(headers, 1):
@@ -1538,33 +1643,34 @@ def export_lessons_excel(lessons, title, request, completed_count, cancelled_cou
     # Данные
     row = 6
     for lesson in lessons:
-        ws.cell(row=row, column=1, value=lesson.id).border = thin_border
-        ws.cell(row=row, column=2, value=lesson.date.strftime('%d.%m.%Y')).border = thin_border
-        ws.cell(row=row, column=3,
-                value=f"{lesson.start_time.strftime('%H:%M')}-{lesson.end_time.strftime('%H:%M')}").border = thin_border
-        ws.cell(row=row, column=4, value=lesson.teacher.user.get_full_name()).border = thin_border
-        ws.cell(row=row, column=5, value=lesson.student.user.get_full_name()).border = thin_border
-        ws.cell(row=row, column=6, value=lesson.subject.name).border = thin_border
-        ws.cell(row=row, column=7, value=float(lesson.cost)).border = thin_border
-        ws.cell(row=row, column=8, value=float(lesson.teacher_payment)).border = thin_border
-        ws.cell(row=row, column=9, value=lesson.get_status_display()).border = thin_border
+        for attendance in lesson.attendance.all():
+            ws.cell(row=row, column=1, value=lesson.id).border = thin_border
+            ws.cell(row=row, column=2, value=lesson.date.strftime('%d.%m.%Y')).border = thin_border
+            ws.cell(row=row, column=3,
+                    value=f"{lesson.start_time.strftime('%H:%M')}-{lesson.end_time.strftime('%H:%M')}").border = thin_border
+            ws.cell(row=row, column=4, value=lesson.teacher.user.get_full_name()).border = thin_border
+            ws.cell(row=row, column=5, value=attendance.student.user.get_full_name()).border = thin_border
+            ws.cell(row=row, column=6, value=lesson.subject.name).border = thin_border
+            ws.cell(row=row, column=7, value=float(attendance.cost)).border = thin_border
+            ws.cell(row=row, column=8, value=float(attendance.teacher_payment_share)).border = thin_border
+            ws.cell(row=row, column=9, value=lesson.get_status_display()).border = thin_border
 
-        # Форматирование чисел
-        ws.cell(row=row, column=7).number_format = '#,##0.00 ₽'
-        ws.cell(row=row, column=8).number_format = '#,##0.00 ₽'
+            # Форматирование чисел
+            ws.cell(row=row, column=7).number_format = '#,##0.00 ₽'
+            ws.cell(row=row, column=8).number_format = '#,##0.00 ₽'
 
-        # Цвет статуса
-        status_cell = ws.cell(row=row, column=9)
-        if lesson.status == 'completed':
-            status_cell.font = Font(color="28A745", bold=True)
-        elif lesson.status == 'cancelled':
-            status_cell.font = Font(color="DC3545", bold=True)
-        elif lesson.status == 'overdue':
-            status_cell.font = Font(color="FFC107", bold=True)
-        elif lesson.status == 'scheduled':
-            status_cell.font = Font(color="007BFF", bold=True)
+            # Цвет статуса
+            status_cell = ws.cell(row=row, column=9)
+            if lesson.status == 'completed':
+                status_cell.font = Font(color="28A745", bold=True)
+            elif lesson.status == 'cancelled':
+                status_cell.font = Font(color="DC3545", bold=True)
+            elif lesson.status == 'overdue':
+                status_cell.font = Font(color="FFC107", bold=True)
+            elif lesson.status == 'scheduled':
+                status_cell.font = Font(color="007BFF", bold=True)
 
-        row += 1
+            row += 1
 
     # Итоговая строка
     row += 1
@@ -1590,7 +1696,7 @@ def export_lessons_excel(lessons, title, request, completed_count, cancelled_cou
     return response
 
 
-def export_lessons_csv(lessons, title, request, completed_count, cancelled_count, overdue_count, total_cost,
+def export_lessons_csv(lessons, title, completed_count, cancelled_count, overdue_count, total_cost,
                        total_payment):
     """Экспорт уроков в CSV"""
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -1615,22 +1721,23 @@ def export_lessons_csv(lessons, title, request, completed_count, cancelled_count
 
     # Данные
     for lesson in lessons:
-        writer.writerow([
-            lesson.id,
-            lesson.date.strftime('%d.%m.%Y'),
-            f"{lesson.start_time.strftime('%H:%M')}-{lesson.end_time.strftime('%H:%M')}",
-            lesson.teacher.user.get_full_name(),
-            lesson.student.user.get_full_name(),
-            lesson.subject.name,
-            f"{lesson.cost:.2f}",
-            f"{lesson.teacher_payment:.2f}",
-            lesson.get_status_display(),
-        ])
+        for attendance in lesson.attendance.all():
+            writer.writerow([
+                lesson.id,
+                lesson.date.strftime('%d.%m.%Y'),
+                f"{lesson.start_time.strftime('%H:%M')}-{lesson.end_time.strftime('%H:%M')}",
+                lesson.teacher.user.get_full_name(),
+                attendance.student.user.get_full_name(),
+                lesson.subject.name,
+                f"{attendance.cost:.2f}",
+                f"{attendance.teacher_payment_share:.2f}",
+                lesson.get_status_display(),
+            ])
 
     return response
 
 
-def export_lessons_html(lessons, title, request, completed_count, cancelled_count, overdue_count, total_cost,
+def export_lessons_html(lessons, title, completed_count, cancelled_count, overdue_count, total_cost,
                         total_payment):
     """Экспорт уроков в HTML"""
     context = {
@@ -1653,7 +1760,7 @@ def export_lessons_html(lessons, title, request, completed_count, cancelled_coun
     return response
 
 
-def export_lessons_pdf(lessons, title, request, completed_count, cancelled_count, overdue_count, total_cost,
+def export_lessons_pdf(lessons, title, completed_count, cancelled_count, overdue_count, total_cost,
                        total_payment):
     """Экспорт уроков в PDF"""
     context = {
@@ -1678,414 +1785,6 @@ def export_lessons_pdf(lessons, title, request, completed_count, cancelled_count
     HTML(string=html_string).write_pdf(response)
 
     return response
-
-
-def export_lessons(request):
-    """Экспорт уроков в разных форматах"""
-    export_format = request.GET.get('export')
-
-    # Получаем отфильтрованные уроки (как в админке)
-    lessons = Lesson.objects.all()
-
-    # Применяем те же фильтры, что и в админке
-    # (здесь нужно добавить фильтрацию по GET параметрам)
-
-    if export_format == 'excel':
-        return export_excel(lessons)
-    elif export_format == 'csv':
-        return export_csv(lessons)
-    elif export_format == 'pdf':
-        return export_pdf(lessons)
-    else:
-        return redirect(request.META.get('HTTP_REFERER', 'admin:school_lesson_changelist'))
-
-
-def export_excel(lessons):
-    response = HttpResponse(content_type='application/vnd.ms-excel')
-    response['Content-Disposition'] = 'attachment; filename="lessons.xlsx"'
-
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Уроки"
-
-    # Заголовки
-    headers = ['ID', 'Дата', 'Время', 'Учитель', 'Ученик', 'Предмет', 'Стоимость', 'Статус']
-    for col, header in enumerate(headers, 1):
-        ws.cell(row=1, column=col, value=header)
-
-    # Данные
-    for row, lesson in enumerate(lessons, 2):
-        ws.cell(row=row, column=1, value=lesson.id)
-        ws.cell(row=row, column=2, value=lesson.date.strftime('%d.%m.%Y'))
-        ws.cell(row=row, column=3, value=f"{lesson.start_time}-{lesson.end_time}")
-        ws.cell(row=row, column=4, value=str(lesson.teacher))
-        ws.cell(row=row, column=5, value=str(lesson.student))
-        ws.cell(row=row, column=6, value=lesson.subject.name)
-        ws.cell(row=row, column=7, value=float(lesson.cost))
-        ws.cell(row=row, column=8, value=lesson.get_status_display())
-
-    wb.save(response)
-    return response
-
-
-def export_csv(lessons):
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="lessons.csv"'
-
-    writer = csv.writer(response)
-    writer.writerow(['ID', 'Дата', 'Время', 'Учитель', 'Ученик', 'Предмет', 'Стоимость', 'Статус'])
-
-    for lesson in lessons:
-        writer.writerow([
-            lesson.id,
-            lesson.date.strftime('%d.%m.%Y'),
-            f"{lesson.start_time}-{lesson.end_time}",
-            str(lesson.teacher),
-            str(lesson.student),
-            lesson.subject.name,
-            lesson.cost,
-            lesson.get_status_display()
-        ])
-
-    return response
-
-
-def export_pdf(lessons):
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="lessons.pdf"'
-
-    buffer = io.BytesIO()
-    p = canvas.Canvas(buffer, pagesize=landscape(A4))
-    width, height = landscape(A4)
-
-    # Заголовок
-    p.setFont("Helvetica-Bold", 16)
-    p.drawString(50, height - 50, "Экспорт уроков")
-
-    # Таблица (упрощенно)
-    p.setFont("Helvetica", 10)
-    y = height - 100
-
-    for lesson in lessons[:30]:  # Ограничим 30 записями для PDF
-        p.drawString(50, y, lesson.date.strftime('%d.%m.%Y'))
-        p.drawString(120, y, str(lesson.teacher))
-        p.drawString(250, y, str(lesson.student))
-        p.drawString(400, y, lesson.subject.name)
-        p.drawString(500, y, f"{lesson.cost}₽")
-        y -= 20
-
-        if y < 50:
-            p.showPage()
-            y = height - 50
-
-    p.save()
-    pdf = buffer.getvalue()
-    buffer.close()
-    response.write(pdf)
-    return response
-
-
-def import_lessons(request):
-    """Импорт уроков из Excel или CSV"""
-    if request.method == 'POST':
-        file = request.FILES.get('file')
-        if not file:
-            messages.error(request, 'Выберите файл для импорта')
-            return redirect('admin:school_lesson_changelist')
-
-        # Определяем формат по расширению
-        if file.name.endswith('.csv'):
-            return import_from_csv(file, request)
-        elif file.name.endswith(('.xlsx', '.xls')):
-            return import_from_excel(file, request)
-        else:
-            messages.error(request, 'Поддерживаются только файлы CSV и Excel (.xlsx, .xls)')
-            return redirect('admin:school_lesson_changelist')
-
-    # GET запрос - показываем форму импорта
-    return render(request, 'admin/school/lesson/import.html')
-
-
-def import_from_csv(file, request):
-    """Импорт из CSV"""
-    try:
-        decoded_file = file.read().decode('utf-8-sig').splitlines()
-        reader = csv.DictReader(decoded_file, delimiter=';')
-
-        success_count = 0
-        error_count = 0
-        errors = []
-
-        for row_num, row in enumerate(reader, start=2):
-            try:
-                # Поиск связанных объектов
-                teacher = Teacher.objects.get(user__last_name=row.get('Учитель', '').strip())
-                student = Student.objects.get(user__last_name=row.get('Ученик', '').strip())
-                subject = Subject.objects.get(name=row.get('Предмет', '').strip())
-
-                # Парсинг даты
-                date_str = row.get('Дата', '').strip()
-                if date_str:
-                    date = datetime.strptime(date_str, '%d.%m.%Y').date()
-                else:
-                    raise ValueError("Дата не указана")
-
-                # Парсинг времени
-                start_time_str = row.get('Время начала', '').strip()
-                end_time_str = row.get('Время окончания', '').strip()
-
-                if start_time_str:
-                    start_time = datetime.strptime(start_time_str, '%H:%M').time()
-                else:
-                    raise ValueError("Время начала не указано")
-
-                if end_time_str:
-                    end_time = datetime.strptime(end_time_str, '%H:%M').time()
-                else:
-                    # Если время окончания не указано, ставим +1 час
-                    from datetime import timedelta
-                    start_dt = datetime.combine(date, start_time)
-                    end_dt = start_dt + timedelta(hours=1)
-                    end_time = end_dt.time()
-
-                # Стоимость
-                cost = float(row.get('Стоимость', 0).replace(',', '.')) if row.get('Стоимость') else 0
-                teacher_payment = float(row.get('Выплата учителю', 0).replace(',', '.')) if row.get(
-                    'Выплата учителю') else cost * 0.5
-
-                # Статус
-                status = row.get('Статус', 'scheduled').strip().lower()
-                if status not in ['scheduled', 'completed', 'cancelled', 'overdue']:
-                    status = 'scheduled'
-
-                # Создание урока
-                Lesson.objects.create(
-                    teacher=teacher,
-                    student=student,
-                    subject=subject,
-                    date=date,
-                    start_time=start_time,
-                    end_time=end_time,
-                    cost=cost,
-                    teacher_payment=teacher_payment,
-                    status=status,
-                )
-                success_count += 1
-
-            except Teacher.DoesNotExist:
-                error_count += 1
-                errors.append(f"Строка {row_num}: Учитель '{row.get('Учитель')}' не найден")
-            except Student.DoesNotExist:
-                error_count += 1
-                errors.append(f"Строка {row_num}: Ученик '{row.get('Ученик')}' не найден")
-            except Subject.DoesNotExist:
-                error_count += 1
-                errors.append(f"Строка {row_num}: Предмет '{row.get('Предмет')}' не найден")
-            except Exception as e:
-                error_count += 1
-                errors.append(f"Строка {row_num}: {str(e)}")
-
-        # Сообщаем результат
-        if success_count > 0:
-            messages.success(request, f'✅ Импортировано уроков: {success_count}')
-        if error_count > 0:
-            error_text = '\n'.join(errors[:5])
-            if len(errors) > 5:
-                error_text += f'\n... и еще {len(errors) - 5} ошибок'
-            messages.warning(request, f'⚠️ Ошибок: {error_count}\n{error_text}')
-
-        return redirect('admin:school_lesson_changelist')
-
-    except Exception as e:
-        messages.error(request, f'Ошибка при импорте: {str(e)}')
-        return redirect('admin:school_lesson_changelist')
-
-
-def find_teacher_by_full_name(name):
-    """Поиск учителя по полному имени (фамилия имя отчество)"""
-    if not name:
-        return None
-
-    name = str(name).strip()
-    if not name:
-        return None
-
-    # Разбиваем имя на части
-    name_parts = name.split()
-    if not name_parts:
-        return None
-
-    # Пробуем найти по фамилии (первое слово)
-    last_name = name_parts[0]
-    teachers = Teacher.objects.filter(user__last_name__icontains=last_name)
-
-    if teachers.exists():
-        if teachers.count() == 1:
-            return teachers.first()
-
-        # Если несколько учителей с такой фамилией, пробуем уточнить по имени
-        if len(name_parts) > 1:
-            first_name = name_parts[1]
-            teachers = teachers.filter(user__first_name__icontains=first_name)
-            if teachers.exists():
-                return teachers.first()
-
-    # Если не нашли, пробуем поиск по полному имени
-    for teacher in Teacher.objects.all():
-        full_name = teacher.user.get_full_name().lower()
-        if name.lower() in full_name:
-            return teacher
-
-    return None
-
-
-def find_student_by_full_name(name):
-    """Поиск ученика по полному имени (фамилия имя отчество)"""
-    if not name:
-        return None
-
-    name = str(name).strip()
-    if not name:
-        return None
-
-    # Разбиваем имя на части
-    name_parts = name.split()
-    if not name_parts:
-        return None
-
-    # Пробуем найти по фамилии
-    last_name = name_parts[0]
-    students = Student.objects.filter(user__last_name__icontains=last_name)
-
-    if students.exists():
-        if students.count() == 1:
-            return students.first()
-
-        # Если несколько, уточняем по имени
-        if len(name_parts) > 1:
-            first_name = name_parts[1]
-            students = students.filter(user__first_name__icontains=first_name)
-            if students.exists():
-                return students.first()
-
-    # Поиск по полному имени
-    for student in Student.objects.all():
-        full_name = student.user.get_full_name().lower()
-        if name.lower() in full_name:
-            return student
-
-    return None
-
-
-def find_teacher_by_id(teacher_id):
-    """Поиск учителя по ID"""
-    try:
-        return Teacher.objects.get(id=int(teacher_id))
-    except (ValueError, Teacher.DoesNotExist):
-        return None
-
-
-def find_student_by_id(student_id):
-    """Поиск ученика по ID"""
-    try:
-        return Student.objects.get(id=int(student_id))
-    except (ValueError, Student.DoesNotExist):
-        return None
-
-
-def import_from_excel(file, request):
-    """Импорт из Excel с поддержкой ID"""
-    try:
-        import tempfile
-        import os
-        from datetime import datetime as dt
-
-        # Сохраняем временный файл
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
-            for chunk in file.chunks():
-                tmp.write(chunk)
-            tmp_path = tmp.name
-
-        wb = openpyxl.load_workbook(tmp_path)
-        ws = wb.active
-
-        # Получаем заголовки (первая строка)
-        headers = [cell.value for cell in ws[1] if cell.value]
-
-        success_count = 0
-        error_count = 0
-        errors = []
-
-        for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-            if not any(row):
-                continue
-
-            try:
-                # Создаем словарь из строки
-                row_dict = {}
-                for i, header in enumerate(headers):
-                    if i < len(row):
-                        row_dict[header] = row[i]
-
-                # Поиск учителя по ID или ФИО (для обратной совместимости)
-                teacher_id = row_dict.get('ID учителя')
-                teacher = None
-
-                if teacher_id:
-                    teacher = find_teacher_by_id(teacher_id)
-                    if not teacher:
-                        raise ValueError(f"Учитель с ID '{teacher_id}' не найден")
-                else:
-                    # Если ID нет, пробуем по ФИО (старый формат)
-                    teacher_name = str(row_dict.get('Учитель', '')).strip()
-                    teacher = find_teacher_by_full_name(teacher_name)
-                    if not teacher:
-                        raise ValueError(f"Учитель '{teacher_name}' не найден")
-
-                # Поиск учеников по ID или ФИО
-                students = []
-
-                # Пробуем сначала по ID учеников
-                student_ids_str = row_dict.get('ID учеников', '')
-                if student_ids_str:
-                    student_ids = [s.strip() for s in str(student_ids_str).split(';') if s.strip()]
-                    for student_id in student_ids:
-                        student = find_student_by_id(student_id)
-                        if not student:
-                            raise ValueError(f"Ученик с ID '{student_id}' не найден")
-                        students.append(student)
-                else:
-                    # Если ID нет, пробуем по ФИО
-                    students_str = str(row_dict.get('Ученики', '')).strip()
-                    student_names = [s.strip() for s in students_str.split(';') if s.strip()]
-                    for student_name in student_names:
-                        student = find_student_by_full_name(student_name)
-                        if not student:
-                            raise ValueError(f"Ученик '{student_name}' не найден")
-                        students.append(student)
-
-                if not students:
-                    raise ValueError("Не указаны ученики")
-
-                # Поиск предмета
-                subject_name = str(row_dict.get('Предмет', '')).strip()
-                subject = Subject.objects.filter(name__icontains=subject_name).first()
-                if not subject:
-                    raise ValueError(f"Предмет '{subject_name}' не найден")
-
-                # ... остальной код создания урока ...
-
-                success_count += 1
-
-            except Exception as e:
-                error_count += 1
-                errors.append(f"Строка {row_num}: {str(e)}")
-
-        # ... остальной код ...
-
-    except Exception as e:
-        messages.error(request, f'Ошибка при импорте: {str(e)}')
-        return redirect('admin:school_lesson_changelist')
 
 
 def download_import_template(request):
@@ -2232,7 +1931,14 @@ def lesson_feedback(request, lesson_id):
     lesson = get_object_or_404(Lesson, id=lesson_id)
 
     # Проверяем, что ученик имеет право оценивать
-    if request.user.role != 'student' or lesson.student.user != request.user:
+    if request.user.role != 'student':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+
+    # Проверяем, что ученик участвовал в уроке
+    try:
+        attendance = lesson.attendance.get(student__user=request.user)
+    except LessonAttendance.DoesNotExist:
         messages.error(request, 'Доступ запрещен')
         return redirect('dashboard')
 
@@ -2251,7 +1957,7 @@ def lesson_feedback(request, lesson_id):
         if form.is_valid():
             feedback = form.save(commit=False)
             feedback.lesson = lesson
-            feedback.student = lesson.student
+            feedback.student = attendance.student
             feedback.teacher = lesson.teacher
             feedback.save()
 
@@ -2378,7 +2084,8 @@ def teacher_homework_create(request, student_id):
             homework = form.save(commit=False)
             homework.teacher = teacher
             homework.student = student
-            homework.subject = student.subjects.first()  # Или выбрать предмет
+            # Берем первый предмет учителя (можно добавить выбор)
+            homework.subject = teacher.subjects.first()
             homework.save()
 
             # Уведомление ученику
@@ -2533,10 +2240,6 @@ def student_homework_detail(request, homework_id):
     return render(request, 'school/student/homework_detail.html', context)
 
 
-from django.http import JsonResponse
-import uuid
-
-
 def generate_video_room(request, lesson_id):
     """Генерирует комнату для видео"""
     lesson = get_object_or_404(Lesson, id=lesson_id)
@@ -2619,8 +2322,6 @@ def teacher_lesson_detail(request, lesson_id):
     total_cost = sum([a.cost for a in attendances]) if attendances else 0
 
     # ВЫПЛАТА УЧИТЕЛЮ - считаем по ВСЕМ ученикам, независимо от статуса!
-    # Учитель получает деньги за всех, кто был на уроке (attended)
-    # Статус 'debt' означает, что ученик должен школе, но учитель всё равно получает
     teacher_payment = sum([a.teacher_payment_share for a in attendances]) if attendances else 0
 
     print(f"DEBUG: Всего учеников: {attendances.count()}")
@@ -2649,7 +2350,7 @@ def teacher_lesson_detail(request, lesson_id):
         'lesson': lesson,
         'attendances': attendances,
         'total_cost': total_cost,
-        'teacher_payment': teacher_payment,  # Теперь считаем всех учеников
+        'teacher_payment': teacher_payment,
         'report': report,
         'form': form,
         'previous_lessons': previous_lessons,
@@ -2662,8 +2363,6 @@ def teacher_lesson_detail(request, lesson_id):
 @require_POST
 def create_video_room(request, lesson_id):
     """Учитель создает видео-комнату для урока"""
-    from .models import Lesson
-
     try:
         lesson = get_object_or_404(Lesson, id=lesson_id)
 
@@ -2905,19 +2604,27 @@ def create_lesson_with_prices(teacher, student, subject, date, start_time, end_t
 
     # Если цены не найдены, используем стандартные
     if cost is None:
-        cost = subject.default_cost or 1000  # значение по умолчанию
+        cost = 1000  # значение по умолчанию
     if teacher_payment is None:
-        teacher_payment = subject.default_teacher_payment or cost * 0.7
+        teacher_payment = cost * 0.7
 
     lesson = Lesson.objects.create(
         teacher=teacher,
-        student=student,
         subject=subject,
         date=date,
         start_time=start_time,
         end_time=end_time,
         base_cost=cost,
         base_teacher_payment=teacher_payment
+    )
+
+    # Добавляем ученика через attendance
+    LessonAttendance.objects.create(
+        lesson=lesson,
+        student=student,
+        cost=cost,
+        teacher_payment_share=teacher_payment,
+        status='registered'
     )
 
     return lesson
@@ -2992,6 +2699,8 @@ def import_students(request):
                 messages.success(request, f'✅ Импортировано учеников: {success_count}')
             if error_count > 0:
                 error_text = '\n'.join(errors[:5])
+                if len(errors) > 5:
+                    error_text += f'\n... и еще {len(errors) - 5} ошибок'
                 messages.warning(request, f'⚠️ Ошибок: {error_count}\n{error_text}')
 
         except Exception as e:
@@ -3106,6 +2815,8 @@ def import_teachers(request):
                 messages.success(request, f'✅ Импортировано учителей: {success_count}')
             if error_count > 0:
                 error_text = '\n'.join(errors[:5])
+                if len(errors) > 5:
+                    error_text += f'\n... и еще {len(errors) - 5} ошибок'
                 messages.warning(request, f'⚠️ Ошибок: {error_count}\n{error_text}')
 
         except Exception as e:
@@ -3144,12 +2855,6 @@ def download_teacher_template(request):
 
     wb.save(response)
     return response
-
-
-# school/views.py
-
-
-logger = logging.getLogger(__name__)
 
 
 def verify_email(request, token):
@@ -3199,7 +2904,6 @@ def verify_email(request, token):
         # Отправляем письмо об успехе
         try:
             print(f"📧 Отправляем письмо об успехе...")
-            from .utils import send_verification_success_email
             send_verification_success_email(user)
             print(f"✅ Письмо об успехе отправлено")
         except Exception as e:
@@ -3222,7 +2926,6 @@ def verify_email(request, token):
         messages.error(request, '❌ Недействительная ссылка подтверждения')
     except Exception as e:
         print(f"❌ Неожиданная ошибка: {e}")
-        import traceback
         traceback.print_exc()
         messages.error(request, f'❌ Ошибка при подтверждении: {str(e)}')
 
@@ -3284,24 +2987,6 @@ def resend_verification(request):
     return render(request, 'school/resend_verification.html')
 
 
-
-@login_required
-def teacher_create_lesson_page(request):
-    """Страница создания урока"""
-    if request.user.role != 'teacher':
-        messages.error(request, 'Доступ запрещен')
-        return redirect('dashboard')
-
-    teacher = request.user.teacher_profile
-    students = teacher.student_set.all()
-
-    context = {
-        'teacher': teacher,
-        'students': students,
-    }
-    return render(request, 'school/teacher/create_lesson.html', context)
-
-
 @login_required
 def teacher_create_schedule(request):
     """Создание шаблона расписания (разового или повторяющегося)"""
@@ -3320,8 +3005,10 @@ def teacher_create_schedule(request):
         end_time_str = request.POST.get('end_time')
         repeat_type = request.POST.get('repeat_type', 'single')
         notes = request.POST.get('notes', '')
+
         print(f"🔍 repeat_type = {repeat_type}")
         print(f"🔍 Все POST данные: {dict(request.POST)}")
+
         # Валидация общих полей
         if not student_id or not subject_id or not start_time_str:
             messages.error(request, 'Заполните все обязательные поля')
@@ -3329,6 +3016,9 @@ def teacher_create_schedule(request):
 
         student = get_object_or_404(Student, id=student_id, teachers=teacher)
         subject = get_object_or_404(Subject, id=subject_id)
+
+        # Получаем цены для ученика и предмета
+        cost, teacher_payment = StudentSubjectPrice.get_price_for(student, subject)
 
         # Конвертируем время из строки в объект time
         from datetime import datetime, timedelta, date
@@ -3352,14 +3042,16 @@ def teacher_create_schedule(request):
                 messages.error(request, 'Неверный формат времени окончания')
                 return redirect('teacher_create_schedule')
 
-        # Создаем шаблон
+        # Создаем шаблон с ценами
         template = ScheduleTemplate(
             teacher=teacher,
             subject=subject,
             start_time=start_time,
             end_time=end_time,
             repeat_type=repeat_type,
-            notes=notes
+            notes=notes,
+            base_cost=cost or 1000,
+            base_teacher_payment=teacher_payment or (cost or 1000) * 0.7
         )
 
         # ПРОВЕРКА В ЗАВИСИМОСТИ ОТ ТИПА
@@ -3428,3 +3120,461 @@ def teacher_create_schedule(request):
     }
     return render(request, 'school/teacher/schedule_template_form.html', context)
 
+
+@staff_member_required
+def admin_finance_dashboard(request):
+    """Финансовый дашборд для администратора"""
+
+    # Период по умолчанию - текущий месяц
+    today = timezone.now().date()
+    start_date = request.GET.get('start_date', today.replace(day=1).strftime('%Y-%m-%d'))
+    end_date = request.GET.get('end_date', today.strftime('%Y-%m-%d'))
+
+    # Преобразуем строки в даты
+    from datetime import datetime
+    start = datetime.strptime(start_date, '%Y-%m-%d').date()
+    end = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+    # Все платежи за период
+    payments = Payment.objects.filter(created_at__date__gte=start, created_at__date__lte=end)
+
+    # Статистика по типам платежей
+    income_total = payments.filter(payment_type='income').aggregate(Sum('amount'))['amount__sum'] or 0
+    expense_total = payments.filter(payment_type='expense').aggregate(Sum('amount'))['amount__sum'] or 0
+    teacher_payments_total = payments.filter(payment_type='teacher_payment').aggregate(Sum('amount'))[
+                                 'amount__sum'] or 0
+
+    # Прибыль школы (пополнения - расходы учеников)
+    # Расходы учеников = доход школы
+    school_income = expense_total
+    school_expense = teacher_payments_total
+    profit = school_income - school_expense
+
+    # Статистика по ученикам
+    students_with_debt = Student.objects.filter(user__balance__lt=0).count()
+    total_debt = abs(
+        Student.objects.filter(user__balance__lt=0).aggregate(Sum('user__balance'))['user__balance__sum'] or 0)
+
+    students_with_balance = Student.objects.filter(user__balance__gt=0).count()
+    total_balance = Student.objects.filter(user__balance__gt=0).aggregate(Sum('user__balance'))[
+                        'user__balance__sum'] or 0
+
+    # Топ-10 учеников по балансу
+    top_students = Student.objects.select_related('user').order_by('-user__balance')[:10]
+
+    # Топ-10 должников
+    top_debtors = Student.objects.filter(user__balance__lt=0).select_related('user').order_by('user__balance')[:10]
+
+    # Статистика по учителям (сколько должны выплатить)
+    teachers_total_balance = Teacher.objects.aggregate(Sum('wallet_balance'))['wallet_balance__sum'] or 0
+
+    # Ежедневная статистика за период
+    daily_stats = []
+    current = start
+    while current <= end:
+        day_payments = payments.filter(created_at__date=current)
+        day_income = day_payments.filter(payment_type='income').aggregate(Sum('amount'))['amount__sum'] or 0
+        day_expense = day_payments.filter(payment_type='expense').aggregate(Sum('amount'))['amount__sum'] or 0
+        day_teacher = day_payments.filter(payment_type='teacher_payment').aggregate(Sum('amount'))['amount__sum'] or 0
+
+        daily_stats.append({
+            'date': current.strftime('%d.%m.%Y'),
+            'income': float(day_income),
+            'expense': float(day_expense),
+            'teacher_payments': float(day_teacher),
+            'profit': float(day_expense - day_teacher),
+        })
+        current += timedelta(days=1)
+
+    context = {
+        'start_date': start_date,
+        'end_date': end_date,
+        'income_total': float(income_total),
+        'expense_total': float(expense_total),
+        'teacher_payments_total': float(teacher_payments_total),
+        'school_income': float(school_income),
+        'school_expense': float(school_expense),
+        'profit': float(profit),
+        'students_with_debt': students_with_debt,
+        'total_debt': float(total_debt),
+        'students_with_balance': students_with_balance,
+        'total_balance': float(total_balance),
+        'top_students': top_students,
+        'top_debtors': top_debtors,
+        'teachers_total_balance': float(teachers_total_balance),
+        'daily_stats': daily_stats,
+        'payments_count': payments.count(),
+    }
+
+    return render(request, 'admin/finance/dashboard.html', context)
+
+
+@staff_member_required
+def import_lessons(request):
+    """Импорт уроков из Excel или CSV"""
+    if request.method == 'POST':
+        file = request.FILES.get('file')
+        if not file:
+            messages.error(request, 'Выберите файл для импорта')
+            return redirect('admin:school_lesson_changelist')
+
+        # Определяем формат по расширению
+        if file.name.endswith('.csv'):
+            return import_from_csv(file, request)
+        elif file.name.endswith(('.xlsx', '.xls')):
+            return import_from_excel(file, request)
+        else:
+            messages.error(request, 'Поддерживаются только файлы CSV и Excel (.xlsx, .xls)')
+            return redirect('admin:school_lesson_changelist')
+
+    # GET запрос - показываем форму импорта
+    return render(request, 'admin/school/lesson/import.html')
+def find_teacher_by_full_name(name):
+    """Поиск учителя по полному имени (фамилия имя отчество)"""
+    if not name:
+        return None
+
+    name = str(name).strip()
+    if not name:
+        return None
+
+    # Разбиваем имя на части
+    name_parts = name.split()
+    if not name_parts:
+        return None
+
+    # Пробуем найти по фамилии (первое слово)
+    last_name = name_parts[0]
+    teachers = Teacher.objects.filter(user__last_name__icontains=last_name)
+
+    if teachers.exists():
+        if teachers.count() == 1:
+            return teachers.first()
+
+        # Если несколько учителей с такой фамилией, пробуем уточнить по имени
+        if len(name_parts) > 1:
+            first_name = name_parts[1]
+            teachers = teachers.filter(user__first_name__icontains=first_name)
+            if teachers.exists():
+                return teachers.first()
+
+    # Если не нашли, пробуем поиск по полному имени
+    for teacher in Teacher.objects.all():
+        full_name = teacher.user.get_full_name().lower()
+        if name.lower() in full_name:
+            return teacher
+
+    return None
+
+
+def find_student_by_full_name(name):
+    """Поиск ученика по полному имени (фамилия имя отчество)"""
+    if not name:
+        return None
+
+    name = str(name).strip()
+    if not name:
+        return None
+
+    # Разбиваем имя на части
+    name_parts = name.split()
+    if not name_parts:
+        return None
+
+    # Пробуем найти по фамилии
+    last_name = name_parts[0]
+    students = Student.objects.filter(user__last_name__icontains=last_name)
+
+    if students.exists():
+        if students.count() == 1:
+            return students.first()
+
+        # Если несколько, уточняем по имени
+        if len(name_parts) > 1:
+            first_name = name_parts[1]
+            students = students.filter(user__first_name__icontains=first_name)
+            if students.exists():
+                return students.first()
+
+    # Поиск по полному имени
+    for student in Student.objects.all():
+        full_name = student.user.get_full_name().lower()
+        if name.lower() in full_name:
+            return student
+
+    return None
+
+
+def find_teacher_by_id(teacher_id):
+    """Поиск учителя по ID"""
+    try:
+        return Teacher.objects.get(id=int(teacher_id))
+    except (ValueError, Teacher.DoesNotExist):
+        return None
+
+
+def find_student_by_id(student_id):
+    """Поиск ученика по ID"""
+    try:
+        return Student.objects.get(id=int(student_id))
+    except (ValueError, Student.DoesNotExist):
+        return None
+
+
+def import_from_csv(file, request):
+    """Импорт из CSV"""
+    try:
+        decoded_file = file.read().decode('utf-8-sig').splitlines()
+        reader = csv.DictReader(decoded_file, delimiter=';')
+
+        success_count = 0
+        error_count = 0
+        errors = []
+
+        for row_num, row in enumerate(reader, start=2):
+            try:
+                # Поиск связанных объектов
+                teacher_name = row.get('Учитель', '').strip()
+                student_name = row.get('Ученик', '').strip()
+                subject_name = row.get('Предмет', '').strip()
+
+                teacher = find_teacher_by_full_name(teacher_name)
+                if not teacher:
+                    raise ValueError(f"Учитель '{teacher_name}' не найден")
+
+                student = find_student_by_full_name(student_name)
+                if not student:
+                    raise ValueError(f"Ученик '{student_name}' не найден")
+
+                subject = Subject.objects.filter(name__icontains=subject_name).first()
+                if not subject:
+                    raise ValueError(f"Предмет '{subject_name}' не найден")
+
+                # Парсинг даты
+                date_str = row.get('Дата', '').strip()
+                if date_str:
+                    date = datetime.strptime(date_str, '%d.%m.%Y').date()
+                else:
+                    raise ValueError("Дата не указана")
+
+                # Парсинг времени
+                start_time_str = row.get('Время начала', '').strip()
+                end_time_str = row.get('Время окончания', '').strip()
+
+                if start_time_str:
+                    start_time = datetime.strptime(start_time_str, '%H:%M').time()
+                else:
+                    raise ValueError("Время начала не указано")
+
+                if end_time_str:
+                    end_time = datetime.strptime(end_time_str, '%H:%M').time()
+                else:
+                    # Если время окончания не указано, ставим +1 час
+                    from datetime import timedelta
+                    start_dt = datetime.combine(date, start_time)
+                    end_dt = start_dt + timedelta(hours=1)
+                    end_time = end_dt.time()
+
+                # Стоимость
+                cost = float(row.get('Стоимость', 0).replace(',', '.')) if row.get('Стоимость') else 1000
+                teacher_payment = float(row.get('Выплата учителю', 0).replace(',', '.')) if row.get(
+                    'Выплата учителю') else cost * 0.7
+
+                # Статус
+                status = row.get('Статус', 'scheduled').strip().lower()
+                if status not in ['scheduled', 'completed', 'cancelled', 'overdue']:
+                    status = 'scheduled'
+
+                # Создание урока
+                lesson = Lesson.objects.create(
+                    teacher=teacher,
+                    subject=subject,
+                    date=date,
+                    start_time=start_time,
+                    end_time=end_time,
+                    base_cost=cost,
+                    base_teacher_payment=teacher_payment,
+                    status=status,
+                )
+
+                # Создаем запись посещаемости
+                LessonAttendance.objects.create(
+                    lesson=lesson,
+                    student=student,
+                    cost=cost,
+                    teacher_payment_share=teacher_payment,
+                    status='registered' if status == 'scheduled' else status
+                )
+
+                success_count += 1
+
+            except Exception as e:
+                error_count += 1
+                errors.append(f"Строка {row_num}: {str(e)}")
+
+        # Сообщаем результат
+        if success_count > 0:
+            messages.success(request, f'✅ Импортировано уроков: {success_count}')
+        if error_count > 0:
+            error_text = '\n'.join(errors[:5])
+            if len(errors) > 5:
+                error_text += f'\n... и еще {len(errors) - 5} ошибок'
+            messages.warning(request, f'⚠️ Ошибок: {error_count}\n{error_text}')
+
+        return redirect('admin:school_lesson_changelist')
+
+    except Exception as e:
+        messages.error(request, f'Ошибка при импорте: {str(e)}')
+        return redirect('admin:school_lesson_changelist')
+
+
+def import_from_excel(file, request):
+    """Импорт из Excel с поддержкой ID"""
+    try:
+        import tempfile
+        import os
+
+        # Сохраняем временный файл
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+            for chunk in file.chunks():
+                tmp.write(chunk)
+            tmp_path = tmp.name
+
+        wb = openpyxl.load_workbook(tmp_path)
+        ws = wb.active
+
+        # Получаем заголовки (первая строка)
+        headers = [cell.value for cell in ws[1] if cell.value]
+
+        success_count = 0
+        error_count = 0
+        errors = []
+
+        for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            if not any(row):
+                continue
+
+            try:
+                # Создаем словарь из строки
+                row_dict = {}
+                for i, header in enumerate(headers):
+                    if i < len(row):
+                        row_dict[header] = row[i]
+
+                # Поиск учителя по ID или ФИО
+                teacher_id = row_dict.get('ID учителя')
+                teacher = None
+
+                if teacher_id:
+                    teacher = find_teacher_by_id(teacher_id)
+                    if not teacher:
+                        raise ValueError(f"Учитель с ID '{teacher_id}' не найден")
+                else:
+                    teacher_name = str(row_dict.get('Учитель', '')).strip()
+                    teacher = find_teacher_by_full_name(teacher_name)
+                    if not teacher:
+                        raise ValueError(f"Учитель '{teacher_name}' не найден")
+
+                # Поиск учеников по ID или ФИО
+                students = []
+
+                student_ids_str = row_dict.get('ID учеников', '')
+                if student_ids_str:
+                    student_ids = [s.strip() for s in str(student_ids_str).split(';') if s.strip()]
+                    for student_id in student_ids:
+                        student = find_student_by_id(student_id)
+                        if not student:
+                            raise ValueError(f"Ученик с ID '{student_id}' не найден")
+                        students.append(student)
+                else:
+                    students_str = str(row_dict.get('Ученики', '')).strip()
+                    student_names = [s.strip() for s in students_str.split(';') if s.strip()]
+                    for student_name in student_names:
+                        student = find_student_by_full_name(student_name)
+                        if not student:
+                            raise ValueError(f"Ученик '{student_name}' не найден")
+                        students.append(student)
+
+                if not students:
+                    raise ValueError("Не указаны ученики")
+
+                # Поиск предмета
+                subject_name = str(row_dict.get('Предмет', '')).strip()
+                subject = Subject.objects.filter(name__icontains=subject_name).first()
+                if not subject:
+                    raise ValueError(f"Предмет '{subject_name}' не найден")
+
+                # Парсинг даты
+                date_str = str(row_dict.get('Дата', '')).strip()
+                date = datetime.strptime(date_str, '%d.%m.%Y').date() if date_str else None
+
+                # Парсинг времени
+                start_time_str = str(row_dict.get('Время начала', '')).strip()
+                end_time_str = str(row_dict.get('Время окончания', '')).strip()
+
+                start_time = datetime.strptime(start_time_str, '%H:%M').time() if start_time_str else None
+                end_time = datetime.strptime(end_time_str, '%H:%M').time() if end_time_str else None
+
+                if not date or not start_time:
+                    raise ValueError("Дата и время начала обязательны")
+
+                if not end_time:
+                    from datetime import timedelta
+                    start_dt = datetime.combine(date, start_time)
+                    end_dt = start_dt + timedelta(hours=1)
+                    end_time = end_dt.time()
+
+                # Стоимость
+                cost = float(str(row_dict.get('Стоимость', '1000')).replace(',', '.'))
+                teacher_payment = float(str(row_dict.get('Выплата учителю', cost * 0.7)).replace(',', '.'))
+
+                # Статус
+                status = str(row_dict.get('Статус', 'scheduled')).strip().lower()
+                if status not in ['scheduled', 'completed', 'cancelled', 'overdue']:
+                    status = 'scheduled'
+
+                # Создание урока
+                lesson = Lesson.objects.create(
+                    teacher=teacher,
+                    subject=subject,
+                    date=date,
+                    start_time=start_time,
+                    end_time=end_time,
+                    base_cost=cost,
+                    base_teacher_payment=teacher_payment,
+                    status=status,
+                )
+
+                # Создаем записи посещаемости для всех учеников
+                for student in students:
+                    LessonAttendance.objects.create(
+                        lesson=lesson,
+                        student=student,
+                        cost=cost,
+                        teacher_payment_share=teacher_payment,
+                        status='registered' if status == 'scheduled' else status
+                    )
+
+                success_count += 1
+
+            except Exception as e:
+                error_count += 1
+                errors.append(f"Строка {row_num}: {str(e)}")
+
+        # Удаляем временный файл
+        os.unlink(tmp_path)
+
+        # Сообщаем результат
+        if success_count > 0:
+            messages.success(request, f'✅ Импортировано уроков: {success_count}')
+        if error_count > 0:
+            error_text = '\n'.join(errors[:5])
+            if len(errors) > 5:
+                error_text += f'\n... и еще {len(errors) - 5} ошибок'
+            messages.warning(request, f'⚠️ Ошибок: {error_count}\n{error_text}')
+
+        return redirect('admin:school_lesson_changelist')
+
+    except Exception as e:
+        messages.error(request, f'Ошибка при импорте: {str(e)}')
+        return redirect('admin:school_lesson_changelist')
