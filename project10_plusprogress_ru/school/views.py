@@ -439,14 +439,6 @@ def teacher_dashboard(request):
         messages.error(request, 'Доступ запрещен')
         return redirect('dashboard')
 
-    # Проверяем наличие профиля учителя
-    try:
-        teacher = request.user.teacher_profile
-    except Teacher.DoesNotExist:
-        # Если профиля нет, создаем его
-        teacher = Teacher.objects.create(user=request.user)
-        messages.info(request, 'Профиль учителя был создан автоматически')
-
     teacher = request.user.teacher_profile
     today = timezone.now().date()
 
@@ -473,12 +465,21 @@ def teacher_dashboard(request):
         status='completed'
     ).select_related('subject').order_by('-date')[:20]
 
-    # Получаем ВСЕ уроки учителя для календаря (без ограничений)
+    # ✅ ИСПРАВЛЕННЫЙ КОД: получаем ВСЕ уроки с учениками
+    from django.db.models import Prefetch
+
     all_lessons = Lesson.objects.filter(
         teacher=teacher
-    ).select_related('subject').order_by('date', 'start_time')
+    ).select_related(
+        'subject'
+    ).prefetch_related(
+        Prefetch(
+            'attendance',
+            queryset=LessonAttendance.objects.select_related('student__user')
+        )
+    ).order_by('date', 'start_time')
 
-    # Получаем методические материалы учителя
+    # Получаем методические материалы
     materials = Material.objects.filter(
         Q(teachers=teacher) | Q(created_by=request.user)
     ).distinct().order_by('-created_at')[:20]
@@ -492,46 +493,44 @@ def teacher_dashboard(request):
         payment_type='teacher_payment'
     ).order_by('-created_at')[:10]
 
-    # Подготовка событий для календаря (ВСЕ УРОКИ)
+    # Подготовка событий для календаря
     calendar_events = []
 
-    # Добавляем ВСЕ уроки учителя
     for lesson in all_lessons:
-        # Определяем цвет в зависимости от статуса и даты
+        # Определяем цвет в зависимости от статуса
         if lesson.status == 'completed':
-            bg_color = '#28a745'  # зеленый
-            text_color = 'white'
+            bg_color = '#28a745'
         elif lesson.status == 'cancelled':
-            bg_color = '#dc3545'  # красный
-            text_color = 'white'
+            bg_color = '#dc3545'
         elif lesson.status == 'overdue':
-            bg_color = '#fd7e14'  # оранжевый
-            text_color = 'white'
+            bg_color = '#fd7e14'
         elif lesson.date < today and lesson.status == 'scheduled':
-            bg_color = '#ffc107'  # желтый (просрочен, но не отмечен)
-            text_color = 'black'
+            bg_color = '#ffc107'
         elif lesson.date == today:
-            bg_color = '#007bff'  # синий (сегодня)
-            text_color = 'white'
+            bg_color = '#007bff'
         else:
-            bg_color = '#6c757d'  # серый (будущие)
-            text_color = 'white'
+            bg_color = '#6c757d'
 
-        # Формируем заголовок
-        students_list = ", ".join([a.student.user.last_name for a in lesson.attendance.all()[:2]])
-        if lesson.attendance.count() > 2:
-            students_list += f" и еще {lesson.attendance.count() - 2}"
-        elif lesson.attendance.count() == 0:
-            students_list = "нет учеников"
+        # Формируем заголовок (ИМЯ И ПЕРВА БУКВА ФАМИЛИИ)
+        attendance_count = lesson.attendance.count()
+        if attendance_count == 0:
+            title = "Нет учеников"
+        elif attendance_count == 1:
+            student = lesson.attendance.first().student
+            first_name = student.user.first_name
+            last_name_initial = student.user.last_name[0] if student.user.last_name else ''
+            title = f"{first_name} {last_name_initial}." if last_name_initial else first_name
+        else:
+            title = f"{attendance_count} учеников"
 
         calendar_events.append({
-            'title': f"{lesson.subject.name} - {students_list}",
+            'title': title,
             'start': f"{lesson.date}T{lesson.start_time}",
             'end': f"{lesson.date}T{lesson.end_time}",
             'url': f"/teacher/lesson/{lesson.id}/",
             'backgroundColor': bg_color,
             'borderColor': bg_color,
-            'textColor': text_color,
+            'textColor': 'white',
         })
 
     context = {
@@ -540,11 +539,11 @@ def teacher_dashboard(request):
         'upcoming_lessons': upcoming_lessons,
         'today_lessons': today_lessons,
         'past_lessons': past_lessons,
-        'all_lessons': all_lessons,
+        'all_lessons': all_lessons,  # ← передаем в шаблон
         'materials': materials,
         'wallet_balance': wallet_balance,
         'recent_payments': recent_payments,
-        'calendar_events': calendar_events,  # теперь здесь ВСЕ уроки
+        'calendar_events': calendar_events,
     }
 
     return render(request, 'school/teacher/dashboard.html', context)

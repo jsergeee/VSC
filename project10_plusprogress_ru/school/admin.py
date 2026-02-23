@@ -14,6 +14,8 @@ from .models import LessonAttendance
 from .models import ScheduleTemplate, ScheduleTemplateStudent
 from .models import StudentSubjectPrice
 from datetime import datetime
+from django.db.models import Prefetch
+from .models import LessonAttendance
 
 from .models import (
     User, Subject, Teacher, Student, Lesson, LessonFormat,
@@ -373,15 +375,67 @@ class LessonAdmin(admin.ModelAdmin):
         ]
         return custom_urls + urls
 
+    from django.db.models import Prefetch
+    from .models import LessonAttendance
+
     def changelist_view(self, request, extra_context=None):
         # Если запрошен календарь
         if request.GET.get('view') == 'calendar':
             lessons = self.get_queryset(request).select_related(
                 'teacher__user', 'subject'
-            ).prefetch_related('students__user')
+            ).prefetch_related(
+                Prefetch(
+                    'attendance',
+                    queryset=LessonAttendance.objects.select_related('student__user')
+                )
+            )
+
+            # Формируем события для календаря
+            calendar_events = []
+            for lesson in lessons:
+                # Предмет (сокращенно - первые 2 буквы)
+                subject_short = lesson.subject.name[:4]
+
+                # Фамилия учителя
+                teacher_last = lesson.teacher.user.last_name
+
+                # Ученики
+                attendance_count = lesson.attendance.count()
+                if attendance_count == 0:
+                    students_text = "нет"
+                elif attendance_count == 1:
+                    student = lesson.attendance.first().student
+                    first_name = student.user.first_name
+                    last_initial = student.user.last_name[0] if student.user.last_name else ''
+                    students_text = f"{first_name} {last_initial}."
+                else:
+                    students_text = f"{attendance_count} уч."
+
+                # Формируем заголовок
+                title = f"{subject_short} {teacher_last} - {students_text}"
+
+                # Определяем цвет в зависимости от статуса
+                if lesson.status == 'completed':
+                    bg_color = '#28a745'
+                elif lesson.status == 'cancelled':
+                    bg_color = '#dc3545'
+                elif lesson.status == 'overdue':
+                    bg_color = '#fd7e14'
+                else:
+                    bg_color = '#007bff'
+
+                calendar_events.append({
+                    'title': title,
+                    'start': f"{lesson.date}T{lesson.start_time}",
+                    'end': f"{lesson.date}T{lesson.end_time}",
+                    'url': f"/admin/school/lesson/{lesson.id}/change/",
+                    'backgroundColor': bg_color,
+                    'borderColor': bg_color,
+                    'textColor': 'white',
+                })
 
             extra_context = extra_context or {}
-            extra_context['lessons'] = lessons
+            extra_context['calendar_events'] = calendar_events
             extra_context['title'] = 'Календарь занятий'
 
             return render(request, 'admin/school/lesson/change_list_calendar.html', extra_context)

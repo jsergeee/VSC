@@ -291,19 +291,7 @@
                     week: 'Неделя',
                     day: 'День'
                 },
-                events: [
-                    {% for lesson in all_lessons %}
-                    {
-                        title: '{{ lesson.subject.name }} - {{ lesson.student.user.last_name }}',
-                        start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
-                        end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
-                        url: "{% url 'teacher_lesson_detail' lesson.id %}",
-                        backgroundColor: '{% if lesson.status == "completed" %}#28a745{% elif lesson.status == "cancelled" %}#dc3545{% elif lesson.status == "overdue" %}#fd7e14{% else %}#007bff{% endif %}',
-                        borderColor: '{% if lesson.status == "completed" %}#28a745{% elif lesson.status == "cancelled" %}#dc3545{% elif lesson.status == "overdue" %}#fd7e14{% else %}#007bff{% endif %}',
-                        textColor: 'white'
-                    },
-                    {% endfor %}
-                ],
+                events: {{ calendar_events|safe }},
                 eventClick: function(info) {
                     if (info.event.url) {
                         window.location.href = info.event.url;
