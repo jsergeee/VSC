@@ -1,7 +1,7 @@
 # school/models.py
 import uuid
 from decimal import Decimal
-
+from datetime import datetime, date, time, timedelta
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
@@ -1345,6 +1345,8 @@ class GroupEnrollment(models.Model):
         super().save(*args, **kwargs)
 
 
+# school/models.py
+
 class ScheduleTemplate(models.Model):
     """Шаблон расписания для создания повторяющихся уроков"""
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='schedule_templates',
@@ -1362,15 +1364,16 @@ class ScheduleTemplate(models.Model):
         'Тип повторения',
         max_length=20,
         choices=[
+            ('single', 'Разовый урок'),
             ('daily', 'Каждый день'),
             ('weekly', 'Каждую неделю'),
             ('biweekly', 'Раз в две недели'),
             ('monthly', 'Каждый месяц'),
         ],
-        default='weekly'
+        default='single'
     )
 
-    # Дни недели
+    # Дни недели (для повторяющихся)
     monday = models.BooleanField('Понедельник', default=False)
     tuesday = models.BooleanField('Вторник', default=False)
     wednesday = models.BooleanField('Среда', default=False)
@@ -1379,44 +1382,23 @@ class ScheduleTemplate(models.Model):
     saturday = models.BooleanField('Суббота', default=False)
     sunday = models.BooleanField('Воскресенье', default=False)
 
-    # Дата начала и окончания
-    start_date = models.DateField('Дата начала')
-    end_date = models.DateField('Дата окончания', null=True, blank=True,
-                                help_text='Оставьте пустым для бесконечного повторения')
+    # Дата для разового урока / период для повторяющихся
+    start_date = models.DateField('Дата начала', null=True, blank=True)
+    end_date = models.DateField('Дата окончания', null=True, blank=True)
     max_occurrences = models.PositiveIntegerField('Максимальное количество занятий', null=True, blank=True)
 
     # Ученики
-    students = models.ManyToManyField(Student, through='ScheduleTemplateStudent', verbose_name='Ученики')
+    students = models.ManyToManyField(Student, through='ScheduleTemplateStudent', blank=True, verbose_name='Ученики')
 
-    # Финансы
-    base_cost = models.DecimalField(
-        'Базовая стоимость',
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        null=True, blank=True
-    )
-    base_teacher_payment = models.DecimalField(
-        'Базовая выплата учителю',
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        null=True, blank=True
-    )
-    price_type = models.CharField(
-        'Тип оплаты',
-        max_length=20,
-        choices=[
-            ('fixed', 'Фиксированная за всех'),
-            ('per_student', 'За каждого ученика'),
-            ('individual', 'Индивидуальная для каждого'),
-        ],
-        default='per_student',
-        null=True, blank=True
-    )
+    # Финансы (опционально)
+    base_cost = models.DecimalField('Базовая стоимость', max_digits=10, decimal_places=2, null=True, blank=True)
+    base_teacher_payment = models.DecimalField('Базовая выплата учителю', max_digits=10, decimal_places=2, null=True,
+                                               blank=True)
 
     meeting_link = models.URLField('Ссылка на занятие', blank=True)
     meeting_platform = models.CharField('Платформа', max_length=50, blank=True)
+
+    notes = models.TextField('Заметки', blank=True)
 
     is_active = models.BooleanField('Активно', default=True)
     created_at = models.DateTimeField('Создано', auto_now_add=True)
@@ -1427,111 +1409,188 @@ class ScheduleTemplate(models.Model):
         verbose_name_plural = 'Шаблоны расписания'
 
     def __str__(self):
-        days = []
-        if self.monday: days.append('Пн')
-        if self.tuesday: days.append('Вт')
-        if self.wednesday: days.append('Ср')
-        if self.thursday: days.append('Чт')
-        if self.friday: days.append('Пт')
-        if self.saturday: days.append('Сб')
-        if self.sunday: days.append('Вс')
-        days_str = ', '.join(days) if days else 'Все дни'
-        return f"{self.subject.name} - {self.start_time} ({days_str})"
+        if self.repeat_type == 'single':
+            date_str = self.start_date.strftime('%d.%m.%Y') if self.start_date else 'без даты'
+            return f"{self.subject.name} - {date_str} {self.start_time}"
+        else:
+            days = []
+            if self.monday: days.append('Пн')
+            if self.tuesday: days.append('Вт')
+            if self.wednesday: days.append('Ср')
+            if self.thursday: days.append('Чт')
+            if self.friday: days.append('Пт')
+            if self.saturday: days.append('Сб')
+            if self.sunday: days.append('Вс')
+            days_str = ', '.join(days) if days else 'Все дни'
+            return f"{self.subject.name} - {self.start_time} ({days_str})"
+
+    # school/models.py - замените метод save() в классе ScheduleTemplate
 
     def save(self, *args, **kwargs):
-        # Автоматически вычисляем длительность
+        # ПРОВЕРЯЕМ, ЧТО ВРЕМЯ ЗАДАНО
         if self.start_time and self.end_time:
-            from datetime import datetime
-            start = datetime.combine(datetime.today(), self.start_time)
-            end = datetime.combine(datetime.today(), self.end_time)
-            self.duration = int((end - start).total_seconds() / 60)
+            # Конвертируем время в минуты
+            start_minutes = self.start_time.hour * 60 + self.start_time.minute
+            end_minutes = self.end_time.hour * 60 + self.end_time.minute
+
+            # Вычисляем разницу
+            diff = end_minutes - start_minutes
+
+            # Если отрицательная (переход через полночь), добавляем 24 часа
+            if diff < 0:
+                diff += 24 * 60
+
+            self.duration = diff
+        else:
+            # Если время не задано, ставим длительность по умолчанию
+            self.duration = 60
+
         super().save(*args, **kwargs)
 
-    def generate_lessons(self, students=None):
+    def generate_lessons(self):
         """Генерирует уроки по шаблону"""
-        from datetime import timedelta, date
-        from .models import Lesson, LessonAttendance, StudentSubjectPrice
+        if self.repeat_type == 'single':
+            return self._create_single_lesson()
+        else:
+            return self._create_recurring_lessons()
 
-        target_students = students if students is not None else self.students.all()
-        if not target_students:
+    def _create_single_lesson(self):
+        """Создает разовый урок"""
+        from .models import Lesson, LessonAttendance
+
+        if not self.start_date:
+            return []
+
+        lesson = Lesson.objects.create(
+            teacher=self.teacher,
+            subject=self.subject,
+            format=self.format,
+            date=self.start_date,
+            start_time=self.start_time,
+            end_time=self.end_time,
+            base_cost=self.base_cost or 0,
+            base_teacher_payment=self.base_teacher_payment or 0,
+            meeting_link=self.meeting_link,
+            meeting_platform=self.meeting_platform,
+            status='scheduled',
+            notes=self.notes
+        )
+
+        # Добавляем учеников
+        for student in self.students.all():
+            LessonAttendance.objects.create(
+                lesson=lesson,
+                student=student,
+                cost=self.base_cost or 0,
+                teacher_payment_share=self.base_teacher_payment or 0
+            )
+
+        return [lesson]
+
+    def _create_recurring_lessons(self):
+        """Создает серию уроков по расписанию"""
+        from datetime import timedelta, date
+        from .models import Lesson, LessonAttendance
+
+        if not self.start_date:
             return []
 
         generated = []
         current_date = self.start_date
-        end_date = self.end_date or date(2099, 12, 31)
+
+        # Определяем дату окончания
+        if self.end_date:
+            end_date = self.end_date
+        else:
+            # Если дата окончания не указана - создаем на 3 месяца вперед
+            end_date = self.start_date + timedelta(days=90)
+            print(f"⚠️ end_date не указан, создаем уроки на 3 месяца до {end_date}")
+
+        # Максимальное количество уроков
+        max_lessons = self.max_occurrences or 20  # максимум 20 уроков по умолчанию
+
         count = 0
+        safety_counter = 0
+        MAX_SAFETY = 500  # защита от бесконечного цикла
 
-        # Значения по умолчанию для финансов
-        base_cost = self.base_cost if self.base_cost is not None else 0
-        base_teacher_payment = self.base_teacher_payment if self.base_teacher_payment is not None else 0
-        price_type = self.price_type if self.price_type else 'per_student'
+        print(f"🔍 Генерация уроков с {current_date} по {end_date}, макс={max_lessons}")
 
-        while current_date <= end_date:
-            weekday = current_date.weekday()
+        while current_date <= end_date and count < max_lessons and safety_counter < MAX_SAFETY:
+            safety_counter += 1
 
-            day_matches = False
-            if self.repeat_type == 'daily':
-                day_matches = True
-            elif self.repeat_type == 'weekly':
-                day_matches = (
-                        (weekday == 0 and self.monday) or
+            if self._should_create_lesson(current_date):
+                # Проверяем, нет ли уже урока на эту дату
+                existing_lesson = Lesson.objects.filter(
+                    teacher=self.teacher,
+                    date=current_date,
+                    start_time=self.start_time
+                ).first()
+
+                if not existing_lesson:
+                    lesson = Lesson.objects.create(
+                        teacher=self.teacher,
+                        subject=self.subject,
+                        format=self.format,
+                        date=current_date,
+                        start_time=self.start_time,
+                        end_time=self.end_time,
+                        base_cost=self.base_cost or 0,
+                        base_teacher_payment=self.base_teacher_payment or 0,
+                        meeting_link=self.meeting_link,
+                        meeting_platform=self.meeting_platform,
+                        status='scheduled',
+                        notes=f'Создано из шаблона #{self.id}: {self.notes}'
+                    )
+
+                    for student in self.students.all():
+                        LessonAttendance.objects.create(
+                            lesson=lesson,
+                            student=student,
+                            cost=self.base_cost or 0,
+                            teacher_payment_share=self.base_teacher_payment or 0
+                        )
+
+                    generated.append(lesson)
+                    count += 1
+                    print(f"✅ Создан урок {count}: {current_date}")
+
+            current_date += timedelta(days=1)
+
+        if safety_counter >= MAX_SAFETY:
+            print(f"⚠️ Достигнут лимит безопасности ({MAX_SAFETY} итераций)")
+
+        print(f"✅ Всего создано {len(generated)} уроков")
+        return generated
+
+    def _should_create_lesson(self, date):
+        """Проверяет, нужно ли создавать урок в эту дату"""
+        weekday = date.weekday()
+
+        if self.repeat_type == 'daily':
+            return True
+        elif self.repeat_type == 'weekly':
+            return ((weekday == 0 and self.monday) or
+                    (weekday == 1 and self.tuesday) or
+                    (weekday == 2 and self.wednesday) or
+                    (weekday == 3 and self.thursday) or
+                    (weekday == 4 and self.friday) or
+                    (weekday == 5 and self.saturday) or
+                    (weekday == 6 and self.sunday))
+        elif self.repeat_type == 'biweekly':
+            weeks_diff = (date - self.start_date).days // 7
+            if weeks_diff % 2 == 0:
+                return ((weekday == 0 and self.monday) or
                         (weekday == 1 and self.tuesday) or
                         (weekday == 2 and self.wednesday) or
                         (weekday == 3 and self.thursday) or
                         (weekday == 4 and self.friday) or
                         (weekday == 5 and self.saturday) or
-                        (weekday == 6 and self.sunday)
-                )
-            elif self.repeat_type == 'biweekly':
-                weeks_diff = (current_date - self.start_date).days // 7
-                if weeks_diff % 2 == 0:
-                    day_matches = (
-                            (weekday == 0 and self.monday) or
-                            (weekday == 1 and self.tuesday) or
-                            (weekday == 2 and self.wednesday) or
-                            (weekday == 3 and self.thursday) or
-                            (weekday == 4 and self.friday) or
-                            (weekday == 5 and self.saturday) or
-                            (weekday == 6 and self.sunday)
-                    )
-            elif self.repeat_type == 'monthly':
-                if current_date.day == self.start_date.day:
-                    day_matches = True
+                        (weekday == 6 and self.sunday))
+        elif self.repeat_type == 'monthly':
+            if self.start_date:
+                return date.day == self.start_date.day
 
-            if day_matches:
-                lesson = Lesson.objects.create(
-                    teacher=self.teacher,
-                    subject=self.subject,
-                    format=self.format,
-                    date=current_date,
-                    start_time=self.start_time,
-                    end_time=self.end_time,
-                    base_cost=base_cost,
-                    base_teacher_payment=base_teacher_payment,
-                    price_type=price_type,
-                    meeting_link=self.meeting_link,
-                    meeting_platform=self.meeting_platform,
-                    status='scheduled',
-                    notes=f'Создано из шаблона #{self.id}'
-                )
-
-                for student in target_students:
-                    LessonAttendance.objects.create(
-                        lesson=lesson,
-                        student=student,
-                        cost=base_cost,
-                        teacher_payment_share=base_teacher_payment
-                    )
-
-                generated.append(lesson)
-                count += 1
-
-                if self.max_occurrences and count >= self.max_occurrences:
-                    break
-
-            current_date += timedelta(days=1)
-
-        return generated
+        return False
 
 
 class ScheduleTemplateStudent(models.Model):

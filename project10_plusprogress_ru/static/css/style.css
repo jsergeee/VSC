@@ -620,6 +620,15 @@ iframe {
 /* 			               02. MENU-NAV                       */
 /* ========================================================== */
 
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+
 .navbar-brand{
 	font-family: 'Roboto Slab', serif;
 	font-size: 28px;
@@ -2538,11 +2547,6 @@ ul.benefits.white li i {
 }
 
 /* Навигационные вкладки */
-.nav-tabs-custom {
-    border-bottom: 2px solid #e9ecef;
-    margin-bottom: 25px;
-    padding: 0 15px;
-}
 
 .nav-tabs-custom .nav-item {
     margin-bottom: -2px;
@@ -3182,4 +3186,8 @@ ul.benefits.white li i {
     .teacher-photo {
         height: 150px;
     }
+}
+
+.footer {
+    text-align: center;
 }

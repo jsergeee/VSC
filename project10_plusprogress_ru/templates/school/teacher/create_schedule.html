@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Создать расписание{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fa fa-repeat"></i>
+                        Создать повторяющееся расписание
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'teacher_create_schedule' %}">
+                        {% csrf_token %}
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="student">Ученик <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="student" name="student" required>
+                                        <option value="">Выберите ученика...</option>
+                                        {% for student in students %}
+                                        <option value="{{ student.id }}">{{ student.user.get_full_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="subject">Предмет <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="subject" name="subject" required>
+                                        <option value="">Выберите предмет...</option>
+                                        {% for subject in teacher.subjects.all %}
+                                        <option value="{{ subject.id }}">{{ subject.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="topic">Тема занятий</label>
+                            <input type="text" class="form-control" id="topic" name="topic"
+                                   placeholder="Например: Курс английского языка. Уровень Beginner">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="start_time">Время начала <span class="text-danger">*</span></label>
+                                    <input type="time" class="form-control" id="start_time" name="start_time" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="end_time">Время окончания</label>
+                                    <input type="time" class="form-control" id="end_time" name="end_time">
+                                    <small class="text-muted">Если не указано, длительность 60 мин</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="fa fa-calendar"></i> Дни недели</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="weekdays[]" id="monday" value="1">
+                                            <label class="form-check-label" for="monday">Понедельник</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="weekdays[]" id="tuesday" value="2">
+                                            <label class="form-check-label" for="tuesday">Вторник</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="weekdays[]" id="wednesday" value="3">
+                                            <label class="form-check-label" for="wednesday">Среда</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="weekdays[]" id="thursday" value="4">
+                                            <label class="form-check-label" for="thursday">Четверг</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="weekdays[]" id="friday" value="5">
+                                            <label class="form-check-label" for="friday">Пятница</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="weekdays[]" id="saturday" value="

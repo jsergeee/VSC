@@ -1,267 +1,226 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Создать шаблон расписания{% endblock %}
-
-{% block extra_css %}
-<style>
-    .form-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 20px;
-        padding: 30px;
-        color: white;
-        margin-bottom: 30px;
-    }
-    .form-card {
-        background: white;
-        border-radius: 15px;
-        padding: 30px;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-    }
-    .day-checkbox {
-        display: inline-block;
-        margin-right: 15px;
-        margin-bottom: 15px;
-    }
-    .day-checkbox label {
-        display: inline-block;
-        width: 50px;
-        height: 50px;
-        line-height: 50px;
-        text-align: center;
-        background: #f8f9fa;
-        border: 2px solid #dee2e6;
-        border-radius: 50%;
-        cursor: pointer;
-        font-weight: 600;
-        transition: all 0.3s;
-    }
-    .day-checkbox input:checked + label {
-        background: #667eea;
-        border-color: #667eea;
-        color: white;
-    }
-    .day-checkbox input {
-        display: none;
-    }
-    .submit-btn {
-        background: linear-gradient(45deg, #28a745, #20c997);
-        color: white;
-        border: none;
-        padding: 12px 30px;
-        border-radius: 50px;
-        font-weight: bold;
-        width: 100%;
-    }
-    .submit-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
-    }
-</style>
+{% block title %}
+    {% if template %}Редактировать{% else %}Создать{% endif %} расписание
 {% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <!-- Заголовок -->
-    <div class="form-header">
-        <h1 class="mb-2">{% if form.instance.pk %}Редактировать{% else %}Создать{% endif %} шаблон расписания</h1>
-        <p class="mb-0">Настройте повторяющиеся уроки для ваших учеников</p>
-    </div>
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card">
+                <div class="card-header {% if template %}bg-info{% else %}bg-success{% endif %} text-white">
+                    <h4 class="mb-0">
+                        <i class="fa {% if template %}fa-edit{% else %}fa-plus-circle{% endif %}"></i>
+                        {% if template %}Редактировать{% else %}Создать{% endif %} расписание
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-pills mb-3" id="scheduleTypeTab" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="single-tab" data-toggle="pill" href="#single" role="tab">
+                                <i class="fa fa-calendar-plus-o"></i> Разовый урок
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="recurring-tab" data-toggle="pill" href="#recurring" role="tab">
+                                <i class="fa fa-repeat"></i> Повторяющееся расписание
+                            </a>
+                        </li>
+                    </ul>
 
-    <!-- Форма -->
-    <div class="form-card">
-        <form method="post">
-            {% csrf_token %}
+                    <form method="post">
+                        {% csrf_token %}
 
-            <div class="row">
-                <!-- Левая колонка -->
-                <div class="col-md-6">
-                    <h5 class="mb-3">Основная информация</h5>
+                        <!-- ✅ ОДНО поле для типа (добавьте сюда) -->
+                        <input type="hidden" name="repeat_type" id="global_repeat_type" value="single">
 
-                    <div class="form-group mb-3">
-                        <label>Предмет</label>
-                        {{ form.subject }}
-                    </div>
-
-                    <div class="form-group mb-3">
-                        <label>Формат</label>
-                        {{ form.format }}
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label>Время начала</label>
-                                {{ form.start_time }}
+                        <!-- Общие поля для всех типов -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="student">Ученик <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="student" name="student" required>
+                                        <option value="">Выберите ученика...</option>
+                                        {% for student in students %}
+                                        <option value="{{ student.id }}" {% if template and student in template.students.all %}selected{% endif %}>
+                                            {{ student.user.get_full_name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="subject">Предмет <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="subject" name="subject" required>
+                                        <option value="">Выберите предмет...</option>
+                                        {% for subject in subjects %}
+                                        <option value="{{ subject.id }}" {% if template and template.subject.id == subject.id %}selected{% endif %}>
+                                            {{ subject.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label>Время окончания</label>
-                                {{ form.end_time }}
+
+                        <div class="form-group mb-3">
+                            <label for="topic">Тема занятия</label>
+                            <input type="text" class="form-control" id="topic" name="topic"
+                                   value="{{ template.notes|default:'' }}"
+                                   placeholder="Например: Урок 1. Введение">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="start_time">Время начала <span class="text-danger">*</span></label>
+                                    <input type="time" class="form-control" id="start_time" name="start_time"
+                                           value="{{ template.start_time|time:'H:i'|default:'' }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="end_time">Время окончания</label>
+                                    <input type="time" class="form-control" id="end_time" name="end_time"
+                                           value="{{ template.end_time|time:'H:i'|default:'' }}">
+                                    <small class="text-muted">По умолчанию +1 час</small>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <!-- Правая колонка -->
-                <div class="col-md-6">
-                    <h5 class="mb-3">Повторение</h5>
+                        <!-- Вкладка: Разовый урок -->
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="single" role="tabpanel">
+                                <div class="form-group mb-3">
+                                    <label for="date">Дата занятия <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="date" name="date"
+                                           value="{{ template.start_date|date:'Y-m-d'|default:today }}" required>
+                                </div>
+                                <!-- ❌ УДАЛИТЕ ЭТОТ input -->
+                            </div>
 
-                    <div class="form-group mb-3">
-                        <label>Тип повторения</label>
-                        {{ form.repeat_type }}
-                    </div>
+                            <!-- Вкладка: Повторяющееся расписание -->
+                            <div class="tab-pane fade" id="recurring" role="tabpanel">
+                                <!-- ❌ УДАЛИТЕ ЭТОТ input -->
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label>Дата начала</label>
-                                {{ form.start_date }}
+                                <div class="card mb-3">
+                                    <div class="card-header bg-info text-white">
+                                        <h5 class="mb-0"><i class="fa fa-calendar"></i> Дни недели</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-3 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="weekdays[]" id="monday" value="1"
+                                                           {% if template and template.monday %}checked{% endif %}>
+                                                    <label class="form-check-label" for="monday">Понедельник</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="weekdays[]" id="tuesday" value="2"
+                                                           {% if template and template.tuesday %}checked{% endif %}>
+                                                    <label class="form-check-label" for="tuesday">Вторник</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="weekdays[]" id="wednesday" value="3"
+                                                           {% if template and template.wednesday %}checked{% endif %}>
+                                                    <label class="form-check-label" for="wednesday">Среда</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="weekdays[]" id="thursday" value="4"
+                                                           {% if template and template.thursday %}checked{% endif %}>
+                                                    <label class="form-check-label" for="thursday">Четверг</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="weekdays[]" id="friday" value="5"
+                                                           {% if template and template.friday %}checked{% endif %}>
+                                                    <label class="form-check-label" for="friday">Пятница</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="weekdays[]" id="saturday" value="6"
+                                                           {% if template and template.saturday %}checked{% endif %}>
+                                                    <label class="form-check-label" for="saturday">Суббота</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="weekdays[]" id="sunday" value="7"
+                                                           {% if template and template.sunday %}checked{% endif %}>
+                                                    <label class="form-check-label" for="sunday">Воскресенье</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="start_date">Дата начала <span class="text-danger">*</span></label>
+                                            <input type="date" class="form-control" id="start_date" name="start_date"
+                                                   value="{{ template.start_date|date:'Y-m-d'|default:today }}" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="end_date">Дата окончания</label>
+                                            <input type="date" class="form-control" id="end_date" name="end_date"
+                                                   value="{{ template.end_date|date:'Y-m-d'|default:'' }}">
+                                            <small class="text-muted">Оставьте пустым для бесконечного</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="max_occurrences">Максимум занятий</label>
+                                            <input type="number" class="form-control" id="max_occurrences" name="max_occurrences"
+                                                   value="{{ template.max_occurrences|default:'' }}" min="1" placeholder="10">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label>Дата окончания</label>
-                                {{ form.end_date }}
-                                <small class="text-muted">Необязательно</small>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="form-group mb-3">
-                        <label>Максимальное количество занятий</label>
-                        {{ form.max_occurrences }}
-                        <small class="text-muted">Оставьте пустым для бесконечного повторения</small>
-                    </div>
+                        <div class="form-group mb-3">
+                            <label for="notes">Заметки</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3">{{ template.notes|default:'' }}</textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'teacher_dashboard' %}" class="btn btn-secondary">
+                                <i class="fa fa-arrow-left"></i> Назад
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fa fa-save"></i>
+                                {% if template %}Сохранить{% else %}Создать{% endif %}
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
-
-            <!-- Дни недели -->
-            <div class="row mt-3">
-                <div class="col-12">
-                    <h5 class="mb-3">Дни недели</h5>
-                    <div class="text-center mb-4">
-                        <div class="day-checkbox">
-                            <input type="checkbox" name="monday" id="id_monday" {% if form.monday.value %}checked{% endif %}>
-                            <label for="id_monday">Пн</label>
-                        </div>
-                        <div class="day-checkbox">
-                            <input type="checkbox" name="tuesday" id="id_tuesday" {% if form.tuesday.value %}checked{% endif %}>
-                            <label for="id_tuesday">Вт</label>
-                        </div>
-                        <div class="day-checkbox">
-                            <input type="checkbox" name="wednesday" id="id_wednesday" {% if form.wednesday.value %}checked{% endif %}>
-                            <label for="id_wednesday">Ср</label>
-                        </div>
-                        <div class="day-checkbox">
-                            <input type="checkbox" name="thursday" id="id_thursday" {% if form.thursday.value %}checked{% endif %}>
-                            <label for="id_thursday">Чт</label>
-                        </div>
-                        <div class="day-checkbox">
-                            <input type="checkbox" name="friday" id="id_friday" {% if form.friday.value %}checked{% endif %}>
-                            <label for="id_friday">Пт</label>
-                        </div>
-                        <div class="day-checkbox">
-                            <input type="checkbox" name="saturday" id="id_saturday" {% if form.saturday.value %}checked{% endif %}>
-                            <label for="id_saturday">Сб</label>
-                        </div>
-                        <div class="day-checkbox">
-                            <input type="checkbox" name="sunday" id="id_sunday" {% if form.sunday.value %}checked{% endif %}>
-                            <label for="id_sunday">Вс</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-<!--
-            &lt;!&ndash; Финансы &ndash;&gt;
-            <div class="row mt-4">
-                <div class="col-12">
-                    <h5 class="mb-3">Финансы</h5>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group mb-3">
-                        <label>Тип оплаты</label>
-                        {{ form.price_type }}
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group mb-3">
-                        <label>Базовая стоимость</label>
-                        {{ form.base_cost }}
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group mb-3">
-                        <label>Базовая выплата</label>
-                        {{ form.base_teacher_payment }}
-                    </div>
-                </div>
-            </div>
--->
-
-            <!-- Платформа -->
-            <div class="row mt-4">
-                <div class="col-12">
-                    <h5 class="mb-3">Платформа</h5>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label>Ссылка на занятие</label>
-                        {{ form.meeting_link }}
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label>Платформа</label>
-                        {{ form.meeting_platform }}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Ученики -->
-            <div class="row mt-4">
-                <div class="col-12">
-                    <h5 class="mb-3">Ученики</h5>
-                    <div class="form-group mb-3">
-                        {{ form.students }}
-                        <small class="text-muted">Выберите учеников, которые будут участвовать в этих уроках</small>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Кнопки -->
-            <div class="row mt-4">
-                <div class="col-12 text-center">
-                    <button type="submit" class="submit-btn">
-                        <i class="fa fa-save"></i> Сохранить шаблон
-                    </button>
-                    <a href="{% url 'teacher_schedule_templates' %}" class="btn btn-outline-secondary mt-2">
-                        <i class="fa fa-arrow-left"></i> Вернуться к списку
-                    </a>
-                </div>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Показываем/скрываем дни недели в зависимости от типа повторения
-    const repeatType = document.querySelector('[name="repeat_type"]');
-    const dayCheckboxes = document.querySelectorAll('.day-checkbox');
+    // Обновляем repeat_type при переключении вкладок
+    document.getElementById('single-tab')?.addEventListener('click', function() {
+        document.getElementById('global_repeat_type').value = 'single';
+    });
 
-    function toggleDays() {
-        if (repeatType.value === 'daily') {
-            dayCheckboxes.forEach(cb => cb.style.opacity = '0.5');
-        } else {
-            dayCheckboxes.forEach(cb => cb.style.opacity = '1');
-        }
-    }
-
-    repeatType.addEventListener('change', toggleDays);
-    toggleDays();
-});
+    document.getElementById('recurring-tab')?.addEventListener('click', function() {
+        document.getElementById('global_repeat_type').value = 'weekly';
+    });
 </script>
 {% endblock %}

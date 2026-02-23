@@ -1,6 +1,5 @@
 <!-- templates/includes/header.html -->
 {% load static %}
-
 <!--begin header -->
 <header class="header">
     <!--begin navbar-fixed-top -->
@@ -11,7 +10,6 @@
             <div class="d-flex align-items-center flex-wrap">
                 <img class="navbar-brand" src="{% static 'images/logo.jpg' %}" alt="Плюс Прогресс"
                      style="max-width: 80px;">
-
                 <div class="mobile-icons">
                     <a href="https://www.instagram.com/linguaglobal.ru/" target="_blank" class="mx-1">
                         <i class="fa fa-instagram" style="font-size: 30px; color: #FD1D1D;"></i>
@@ -24,29 +22,24 @@
                         <i class="fa fa-telegram" style="color: #0088cc; font-size: 30px;"></i>
                     </a>
                 </div>
-
                 <a class="header-number mx-3" href="tel:79272418211">+7 (927) 241-82-11</a>
-
                 <span class="text-muted" style="font-size: 14px;">Онлайн английский, русский, математика,
                     биология</span>
             </div>
             <!--end logo и контакты -->
-
             <!--begin navbar-toggler (гамбургер) -->
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
                     aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"><i class="fas fa-bars"></i></span>
             </button>
             <!--end navbar-toggler -->
-
             <!--begin navbar-collapse (меню) -->
             <div class="collapse navbar-collapse" id="navbarCollapse">
                 <ul class="navbar-nav ml-auto">
                     <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Главная</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#about">О нас</a></li>
+                    <li class="nav-item"><a class="nav-link text-nowrap" href="#about">О нас</a></li>
                     <li class="nav-item"><a class="nav-link" href="#testimonials">Отзывы</a></li>
                     <li class="nav-item"><a class="nav-link" href="#pricing">Цены</a></li>
-
                     {% if user.is_authenticated %}
                     <!-- БЛОК УВЕДОМЛЕНИЙ -->
                     <li class="nav-item dropdown">
@@ -83,7 +76,6 @@
                             </div>
                         </div>
                     </li>
-
                     <!-- ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
@@ -94,7 +86,6 @@
                             <a class="dropdown-item" href="{% url 'dashboard' %}">
                                 <i class="fa fa-tachometer-alt"></i> Личный кабинет
                             </a>
-
                             <!-- СПЕЦИАЛЬНЫЕ ПУНКТЫ ДЛЯ РАЗНЫХ РОЛЕЙ -->
                             {% if user.role == 'student' %}
                             <a class="dropdown-item" href="{% url 'student_feedbacks' %}">
@@ -105,22 +96,19 @@
                                 <i class="fa fa-star text-warning"></i> Отзывы обо мне
                             </a>
                             <!-- ===== НОВАЯ ССЫЛКА НА ШАБЛОНЫ ===== -->
-                            <a class="dropdown-item" href="{% url 'teacher_schedule_templates' %}">
+ <!--                           <a class="dropdown-item" href="{% url 'teacher_schedule_templates' %}">
                                 <i class="fa fa-calendar-plus"></i> Шаблоны расписания
-                            </a>
+                            </a>-->
                             {% endif %}
-
                             <a class="dropdown-item" href="{% url 'profile' %}">
                                 <i class="fa fa-user"></i> Профиль
                             </a>
-
                             {% if user.role == 'admin' %}
                             <div class="dropdown-divider"></div>
                             <a class="dropdown-item" href="{% url 'admin:index' %}">
                                 <i class="fa fa-cog"></i> Админ-панель
                             </a>
                             {% endif %}
-
                             <div class="dropdown-divider"></div>
                             <a class="dropdown-item" href="{% url 'logout' %}">
                                 <i class="fa fa-sign-out-alt"></i> Выйти

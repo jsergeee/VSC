@@ -7,6 +7,7 @@ from .models import LessonFeedback
 from .models import Homework, HomeworkSubmission
 from django import forms
 from django.core.exceptions import ValidationError
+from .models import ScheduleTemplate
 
 
 
@@ -299,7 +300,9 @@ class HomeworkCheckForm(forms.ModelForm):
         }
 
 
-from .models import ScheduleTemplate
+
+
+# school/forms.py
 
 class ScheduleTemplateForm(forms.ModelForm):
     class Meta:
@@ -308,7 +311,8 @@ class ScheduleTemplateForm(forms.ModelForm):
             'subject', 'format', 'start_time', 'end_time',
             'repeat_type', 'start_date', 'end_date', 'max_occurrences',
             'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
-            'price_type', 'base_cost', 'base_teacher_payment',
+            # 'price_type',  # Закомментировать или удалить
+            'base_cost', 'base_teacher_payment',
             'meeting_link', 'meeting_platform', 'students'
         ]
         widgets = {

@@ -28,7 +28,6 @@ import csv
 import openpyxl
 from django.contrib import messages
 from django.http import HttpResponse
-from datetime import datetime
 from .models import Lesson, Teacher, Student, Subject, LessonFormat, LessonAttendance
 from django.template.loader import render_to_string
 from weasyprint import HTML
@@ -61,6 +60,13 @@ from django.contrib import messages
 from django.utils import timezone
 from .models import EmailVerificationToken
 from .utils import send_verification_email, send_verification_success_email
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.utils import timezone
+from datetime import datetime, timedelta
+from .models import Lesson, Teacher, Student, Subject, ScheduleTemplate
+from .models import ScheduleTemplate, ScheduleTemplateStudent
 from .models import (
     User, Teacher, Student, Lesson, Subject,
     LessonReport, Payment, TrialRequest, Schedule,
@@ -3277,3 +3283,149 @@ def resend_verification(request):
             )
 
     return render(request, 'school/resend_verification.html')
+
+
+
+@login_required
+def teacher_create_lesson_page(request):
+    """Страница создания урока"""
+    if request.user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+
+    teacher = request.user.teacher_profile
+    students = teacher.student_set.all()
+
+    context = {
+        'teacher': teacher,
+        'students': students,
+    }
+    return render(request, 'school/teacher/create_lesson.html', context)
+
+
+@login_required
+def teacher_create_schedule(request):
+    """Создание шаблона расписания (разового или повторяющегося)"""
+    if request.user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+
+    teacher = request.user.teacher_profile
+
+    if request.method == 'POST':
+        # Основные поля
+        student_id = request.POST.get('student')
+        subject_id = request.POST.get('subject')
+        topic = request.POST.get('topic', '')
+        start_time_str = request.POST.get('start_time')
+        end_time_str = request.POST.get('end_time')
+        repeat_type = request.POST.get('repeat_type', 'single')
+        notes = request.POST.get('notes', '')
+        print(f"🔍 repeat_type = {repeat_type}")
+        print(f"🔍 Все POST данные: {dict(request.POST)}")
+        # Валидация общих полей
+        if not student_id or not subject_id or not start_time_str:
+            messages.error(request, 'Заполните все обязательные поля')
+            return redirect('teacher_create_schedule')
+
+        student = get_object_or_404(Student, id=student_id, teachers=teacher)
+        subject = get_object_or_404(Subject, id=subject_id)
+
+        # Конвертируем время из строки в объект time
+        from datetime import datetime, timedelta, date
+
+        try:
+            start_time = datetime.strptime(start_time_str, '%H:%M').time()
+        except ValueError:
+            messages.error(request, 'Неверный формат времени начала')
+            return redirect('teacher_create_schedule')
+
+        # Если время окончания не указано, ставим +1 час
+        if not end_time_str:
+            today_date = date.today()
+            start_dt = datetime.combine(today_date, start_time)
+            end_dt = start_dt + timedelta(hours=1)
+            end_time = end_dt.time()
+        else:
+            try:
+                end_time = datetime.strptime(end_time_str, '%H:%M').time()
+            except ValueError:
+                messages.error(request, 'Неверный формат времени окончания')
+                return redirect('teacher_create_schedule')
+
+        # Создаем шаблон
+        template = ScheduleTemplate(
+            teacher=teacher,
+            subject=subject,
+            start_time=start_time,
+            end_time=end_time,
+            repeat_type=repeat_type,
+            notes=notes
+        )
+
+        # ПРОВЕРКА В ЗАВИСИМОСТИ ОТ ТИПА
+        if repeat_type == 'single':
+            # Разовый урок - проверяем только дату
+            date_str = request.POST.get('date')
+            if not date_str:
+                messages.error(request, 'Укажите дату занятия')
+                return redirect('teacher_create_schedule')
+
+            template.start_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            template.end_date = None
+            template.max_occurrences = 1
+
+        else:
+            # Повторяющееся расписание - проверяем все поля
+            weekdays = request.POST.getlist('weekdays[]')
+            start_date_str = request.POST.get('start_date')
+            end_date_str = request.POST.get('end_date')
+            max_occurrences = request.POST.get('max_occurrences')
+
+            if not start_date_str:
+                messages.error(request, 'Укажите дату начала расписания')
+                return redirect('teacher_create_schedule')
+
+            if not weekdays:
+                messages.error(request, 'Выберите хотя бы один день недели')
+                return redirect('teacher_create_schedule')
+
+            template.start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            template.end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else None
+            template.max_occurrences = int(max_occurrences) if max_occurrences else None
+
+            # Дни недели
+            template.monday = '1' in weekdays
+            template.tuesday = '2' in weekdays
+            template.wednesday = '3' in weekdays
+            template.thursday = '4' in weekdays
+            template.friday = '5' in weekdays
+            template.saturday = '6' in weekdays
+            template.sunday = '7' in weekdays
+
+        # Сохраняем шаблон
+        template.save()
+        template.students.add(student)
+
+        # Генерируем уроки
+        lessons = template.generate_lessons()
+
+        if repeat_type == 'single':
+            messages.success(request, f'Урок создан на {template.start_date} в {start_time_str}')
+        else:
+            messages.success(request, f'Расписание создано! Сгенерировано {len(lessons)} уроков')
+
+        return redirect('teacher_dashboard')
+
+    # GET запрос - показываем форму
+    students = teacher.student_set.all()
+    subjects = teacher.subjects.all()
+
+    context = {
+        'teacher': teacher,
+        'students': students,
+        'subjects': subjects,
+        'today': timezone.now().date().strftime('%Y-%m-%d'),
+    }
+    return render(request, 'school/teacher/schedule_template_form.html', context)
+

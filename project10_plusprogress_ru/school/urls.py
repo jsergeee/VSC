@@ -66,6 +66,7 @@ urlpatterns = [
     path('teacher/group-lesson/<int:lesson_id>/complete/', views.complete_group_lesson, name='complete_group_lesson'),
     path('teacher/schedule-template/<int:template_id>/delete/', views.teacher_schedule_template_delete,
          name='teacher_schedule_template_delete'),
+    path('teacher/schedule/create/', views.teacher_create_schedule, name='teacher_create_schedule'),
 
     # Уведомления
     path('api/notifications/', views.get_notifications, name='api_notifications'),
