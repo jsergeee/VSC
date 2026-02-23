@@ -131,14 +131,41 @@ def register(request):
 def user_login(request):
     if request.method == 'POST':
         form = UserLoginForm(request.POST)
+        print(f"\n{'=' * 60}")
+        print(f"🔍 ПОПЫТКА ВХОДА")
+        print(f"{'=' * 60}")
+
         if form.is_valid():
             username = form.cleaned_data['username']
             password = form.cleaned_data['password']
+
+            print(f"📝 Данные формы:")
+            print(f"   Username: {username}")
+            print(f"   Password: {'*' * len(password)}")
+
+            # 1. Проверяем, есть ли пользователь в БД
+            try:
+                user_from_db = User.objects.get(username=username)
+                print(f"✅ Пользователь найден в БД:")
+                print(f"   ID: {user_from_db.id}")
+                print(f"   Email: {user_from_db.email}")
+                print(f"   is_email_verified: {user_from_db.is_email_verified}")
+                print(f"   Role: {user_from_db.role}")
+                print(f"   Is active: {user_from_db.is_active}")
+            except User.DoesNotExist:
+                print(f"❌ Пользователь с username '{username}' не найден в БД")
+
+            # 2. Пытаемся аутентифицировать
             user = authenticate(username=username, password=password)
 
             if user:
-                # Проверяем, подтвержден ли email
+                print(f"✅ Аутентификация успешна!")
+                print(f"   User: {user.username}")
+                print(f"   is_email_verified: {user.is_email_verified}")
+
+                # 3. Проверяем подтверждение email
                 if not user.is_email_verified:
+                    print(f"❌ Email НЕ подтвержден!")
                     messages.warning(
                         request,
                         'Пожалуйста, подтвердите ваш email перед входом в систему. '
@@ -148,17 +175,27 @@ def user_login(request):
                     )
                     return redirect('login')
 
+                # 4. Входим в систему
                 login(request, user)
+                print(f"✅ Вход выполнен!")
 
-                # Перенаправляем в зависимости от роли
+                # 5. Перенаправляем по роли
                 if user.role == 'student':
+                    print(f"   Перенаправление на student_dashboard")
                     return redirect('student_dashboard')
                 elif user.role == 'teacher':
+                    print(f"   Перенаправление на teacher_dashboard")
                     return redirect('teacher_dashboard')
                 else:
+                    print(f"   Перенаправление на admin")
                     return redirect('admin:index')
             else:
+                print(f"❌ Аутентификация失败!")
+                print(f"   Неверный пароль для пользователя {username}")
                 messages.error(request, 'Неверное имя пользователя или пароль')
+        else:
+            print(f"❌ Форма невалидна:")
+            print(f"   Ошибки: {form.errors}")
     else:
         form = UserLoginForm()
 
@@ -395,6 +432,14 @@ def teacher_dashboard(request):
     if request.user.role != 'teacher':
         messages.error(request, 'Доступ запрещен')
         return redirect('dashboard')
+
+    # Проверяем наличие профиля учителя
+    try:
+        teacher = request.user.teacher_profile
+    except Teacher.DoesNotExist:
+        # Если профиля нет, создаем его
+        teacher = Teacher.objects.create(user=request.user)
+        messages.info(request, 'Профиль учителя был создан автоматически')
 
     teacher = request.user.teacher_profile
     today = timezone.now().date()
@@ -3186,7 +3231,19 @@ def resend_verification(request):
         email = request.POST.get('email')
 
         try:
-            user = User.objects.get(email=email, is_email_verified=False)
+            # Убираем фильтр is_email_verified=False
+            user = User.objects.get(email=email)
+
+            print(f"📧 Найден пользователь: {user.username}")
+            print(f"   is_email_verified: {user.is_email_verified}")
+
+            # Если уже подтвержден
+            if user.is_email_verified:
+                messages.info(
+                    request,
+                    'Этот email уже подтвержден. Вы можете войти в систему.'
+                )
+                return redirect('login')
 
             # Проверяем, не отправляли ли письмо недавно
             if user.email_verification_sent:
@@ -3215,7 +3272,7 @@ def resend_verification(request):
             # Не сообщаем, существует ли пользователь (безопасность)
             messages.success(
                 request,
-                'Если пользователь с таким email существует и не подтвержден, '
+                'Если пользователь с таким email существует, '
                 'письмо будет отправлено повторно.'
             )
 

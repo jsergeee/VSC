@@ -5,90 +5,19 @@
 
 {% block extra_css %}
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
-
-<style>
-
-    .rating-stars {
-        color: #ffc107;
-        font-size: 1.2rem;
-        letter-spacing: 2px;
-    }
-
-    .btn-rating {
-        background: linear-gradient(45deg, #ffc107, #ff9800);
-        border: none;
-        color: white;
-        transition: all 0.3s;
-    }
-
-    .btn-rating:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4);
-        color: white;
-    }
-
-    .feedback-badge {
-        background: #e8f5e9;
-        color: #2e7d32;
-        padding: 8px 15px;
-        border-radius: 20px;
-        font-size: 0.9rem;
-        border: 1px solid #c8e6c9;
-    }
-
-    .homework-nav-link {
-        display: inline-block;
-        padding: 8px 15px;
-        background: linear-gradient(45deg, #28a745, #20c997);
-        color: white !important;
-        border-radius: 50px;
-        margin-left: 10px;
-        font-weight: bold;
-        transition: all 0.3s;
-        text-decoration: none;
-    }
-
-    .homework-nav-link:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
-        text-decoration: none;
-        color: white;
-    }
-
-    .homework-nav-link i {
-        margin-right: 5px;
-    }
-
-    .teacher-card,
-    .material-card,
-    .lesson-item {
-        cursor: pointer;
-        transition: all 0.3s;
-    }
-
-    .teacher-card:hover,
-    .material-card:hover,
-    .lesson-item:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    }
-</style>
 {% endblock %}
 
 {% block content %}
 <div class="container mt-4">
+    <!-- Приветствие -->
     <div class="row mb-4">
-        <div class="col-12 d-flex justify-content-between align-items-center">
-            <div>
-                <h2>Здравствуйте, {{ user.first_name }}!</h2>
-                <p class="text-muted">Рады видеть вас в личном кабинете</p>
-            </div>
-            <a href="{% url 'student_homeworks' %}" class="homework-nav-link">
-                <i class="fa fa-book"></i> Мои задания
-            </a>
+        <div class="col-12">
+            <h2>Здравствуйте, {{ user.first_name }}!</h2>
+            <p class="text-muted">Рады видеть вас в личном кабинете</p>
         </div>
     </div>
 
+    <!-- Баланс -->
     <div class="row">
         <div class="col-12">
             <div class="balance-card">
@@ -102,6 +31,7 @@
         </div>
     </div>
 
+    <!-- Быстрая статистика -->
     <div class="quick-stats">
         <div class="stat-card">
             <div class="stat-number">{{ upcoming_lessons|length }}</div>
@@ -121,51 +51,57 @@
         </div>
     </div>
 
-    <!-- ===== НОВЫЙ БЛОК: СВЕЖИЕ ДЗ ===== -->
-{% if recent_homeworks %}
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fa fa-book"></i> Активные домашние задания</h5>
-                <a href="{% url 'student_homeworks' %}" class="btn btn-sm btn-light">Все задания →</a>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    {% for homework in recent_homeworks %}
-                    <div class="col-md-6 mb-3">
-                        <div class="homework-item p-3 border rounded {% if homework.get_status == 'overdue' %}bg-light-danger{% endif %}">
-                            <div class="d-flex justify-content-between">
-                                <h6 class="mb-1">
-                                    <a href="{% url 'student_homework_detail' homework.id %}" class="text-dark">
-                                        {{ homework.title }}
-                                    </a>
-                                </h6>
-                                <span class="badge badge-{{ homework.get_status }}">
-                                    {{ homework.get_status_display }}
-                                </span>
+    <!-- Активные домашние задания -->
+    {% if recent_homeworks %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fa fa-book"></i> Активные домашние задания</h5>
+                    <a href="{% url 'student_homeworks' %}" class="btn btn-sm btn-light">Все задания →</a>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for homework in recent_homeworks %}
+                        <div class="col-md-6 mb-3">
+                            <div class="homework-item p-3 border rounded {% if homework.get_status == 'overdue' %}bg-light-danger{% endif %}">
+                                <div class="d-flex justify-content-between">
+                                    <h6 class="mb-1">
+                                        <a href="{% url 'student_homework_detail' homework.id %}" class="text-dark">
+                                            {{ homework.title }}
+                                        </a>
+                                    </h6>
+                                    <span class="badge badge-{{ homework.get_status }}">
+                                        {{ homework.get_status_display }}
+                                    </span>
+                                </div>
+                                <p class="mb-1 small text-muted">
+                                    <i class="fa fa-user"></i> {{ homework.teacher.user.get_full_name }} |
+                                    <i class="fa fa-calendar"></i> до {{ homework.deadline|date:"d.m.Y H:i" }}
+                                </p>
+                                {% if homework.get_status == 'submitted' %}
+                                <span class="badge badge-info">Ожидает проверки</span>
+                                {% endif %}
                             </div>
-                            <p class="mb-1 small text-muted">
-                                <i class="fa fa-user"></i> {{ homework.teacher.user.get_full_name }} |
-                                <i class="fa fa-calendar"></i> до {{ homework.deadline|date:"d.m.Y H:i" }}
-                            </p>
-                            {% if homework.get_status == 'submitted' %}
-                            <span class="badge badge-info">Ожидает проверки</span>
-                            {% endif %}
                         </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
                 </div>
             </div>
         </div>
     </div>
-</div>
-{% endif %}
+    {% endif %}
 
+    <!-- Навигационные вкладки -->
     <ul class="nav nav-tabs-custom" id="myTab" role="tablist">
         <li class="nav-item">
             <a class="nav-link active" id="schedule-tab" data-toggle="tab" href="#schedule" role="tab">
                 <i class="fa fa-calendar"></i> Расписание
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="homeworks-tab" data-toggle="tab" href="#homeworks" role="tab">
+                <i class="fa fa-book"></i> Домашние задания
             </a>
         </li>
         <li class="nav-item">
@@ -185,7 +121,9 @@
         </li>
     </ul>
 
+    <!-- Содержимое вкладок -->
     <div class="tab-content">
+        <!-- Вкладка Расписание -->
         <div class="tab-pane fade show active" id="schedule" role="tabpanel">
             <div class="row">
                 <div class="col-12">
@@ -194,6 +132,108 @@
             </div>
         </div>
 
+        <!-- Вкладка Домашние задания -->
+        <div class="tab-pane fade" id="homeworks" role="tabpanel">
+            <div class="row mb-4">
+                <div class="col-12 d-flex justify-content-between align-items-center">
+                    <h4 class="section-title mb-0">Все домашние задания</h4>
+                    <a href="{% url 'student_homeworks' %}" class="btn btn-success">
+                        <i class="fa fa-book"></i> Перейти к заданиям
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="stats-grid">
+                        <div class="stat-card-small">
+                            <div class="stat-number">{{ stats.total|default:'0' }}</div>
+                            <div class="stat-label">Всего заданий</div>
+                        </div>
+                        <div class="stat-card-small">
+                            <div class="stat-number">{{ stats.pending|default:'0' }}</div>
+                            <div class="stat-label">Ожидают</div>
+                        </div>
+                        <div class="stat-card-small">
+                            <div class="stat-number">{{ stats.submitted|default:'0' }}</div>
+                            <div class="stat-label">На проверке</div>
+                        </div>
+                        <div class="stat-card-small">
+                            <div class="stat-number">{{ stats.checked|default:'0' }}</div>
+                            <div class="stat-label">Проверено</div>
+                        </div>
+                        <div class="stat-card-small">
+                            <div class="stat-number">{{ stats.overdue|default:'0' }}</div>
+                            <div class="stat-label">Просрочено</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    {% if homeworks %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Дата</th>
+                                    <th>Учитель</th>
+                                    <th>Предмет</th>
+                                    <th>Задание</th>
+                                    <th>Срок</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for homework in homeworks %}
+                                <tr>
+                                    <td>{{ homework.created_at|date:"d.m.Y" }}</td>
+                                    <td>{{ homework.teacher.user.get_full_name }}</td>
+                                    <td>{{ homework.subject.name }}</td>
+                                    <td>{{ homework.title|truncatechars:30 }}</td>
+                                    <td>{{ homework.deadline|date:"d.m.Y" }}</td>
+                                    <td>
+                                        {% with status=homework.get_status %}
+                                            {% if status == 'pending' %}
+                                                <span class="badge badge-warning">⏳ Ожидает</span>
+                                            {% elif status == 'submitted' %}
+                                                <span class="badge badge-info">📤 На проверке</span>
+                                            {% elif status == 'checked' %}
+                                                <span class="badge badge-success">✅ Проверено</span>
+                                            {% elif status == 'overdue' %}
+                                                <span class="badge badge-danger">⚠️ Просрочено</span>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'student_homework_detail' homework.id %}"
+                                           class="btn btn-sm btn-primary">
+                                            <i class="fa fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center">
+                                        <div class="empty-state">
+                                            <i class="fa fa-book"></i>
+                                            <h5>Нет домашних заданий</h5>
+                                            <p>Задания появятся после занятий</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Вкладка Мои учителя -->
         <div class="tab-pane fade" id="teachers" role="tabpanel">
             <div class="row">
                 {% if teachers %}
@@ -223,7 +263,11 @@
 
                             {% if teacher.rating_stats %}
                             <div class="mb-2">
-                                <span class="rating-stars">{% for i in "12345"|make_list %}{% if forloop.counter <= teacher.rating_stats.average_rating %}★{% else %}☆{% endif %}{% endfor %}</span>
+                                <span class="rating-stars">
+                                    {% for i in "12345"|make_list %}
+                                        {% if forloop.counter <= teacher.rating_stats.average_rating %}★{% else %}☆{% endif %}
+                                    {% endfor %}
+                                </span>
                                 <small class="text-muted ml-1">({{ teacher.rating_stats.total_feedbacks }} оценок)</small>
                             </div>
                             {% endif %}
@@ -236,6 +280,7 @@
                     </div>
                 </div>
 
+                <!-- Модальное окно учителя -->
                 <div class="modal fade" id="teacherModal{{ teacher.id }}" tabindex="-1" role="dialog">
                     <div class="modal-dialog modal-lg">
                         <div class="modal-content">
@@ -265,7 +310,12 @@
                                         {% if teacher.rating_stats %}
                                         <h6>Рейтинг:</h6>
                                         <div class="mb-3">
-                                            <div class="rating-stars mb-2">{% for i in "12345"|make_list %}{% if forloop.counter <= teacher.rating_stats.average_rating %}★{% else %}☆{% endif %}{% endfor %} <span class="ml-2">{{ teacher.rating_stats.average_rating|floatformat:1 }} / 5</span></div>
+                                            <div class="rating-stars mb-2">
+                                                {% for i in "12345"|make_list %}
+                                                    {% if forloop.counter <= teacher.rating_stats.average_rating %}★{% else %}☆{% endif %}
+                                                {% endfor %}
+                                                <span class="ml-2">{{ teacher.rating_stats.average_rating|floatformat:1 }} / 5</span>
+                                            </div>
                                             <small class="text-muted">На основе {{ teacher.rating_stats.total_feedbacks }} оценок</small>
                                         </div>
                                         {% endif %}
@@ -288,9 +338,10 @@
             </div>
         </div>
 
+        <!-- Вкладка Методические материалы -->
         <div class="tab-pane fade" id="materials" role="tabpanel">
-            <div class="row">
-                <div class="col-12 mb-3">
+            <div class="row mb-3">
+                <div class="col-12">
                     <div class="btn-group">
                         <button class="btn btn-outline-primary" onclick="filterMaterials('all')">Все</button>
                         <button class="btn btn-outline-primary" onclick="filterMaterials('file')">Файлы</button>
@@ -298,6 +349,7 @@
                     </div>
                 </div>
             </div>
+
             <div class="row">
                 {% if materials %}
                 {% for material in materials %}
@@ -352,6 +404,7 @@
             </div>
         </div>
 
+        <!-- Вкладка История занятий -->
         <div class="tab-pane fade" id="history" role="tabpanel">
             <div class="row">
                 <div class="col-12">
@@ -383,7 +436,11 @@
                                     <span class="feedback-badge">
                                         <i class="fa fa-star text-warning"></i>
                                         Ваша оценка:
-                                        <span class="rating-stars">{% for i in "12345"|make_list %}{% if forloop.counter <= lesson.feedback.rating %}★{% else %}☆{% endif %}{% endfor %}</span>
+                                        <span class="rating-stars">
+                                            {% for i in "12345"|make_list %}
+                                                {% if forloop.counter <= lesson.feedback.rating %}★{% else %}☆{% endif %}
+                                            {% endfor %}
+                                        </span>
                                     </span>
                                     {% else %}
                                     <span class="btn btn-sm btn-rating disabled">

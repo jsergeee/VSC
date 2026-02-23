@@ -9,7 +9,7 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.contrib import messages
 import logging
-
+from .models import User
 class StudentProfileMiddleware(MiddlewareMixin):
     """Проверяет наличие профиля ученика при каждом запросе"""
     
@@ -30,74 +30,43 @@ logger = logging.getLogger(__name__)
 
 
 class EmailVerificationMiddleware:
-    """
-    Проверяет, подтвержден ли email пользователя.
-    Не пускает неподтвержденных пользователей в личный кабинет.
-    """
-
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
         # Список разрешенных URL для неподтвержденных пользователей
-        try:
-            allowed_paths = [
-                reverse('logout'),
-                reverse('login'),
-                reverse('register'),
-                reverse('resend_verification'),
-                '/admin/',
-            ]
+        allowed_paths = [
+            '/logout/',
+            '/login/',
+            '/register/',
+            '/resend-verification/',
+            '/verify-email/',
+            '/admin/',
+        ]
 
-            # Добавляем verify_email с любым токеном
-            verify_email_url = reverse('verify_email', args=['dummy'])
-            verify_email_base = verify_email_url.replace('dummy', '')
-            allowed_paths.append(verify_email_base)
+        print(f"\n📋 MIDDLEWARE CHECK:")
+        print(f"   Path: {request.path}")
+        print(f"   User authenticated: {request.user.is_authenticated}")
 
-        except Exception as e:
-            # Если ошибка при построении URL, используем строки
-            logger.error(f"Ошибка при построении URL в middleware: {e}")
-            allowed_paths = [
-                '/logout/',
-                '/login/',
-                '/register/',
-                '/resend-verification/',
-                '/verify-email/',
-                '/admin/',
-            ]
-
-        # Для отладки
         if request.user.is_authenticated:
-            print(f"\n📋 Middleware check for path: {request.path}")
             print(f"   User: {request.user.username}")
             print(f"   is_email_verified: {request.user.is_email_verified}")
-            print(f"   Allowed paths: {allowed_paths}")
+            print(f"   From DB: {User.objects.get(id=request.user.id).is_email_verified}")
 
-        if request.user.is_authenticated and not request.user.is_email_verified:
-            # Проверяем, находится ли пользователь на разрешенном пути
-            current_path = request.path
-            allowed = False
+            if not request.user.is_email_verified:
+                print(f"   ❌ Email not verified")
+                current_path = request.path
+                allowed = any(current_path.startswith(path) for path in allowed_paths)
+                print(f"   Path allowed: {allowed}")
 
-            for path in allowed_paths:
-                if current_path.startswith(path):
-                    allowed = True
-                    break
-
-            print(f"   Current path: {current_path}")
-            print(f"   Allowed: {allowed}")
-
-            if not allowed:
-                print(f"   ⚠️ Blocking access, redirecting to resend_verification")
-                messages.warning(
-                    request,
-                    'Пожалуйста, подтвердите ваш email для доступа к личному кабинету. '
-                    'Проверьте вашу почту (включая папку "Спам").'
-                )
-                return redirect('resend_verification')
+                if not allowed:
+                    print(f"   🚫 Redirecting to resend_verification")
+                    messages.warning(
+                        request,
+                        'Пожалуйста, подтвердите ваш email для доступа к личному кабинету'
+                    )
+                    return redirect('resend_verification')
             else:
-                print(f"   ✅ Path allowed for unverified user")
-        else:
-            if request.user.is_authenticated:
-                print(f"   ✅ User verified, no restrictions")
+                print(f"   ✅ Email verified")
 
         return self.get_response(request)

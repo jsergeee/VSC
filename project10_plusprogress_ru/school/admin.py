@@ -1,3 +1,5 @@
+# school/admin.py
+
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
@@ -37,9 +39,11 @@ class StudentSubjectPriceInline(admin.TabularInline):
 
 # ==================== CUSTOM USER ADMIN ====================
 class CustomUserAdmin(UserAdmin):
-    list_display = ('username', 'get_full_name', 'email', 'phone', 'role', 'balance', 'is_staff')
-    list_filter = ('role', 'is_staff', 'is_superuser', 'groups')
+    list_display = ('username', 'get_full_name', 'email', 'phone', 'role',
+                    'balance', 'is_email_verified_badge', 'is_staff')
+    list_filter = ('role', 'is_email_verified', 'is_staff', 'is_superuser', 'groups')
     search_fields = ('username', 'first_name', 'last_name', 'email', 'phone')
+    readonly_fields = ('email_verification_sent',)
 
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
@@ -49,6 +53,11 @@ class CustomUserAdmin(UserAdmin):
         ('Роль и баланс', {
             'fields': ('role', 'balance'),
             'classes': ('wide',),
+        }),
+        ('✅ Email подтверждение', {  # ✅ НОВЫЙ БЛОК С ЭМОДЗИ
+            'fields': ('is_email_verified', 'email_verification_sent'),
+            'classes': ('wide',),
+            'description': 'Управление подтверждением email пользователя',
         }),
         ('Права доступа', {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
@@ -65,6 +74,9 @@ class CustomUserAdmin(UserAdmin):
         }),
     )
 
+    # Добавляем действия для массовой обработки
+    actions = ['mark_as_verified', 'mark_as_unverified']
+
     def get_full_name(self, obj):
         full_name = obj.get_full_name()
         if obj.patronymic:
@@ -72,6 +84,33 @@ class CustomUserAdmin(UserAdmin):
         return full_name or obj.username
 
     get_full_name.short_description = 'ФИО'
+
+    def is_email_verified_badge(self, obj):
+        """Отображает статус подтверждения email в виде цветного значка"""
+        if obj.is_email_verified:
+            return format_html(
+                '<span style="background: #28a745; color: white; padding: 3px 8px; border-radius: 3px;">✅ Подтвержден</span>'
+            )
+        else:
+            return format_html(
+                '<span style="background: #dc3545; color: white; padding: 3px 8px; border-radius: 3px;">❌ Не подтвержден</span>'
+            )
+
+    is_email_verified_badge.short_description = 'Email подтвержден'
+
+    def mark_as_verified(self, request, queryset):
+        """Отметить выбранных пользователей как верифицированных"""
+        updated = queryset.update(is_email_verified=True)
+        self.message_user(request, f'✅ {updated} пользователей отмечены как подтвержденные')
+
+    mark_as_verified.short_description = "✅ Отметить как подтвержденные email"
+
+    def mark_as_unverified(self, request, queryset):
+        """Отметить выбранных пользователей как неверифицированных"""
+        updated = queryset.update(is_email_verified=False)
+        self.message_user(request, f'⚠️ {updated} пользователей отмечены как неподтвержденные')
+
+    mark_as_unverified.short_description = "❌ Отметить как неподтвержденные email"
 
 
 # ==================== SUBJECT ADMIN ====================
@@ -106,6 +145,7 @@ class TeacherAdmin(admin.ModelAdmin):
         return obj.user.date_joined.strftime('%d.%m.%Y')
 
     created.short_description = 'Дата регистрации'
+
     change_list_template = "admin/school/teacher/change_list.html"
     actions = ['export_teachers_excel']
 
@@ -188,8 +228,8 @@ class StudentAdmin(admin.ModelAdmin):
         return format_html('<span style="color: #6c757d;">⚪ 0.00</span>')
 
     get_balance_display.short_description = 'Баланс'
-    change_list_template = "admin/school/student/change_list.html"
 
+    change_list_template = "admin/school/student/change_list.html"
     actions = ['export_students_excel']
 
     def export_students_excel(self, request, queryset):
@@ -650,32 +690,7 @@ class LessonAttendanceAdmin(admin.ModelAdmin):
     raw_id_fields = ['lesson', 'student']
 
 
-# ==================== REGISTER ALL MODELS ====================
-admin.site.register(User, CustomUserAdmin)
-admin.site.register(Subject, SubjectAdmin)
-admin.site.register(Teacher, TeacherAdmin)
-admin.site.register(Student, StudentAdmin)
-admin.site.register(LessonFormat, LessonFormatAdmin)
-# Lesson уже зарегистрирован через @admin.register(Lesson)
-# LessonReport уже зарегистрирован через @admin.register(LessonReport)
-# Payment уже зарегистрирован через @admin.register(Payment)
-# Schedule уже зарегистрирован через @admin.register(Schedule)
-# TrialRequest уже зарегистрирован через @admin.register(TrialRequest)
-# Notification уже зарегистрирован через @admin.register(Notification)
-# LessonFeedback уже зарегистрирован через @admin.register(LessonFeedback)
-# TeacherRating уже зарегистрирован через @admin.register(TeacherRating)
-# Homework уже зарегистрирован через @admin.register(Homework)
-# HomeworkSubmission уже зарегистрирован через @admin.register(HomeworkSubmission)
-# GroupLesson уже зарегистрирован через @admin.register(GroupLesson)
-# GroupEnrollment уже зарегистрирован через @admin.register(GroupEnrollment)
-# LessonAttendance уже зарегистрирован через @admin.register(LessonAttendance)
-
-# Настройка заголовков админки
-admin.site.site_header = 'Плюс Прогресс - Администрирование'
-admin.site.site_title = 'Плюс Прогресс'
-admin.site.index_title = 'Управление онлайн школой'
-
-
+# ==================== SCHEDULE TEMPLATE ADMIN ====================
 class ScheduleTemplateStudentInline(admin.TabularInline):
     model = ScheduleTemplateStudent
     extra = 1
@@ -732,6 +747,7 @@ class ScheduleTemplateAdmin(admin.ModelAdmin):
     generate_lessons.short_description = 'Создать уроки по шаблону'
 
 
+# ==================== STUDENT SUBJECT PRICE ADMIN ====================
 @admin.register(StudentSubjectPrice)
 class StudentSubjectPriceAdmin(admin.ModelAdmin):
     list_display = ['student', 'subject', 'cost', 'teacher_payment', 'discount', 'is_active']
@@ -740,3 +756,31 @@ class StudentSubjectPriceAdmin(admin.ModelAdmin):
     list_editable = ['cost', 'teacher_payment', 'is_active']
     autocomplete_fields = ['student', 'subject']
     date_hierarchy = 'created_at'
+
+
+# ==================== REGISTER ALL MODELS ====================
+admin.site.register(User, CustomUserAdmin)
+admin.site.register(Subject, SubjectAdmin)
+admin.site.register(Teacher, TeacherAdmin)
+admin.site.register(Student, StudentAdmin)
+admin.site.register(LessonFormat, LessonFormatAdmin)
+# Lesson уже зарегистрирован через @admin.register(Lesson)
+# LessonReport уже зарегистрирован через @admin.register(LessonReport)
+# Payment уже зарегистрирован через @admin.register(Payment)
+# Schedule уже зарегистрирован через @admin.register(Schedule)
+# TrialRequest уже зарегистрирован через @admin.register(TrialRequest)
+# Notification уже зарегистрирован через @admin.register(Notification)
+# LessonFeedback уже зарегистрирован через @admin.register(LessonFeedback)
+# TeacherRating уже зарегистрирован через @admin.register(TeacherRating)
+# Homework уже зарегистрирован через @admin.register(Homework)
+# HomeworkSubmission уже зарегистрирован через @admin.register(HomeworkSubmission)
+# GroupLesson уже зарегистрирован через @admin.register(GroupLesson)
+# GroupEnrollment уже зарегистрирован через @admin.register(GroupEnrollment)
+# LessonAttendance уже зарегистрирован через @admin.register(LessonAttendance)
+# ScheduleTemplate уже зарегистрирован через @admin.register(ScheduleTemplate)
+# StudentSubjectPrice уже зарегистрирован через @admin.register(StudentSubjectPrice)
+
+# Настройка заголовков админки
+admin.site.site_header = 'Плюс Прогресс - Администрирование'
+admin.site.site_title = 'Плюс Прогресс'
+admin.site.index_title = 'Управление онлайн школой'
