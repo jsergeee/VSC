@@ -10,9 +10,11 @@ from django.urls import reverse
 from django.contrib import messages
 import logging
 from .models import User
+from django.utils import timezone
+from .models import Lesson
 class StudentProfileMiddleware(MiddlewareMixin):
     """Проверяет наличие профиля ученика при каждом запросе"""
-    
+
     def process_request(self, request):
         if request.user.is_authenticated and request.user.role == 'student':
             # Проверяем наличие профиля ученика
@@ -83,7 +85,7 @@ class EmailVerificationMiddleware:
             print(f"   From DB: {User.objects.get(id=request.user.id).is_email_verified}")
 
             if not request.user.is_email_verified:
-                
+
                 current_path = request.path
                 allowed = any(current_path.startswith(path) for path in allowed_paths)
                 print(f"   Path allowed: {allowed}")
@@ -99,3 +101,29 @@ class EmailVerificationMiddleware:
                 print(f"   ✅ Email verified")
 
         return self.get_response(request)
+
+
+
+
+
+class OverdueLessonsMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Проверяем просроченные уроки при каждом запросе
+        from datetime import datetime, timedelta
+        from django.utils import timezone
+
+        # Берем уроки за последние 24 часа, чтобы не нагружать базу
+        yesterday = timezone.now().date() - timedelta(days=1)
+        overdue_lessons = Lesson.objects.filter(
+            status='scheduled',
+            date__gte=yesterday
+        )
+
+        for lesson in overdue_lessons:
+            lesson.check_overdue()
+
+        response = self.get_response(request)
+        return response

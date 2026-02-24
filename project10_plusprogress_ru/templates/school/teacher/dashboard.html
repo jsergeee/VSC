@@ -1,8 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}Личный кабинет учителя{% endblock %}
-
 {% block extra_css %}
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet'/>
 <style>
@@ -152,7 +150,6 @@
     }
 </style>
 {% endblock %}
-
 {% block content %}
 <div class="container mt-4">
     <!-- Приветствие -->
@@ -161,7 +158,6 @@
             <h2>Здравствуйте, {{ user.first_name }}!</h2>
         </div>
     </div>
-
     <!-- Быстрая статистика -->
     <div class="quick-stats">
         <div class="stat-card">
@@ -181,7 +177,6 @@
             <div class="stat-label">Моих материалов</div>
         </div>
     </div>
-
     <!-- Навигационные вкладки -->
     <ul class="nav nav-tabs-custom" id="myTab" role="tablist">
         <li class="nav-item">
@@ -215,7 +210,6 @@
             </a>
         </li>
     </ul>
-
     <!-- Содержимое вкладок -->
     <div class="tab-content">
         <!-- Вкладка Расписание (календарь) -->
@@ -231,46 +225,112 @@
                 </div>
             </div>
         </div>
-
-        <!-- Остальные вкладки (заглушки) -->
-        <div class="tab-pane fade" id="students">
-            <div class="text-center py-5">
-                <i class="fa fa-users fa-4x text-muted mb-3"></i>
-                <h4>Мои ученики</h4>
-                <p class="text-muted">Раздел в разработке</p>
-            </div>
-        </div>
-        <div class="tab-pane fade" id="homeworks">
-            <div class="text-center py-5">
-                <i class="fa fa-book fa-4x text-muted mb-3"></i>
-                <h4>Домашние задания</h4>
-                <p class="text-muted">Раздел в разработке</p>
-            </div>
-        </div>
-        <div class="tab-pane fade" id="payments">
-            <div class="text-center py-5">
-                <i class="fa fa-money fa-4x text-muted mb-3"></i>
-                <h4>Выплаты</h4>
-                <p class="text-muted">Раздел в разработке</p>
-            </div>
-        </div>
-        <div class="tab-pane fade" id="materials">
-            <div class="text-center py-5">
-                <i class="fa fa-file fa-4x text-muted mb-3"></i>
-                <h4>Методические материалы</h4>
-                <p class="text-muted">Раздел в разработке</p>
-            </div>
-        </div>
-        <div class="tab-pane fade" id="history">
-            <div class="text-center py-5">
+<!-- Вкладка История занятий -->
+<div class="tab-pane fade" id="history" role="tabpanel">
+    <div class="row">
+        <div class="col-12">
+            <h4 class="section-title mb-4">Проведенные занятия</h4>
+            {% if past_lessons %}
+                {% for lesson in past_lessons %}
+                <a href="{% url 'teacher_lesson_detail' lesson.id %}" style="text-decoration: none; color: inherit;">
+                    <div class="lesson-item completed p-3 mb-3 border rounded hover-shadow" style="transition: all 0.3s; display: block; background: white;">
+                        <div class="row align-items-center">
+                            <div class="col-md-2">
+                                <strong>{{ lesson.date|date:"d.m.Y" }}</strong><br>
+                                <small class="text-muted">{{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}</small>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>{{ lesson.subject.name }}</strong><br>
+                                <small class="text-muted">
+                                    {% for attendance in lesson.attendance.all %}
+                                        {{ attendance.student.user.get_full_name }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </small>
+                            </div>
+                            <div class="col-md-2">
+                                <span class="badge badge-success px-3 py-2">Проведено</span>
+                            </div>
+                            <div class="col-md-3 text-right">
+                                {% if lesson.report %}
+                                <span class="badge badge-info px-3 py-2 mr-2">
+                                    <i class="fa fa-file-text"></i> Отчет
+                                </span>
+                                {% endif %}
+                                {% if lesson.feedback %}
+                                <span class="badge badge-warning px-3 py-2">
+                                    <i class="fa fa-star"></i> Оценка: {{ lesson.feedback.rating }}/5
+                                </span>
+                                {% else %}
+                                <span class="badge badge-secondary px-3 py-2">
+                                    <i class="fa fa-star"></i> Нет оценки
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-2 text-right">
+                                <small class="text-primary">Подробнее →</small>
+                            </div>
+                        </div>
+                        {% if lesson.feedback and lesson.feedback.comment %}
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <div class="bg-light p-2 rounded">
+                                    <i class="fa fa-quote-left text-muted mr-2"></i>
+                                    {{ lesson.feedback.comment|truncatechars:100 }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </a>
+                {% endfor %}
+            {% else %}
+            <div class="empty-state text-center py-5">
                 <i class="fa fa-history fa-4x text-muted mb-3"></i>
-                <h4>История занятий</h4>
-                <p class="text-muted">Раздел в разработке</p>
+                <h5>Нет проведенных занятий</h5>
+                <p class="text-muted">История появится после первых занятий</p>
             </div>
+            {% endif %}
         </div>
     </div>
 </div>
-
+    <!-- Остальные вкладки (заглушки) -->
+    <div class="tab-pane fade" id="students">
+        <div class="text-center py-5">
+            <i class="fa fa-users fa-4x text-muted mb-3"></i>
+            <h4>Мои ученики</h4>
+            <p class="text-muted">Раздел в разработке</p>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="homeworks">
+        <div class="text-center py-5">
+            <i class="fa fa-book fa-4x text-muted mb-3"></i>
+            <h4>Домашние задания</h4>
+            <p class="text-muted">Раздел в разработке</p>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="payments">
+        <div class="text-center py-5">
+            <i class="fa fa-money fa-4x text-muted mb-3"></i>
+            <h4>Выплаты</h4>
+            <p class="text-muted">Раздел в разработке</p>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="materials">
+        <div class="text-center py-5">
+            <i class="fa fa-file fa-4x text-muted mb-3"></i>
+            <h4>Методические материалы</h4>
+            <p class="text-muted">Раздел в разработке</p>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="history">
+        <div class="text-center py-5">
+            <i class="fa fa-history fa-4x text-muted mb-3"></i>
+            <h4>История занятий</h4>
+            <p class="text-muted">Раздел в разработке</p>
+        </div>
+    </div>
+</div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/ru.js'></script>
 <script>

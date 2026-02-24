@@ -106,6 +106,7 @@ class CustomUserAdmin(UserAdmin):
         if obj.patronymic:
             return f"{full_name} {obj.patronymic}"
         return full_name or obj.username
+
     get_full_name.short_description = 'ФИО'
 
     # УДАЛЕН метод balance_colored
@@ -119,16 +120,19 @@ class CustomUserAdmin(UserAdmin):
             return format_html(
                 '<span style="background: #dc3545; color: white; padding: 3px 8px; border-radius: 3px;">❌ Не подтвержден</span>'
             )
+
     is_email_verified_badge.short_description = 'Email подтвержден'
 
     def mark_as_verified(self, request, queryset):
         updated = queryset.update(is_email_verified=True)
         self.message_user(request, f'✅ {updated} пользователей отмечены как подтвержденные')
+
     mark_as_verified.short_description = "✅ Отметить как подтвержденные email"
 
     def mark_as_unverified(self, request, queryset):
         updated = queryset.update(is_email_verified=False)
         self.message_user(request, f'⚠️ {updated} пользователей отмечены как неподтвержденные')
+
     mark_as_unverified.short_description = "❌ Отметить как неподтвержденные email"
 
     def export_users_excel(self, request, queryset):
@@ -176,9 +180,10 @@ class CustomUserAdmin(UserAdmin):
 
         wb.save(response)
         return response
+
     export_users_excel.short_description = "📥 Экспорт выбранных пользователей в Excel"
-    
-    
+
+
 # ==================== SUBJECT ADMIN ====================
 
 class SubjectAdmin(admin.ModelAdmin):
@@ -187,28 +192,32 @@ class SubjectAdmin(admin.ModelAdmin):
 
     def teachers_count(self, obj):
         return obj.teacher_set.count()
+
     teachers_count.short_description = 'Учителей'
 
     def lessons_count(self, obj):
         return obj.lesson_set.count()
+
     lessons_count.short_description = 'Занятий'
 
 
 # ==================== TEACHER ADMIN ====================
 
+
 class TeacherAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user_link', 'display_subjects', 'experience', 
-                   'students_count', 'rating_display')
+    list_display = ('id', 'user_link', 'display_subjects', 'experience',
+                    'students_count', 'rating_display', 'earnings_for_period')
     list_filter = ('subjects',)
     search_fields = ('user__first_name', 'user__last_name', 'user__email')
     filter_horizontal = ('subjects',)
-    readonly_fields = ('wallet_balance', 'rating_display')  # Должно быть списком или кортежем
+    readonly_fields = ('wallet_balance', 'rating_display')
+    change_list_template = "admin/school/teacher/change_list_with_period.html"
 
     fieldsets = (
         (None, {
             'fields': ('user', 'subjects', 'experience')
         }),
-        ('Финансы', {  # Исправлено: fields должен быть списком или кортежем
+        ('Финансы', {
             'fields': ('wallet_balance', 'payment_details'),
             'classes': ('wide',),
         }),
@@ -225,14 +234,17 @@ class TeacherAdmin(admin.ModelAdmin):
     def user_link(self, obj):
         url = f'/admin/school/user/{obj.user.id}/change/'
         return format_html('<a href="{}">{}</a>', url, obj.user.get_full_name())
+
     user_link.short_description = 'Учитель'
 
     def display_subjects(self, obj):
         return ", ".join([s.name for s in obj.subjects.all()])
+
     display_subjects.short_description = 'Предметы'
 
     def students_count(self, obj):
         return obj.student_set.count()
+
     students_count.short_description = 'Учеников'
 
     def rating_display(self, obj):
@@ -242,7 +254,91 @@ class TeacherAdmin(admin.ModelAdmin):
             return f"{stars} ({rating.average_rating:.1f}) - {rating.total_feedbacks} оценок"
         except:
             return 'Нет оценок'
+
     rating_display.short_description = 'Рейтинг'
+
+    # ⚡⚡⚡ СОХРАНЯЕМ REQUEST ДЛЯ ИСПОЛЬЗОВАНИЯ В ДРУГИХ МЕТОДАХ ⚡⚡⚡
+    def get_queryset(self, request):
+        self.request = request
+        return super().get_queryset(request)
+
+    # ⚡⚡⚡ МЕТОД ДЛЯ ОТОБРАЖЕНИЯ ЗАРАБОТКА (ПРЯМОЙ РАСЧЕТ) ⚡⚡⚡
+    def earnings_for_period(self, obj):
+        """Отображение статистики за период (прямой расчет)"""
+        request = getattr(self, 'request', None)
+        print(f"\n🔍 earnings_for_period для {obj.user.get_full_name()}")
+        print(f"   request есть: {request is not None}")
+
+        if request:
+            start_date = request.GET.get('start_date')
+            end_date = request.GET.get('end_date')
+            print(f"   start_date: {start_date}, end_date: {end_date}")
+
+            if start_date and end_date:
+                try:
+                    from datetime import datetime
+                    start = datetime.strptime(start_date, '%Y-%m-%d').date()
+                    end = datetime.strptime(end_date, '%Y-%m-%d').date()
+                    print(f"   start: {start}, end: {end}")
+
+                    earnings = obj.get_teacher_earnings(start, end)
+                    print(f"   earnings: {earnings}")
+
+                    return format_html(
+                        '<span style="color: #28a745;">💰 {} ₽</span><br>'
+                        '<small style="color: #6c757d;">Выплаты: {} ₽</small>',
+                        earnings['net_income'],
+                        earnings['total_salaries']
+                    )
+                except Exception as e:
+                    print(f"   ❌ Ошибка расчета: {e}")
+            else:
+                print(f"   ❌ Нет дат в запросе")
+        else:
+            print(f"   ❌ Нет request")
+        return '-'
+
+    earnings_for_period.short_description = 'Заработок за период'
+
+    # ⚡⚡⚡ МЕТОД ДЛЯ ОБРАБОТКИ СПИСКА (ТОЛЬКО ДЛЯ ТАБЛИЦЫ СТАТИСТИКИ) ⚡⚡⚡
+    def changelist_view(self, request, extra_context=None):
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+
+        # Если параметры есть в GET, сохраняем их в сессию
+        if start_date and end_date:
+            request.session['teacher_filter_start'] = start_date
+            request.session['teacher_filter_end'] = end_date
+        else:
+            # Если параметров нет, пробуем взять из сессии
+            start_date = request.session.get('teacher_filter_start')
+            end_date = request.session.get('teacher_filter_end')
+
+        if start_date and end_date:
+            try:
+                from datetime import datetime
+                start = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+                extra_context = extra_context or {}
+                teachers_data = []
+
+                for teacher in self.get_queryset(request):
+                    earnings = teacher.get_teacher_earnings(start, end)
+                    teachers_data.append({
+                        'teacher': teacher,
+                        'earnings': earnings
+                    })
+
+                extra_context['teachers_data'] = teachers_data
+                extra_context['start_date'] = start_date
+                extra_context['end_date'] = end_date
+                print(f"\n✅ teachers_data создан, размер: {len(teachers_data)}")
+
+            except Exception as e:
+                print(f"❌ Ошибка в changelist_view: {e}")
+
+        return super().changelist_view(request, extra_context)
 
     actions = ['export_teachers_excel', 'calculate_payments']
 
@@ -272,7 +368,7 @@ class TeacherAdmin(admin.ModelAdmin):
 
         for row, teacher in enumerate(queryset, start=2):
             subjects = ", ".join([s.name for s in teacher.subjects.all()])
-            
+
             total_lessons = Lesson.objects.filter(teacher=teacher).count()
             completed_lessons = Lesson.objects.filter(teacher=teacher, status='completed').count()
             total_students = teacher.student_set.count()
@@ -301,6 +397,7 @@ class TeacherAdmin(admin.ModelAdmin):
 
         wb.save(response)
         return response
+
     export_teachers_excel.short_description = "📥 Экспорт выбранных учителей в Excel"
 
     def calculate_payments(self, request, queryset):
@@ -310,9 +407,8 @@ class TeacherAdmin(admin.ModelAdmin):
             return redirect(f'/admin/school/teacher/{teacher.id}/payments/')
         else:
             self.message_user(request, 'Выберите одного учителя для расчета выплат', level='WARNING')
+
     calculate_payments.short_description = "💰 Расчет выплат"
-
-
 def export_teachers_excel(self, request, queryset):
     """Экспорт выбранных учителей в Excel"""
     import openpyxl
@@ -340,7 +436,7 @@ def export_teachers_excel(self, request, queryset):
 
     for row, teacher in enumerate(queryset, start=2):
         subjects = ", ".join([s.name for s in teacher.subjects.all()])
-        
+
         # Считаем статистику учителя
         total_lessons = Lesson.objects.filter(teacher=teacher).count()
         completed_lessons = Lesson.objects.filter(teacher=teacher, status='completed').count()
@@ -371,23 +467,26 @@ def export_teachers_excel(self, request, queryset):
 
     wb.save(response)
     return response
+
+
 export_teachers_excel.short_description = "📥 Экспорт выбранных учителей в Excel"
 
+
 def calculate_payments(self, request, queryset):
-        """Перейти к расчету выплат"""
-        if queryset.count() == 1:
-            teacher = queryset.first()
-            return redirect(f'/admin/school/teacher/{teacher.id}/payments/')
-        else:
-            self.message_user(request, 'Выберите одного учителя для расчета выплат', level='WARNING')
-        calculate_payments.short_description = "💰 Расчет выплат"
+    """Перейти к расчету выплат"""
+    if queryset.count() == 1:
+        teacher = queryset.first()
+        return redirect(f'/admin/school/teacher/{teacher.id}/payments/')
+    else:
+        self.message_user(request, 'Выберите одного учителя для расчета выплат', level='WARNING')
+    calculate_payments.short_description = "💰 Расчет выплат"
 
 
 # ==================== STUDENT ADMIN ====================
 
 class StudentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user_link', 'parent_name', 'parent_phone', 
-                   'get_teachers_count', 'last_lesson')
+    list_display = ('id', 'user_link', 'parent_name', 'parent_phone',
+                    'get_teachers_count', 'last_lesson')
     search_fields = ('user__first_name', 'user__last_name', 'user__email', 'parent_name')
     filter_horizontal = ('teachers',)
     list_filter = ('teachers',)
@@ -410,20 +509,21 @@ class StudentAdmin(admin.ModelAdmin):
     def user_link(self, obj):
         url = f'/admin/school/user/{obj.user.id}/change/'
         return format_html('<a href="{}">{}</a>', url, obj.user.get_full_name())
+
     user_link.short_description = 'Ученик'
 
     def get_teachers_count(self, obj):
         return obj.teachers.count()
+
     get_teachers_count.short_description = 'Кол-во учителей'
-
-
 
     def last_lesson(self, obj):
         last = obj.lessons.order_by('-date').first()
         if last:
-            return format_html('<a href="/admin/school/lesson/{}/change/">{} {}</a>', 
-                             last.id, last.date.strftime('%d.%m.%Y'), last.subject)
+            return format_html('<a href="/admin/school/lesson/{}/change/">{} {}</a>',
+                               last.id, last.date.strftime('%d.%m.%Y'), last.subject)
         return '-'
+
     last_lesson.short_description = 'Последний урок'
 
     actions = ['export_students_excel', 'show_finance_report']
@@ -478,6 +578,7 @@ class StudentAdmin(admin.ModelAdmin):
 
         wb.save(response)
         return response
+
     export_students_excel.short_description = "📥 Экспорт выбранных учеников в Excel"
 
     def show_finance_report(self, request, queryset):
@@ -487,6 +588,7 @@ class StudentAdmin(admin.ModelAdmin):
             return redirect(f'/admin/school/student/{student.id}/report/')
         else:
             self.message_user(request, 'Выберите одного ученика для просмотра отчета', level='WARNING')
+
     show_finance_report.short_description = "📊 Финансовый отчет"
 
 
@@ -498,6 +600,7 @@ class LessonFormatAdmin(admin.ModelAdmin):
 
     def lessons_count(self, obj):
         return obj.lesson_set.count()
+
     lessons_count.short_description = 'Занятий'
 
 
@@ -510,8 +613,8 @@ class LessonAdmin(admin.ModelAdmin):
         models.DateField: {'widget': forms.DateInput(attrs={'type': 'date'})},
     }
 
-    list_display = ('id', 'colored_subject', 'teacher_link', 'students_preview', 
-                   'date', 'start_time', 'status_badge', 'finance_preview')
+    list_display = ('id', 'colored_subject', 'teacher_link', 'students_preview',
+                    'date', 'start_time', 'status_badge', 'finance_preview')
     list_filter = ('status', 'subject', 'date', 'teacher', 'is_group')
     search_fields = ('teacher__user__last_name', 'students__user__last_name', 'subject__name')
     date_hierarchy = 'date'
@@ -546,6 +649,7 @@ class LessonAdmin(admin.ModelAdmin):
     def teacher_link(self, obj):
         url = f'/admin/school/teacher/{obj.teacher.id}/change/'
         return format_html('<a href="{}">{}</a>', url, obj.teacher.user.get_full_name())
+
     teacher_link.short_description = 'Учитель'
 
     def colored_subject(self, obj):
@@ -557,6 +661,7 @@ class LessonAdmin(admin.ModelAdmin):
         }
         color = colors.get(obj.status, '#6c757d')
         return format_html('<span style="color: {}; font-weight: bold;">{}</span>', color, obj.subject.name)
+
     colored_subject.short_description = 'Предмет'
 
     def students_preview(self, obj):
@@ -567,6 +672,7 @@ class LessonAdmin(admin.ModelAdmin):
             return students.first().user.get_full_name()
         else:
             return format_html('{} учеников', students.count())
+
     students_preview.short_description = 'Ученики'
 
     def status_badge(self, obj):
@@ -580,29 +686,31 @@ class LessonAdmin(admin.ModelAdmin):
         return format_html(
             '<span style="background: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
             color, text)
+
     status_badge.short_description = 'Статус'
 
     def finance_preview(self, obj):
         """Предпросмотр финансов с использованием LessonFinanceCalculator"""
         calculator = LessonFinanceCalculator(obj)
         stats = calculator.stats
-        
+
         if stats['students_total'] == 0:
             return '-'
-        
+
         return format_html(
             '<span title="Всего: {}₽\nВыплата: {}₽\nПрисутствовало: {}/{}">💰 {}₽</span>',
             stats['total_cost'], stats['teacher_payment'],
             stats['students_attended'], stats['students_total'],
             stats['total_cost']
         )
+
     finance_preview.short_description = 'Финансы'
 
     def finance_stats(self, obj):
         """Детальная финансовая статистика"""
         calculator = LessonFinanceCalculator(obj)
         stats = calculator.stats
-        
+
         html = f"""
         <div style="background: #f8f9fa; padding: 15px; border-radius: 5px;">
             <h3 style="margin-top: 0;">Финансовая статистика урока</h3>
@@ -643,6 +751,7 @@ class LessonAdmin(admin.ModelAdmin):
         </div>
         """
         return format_html(html)
+
     finance_stats.short_description = 'Финансовая статистика'
 
     def has_report(self, obj):
@@ -650,6 +759,7 @@ class LessonAdmin(admin.ModelAdmin):
             url = f'/admin/school/lessonreport/{obj.report.id}/change/'
             return format_html('<a href="{}" style="color: #28a745;">✅ Отчет #{}</a>', url, obj.report.id)
         return '❌ Нет отчета'
+
     has_report.short_description = 'Отчет'
 
     actions = ['export_lessons_finance', 'mark_as_completed', 'mark_as_paid', 'mark_as_debt']
@@ -670,7 +780,7 @@ class LessonAdmin(admin.ModelAdmin):
         """Страница массового завершения уроков"""
         lesson_ids = request.GET.getlist('ids')
         lessons = Lesson.objects.filter(id__in=lesson_ids)
-        
+
         if request.method == 'POST':
             # Обработка массового завершения
             from django.contrib import messages
@@ -681,7 +791,7 @@ class LessonAdmin(admin.ModelAdmin):
                     completed += 1
             messages.success(request, f'✅ Завершено {completed} уроков')
             return redirect('admin:school_lesson_changelist')
-        
+
         context = {
             'lessons': lessons,
             'title': 'Массовое завершение уроков',
@@ -704,7 +814,7 @@ class LessonAdmin(admin.ModelAdmin):
             for lesson in lessons:
                 calculator = LessonFinanceCalculator(lesson)
                 stats = calculator.stats
-                
+
                 subject_short = lesson.subject.name[:4]
                 teacher_last = lesson.teacher.user.last_name
 
@@ -765,7 +875,7 @@ class LessonAdmin(admin.ModelAdmin):
         ws = wb.active
         ws.title = "Финансы уроков"
 
-        headers = ['ID', 'Дата', 'Учитель', 'Предмет', 'Учеников', 
+        headers = ['ID', 'Дата', 'Учитель', 'Предмет', 'Учеников',
                    'Присутствовало', 'В долг', 'Общая стоимость', 'Выплата учителю']
 
         header_font = Font(bold=True, color="FFFFFF")
@@ -803,20 +913,22 @@ class LessonAdmin(admin.ModelAdmin):
 
         wb.save(response)
         return response
+
     export_lessons_finance.short_description = "📊 Экспорт финансов уроков"
 
     def mark_as_completed(self, request, queryset):
         """Отметить уроки как проведенные"""
         from django.contrib import messages
-        
+
         completed = 0
         for lesson in queryset.filter(status='scheduled'):
             if lesson.attendance.exists():
                 lesson.status = 'completed'
                 lesson.save()
                 completed += 1
-        
+
         self.message_user(request, f'✅ {completed} уроков отмечены как проведенные')
+
     mark_as_completed.short_description = "✅ Отметить как проведенные"
 
     def mark_as_paid(self, request, queryset):
@@ -826,6 +938,7 @@ class LessonAdmin(admin.ModelAdmin):
             status='debt'
         ).update(status='attended')
         self.message_user(request, f'💰 {updated} записей отмечены как оплаченные')
+
     mark_as_paid.short_description = "💰 Отметить как оплаченные"
 
     def mark_as_debt(self, request, queryset):
@@ -835,6 +948,7 @@ class LessonAdmin(admin.ModelAdmin):
             status='attended'
         ).update(status='debt')
         self.message_user(request, f'⚠️ {updated} записей отмечены как долг')
+
     mark_as_debt.short_description = "⚠️ Отметить как долг"
 
 
@@ -851,10 +965,12 @@ class LessonReportAdmin(admin.ModelAdmin):
     def lesson_link(self, obj):
         url = f'/admin/school/lesson/{obj.lesson.id}/change/'
         return format_html('<a href="{}">{} #{}</a>', url, obj.lesson.subject, obj.lesson.id)
+
     lesson_link.short_description = 'Занятие'
 
     def topic_preview(self, obj):
         return obj.topic[:50] + '...' if len(obj.topic) > 50 else obj.topic
+
     topic_preview.short_description = 'Тема'
 
 
@@ -862,8 +978,8 @@ class LessonReportAdmin(admin.ModelAdmin):
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user_link', 'amount_colored', 'payment_type_badge', 
-                   'description', 'lesson_link', 'created_at')
+    list_display = ('id', 'user_link', 'amount_colored', 'payment_type_badge',
+                    'description', 'lesson_link', 'created_at')
     list_filter = ('payment_type', 'created_at')
     search_fields = ('user__first_name', 'user__last_name', 'description')
     date_hierarchy = 'created_at'
@@ -886,6 +1002,7 @@ class PaymentAdmin(admin.ModelAdmin):
     def user_link(self, obj):
         url = f'/admin/school/user/{obj.user.id}/change/'
         return format_html('<a href="{}">{}</a>', url, obj.user.get_full_name())
+
     user_link.short_description = 'Пользователь'
 
     def amount_colored(self, obj):
@@ -895,18 +1012,21 @@ class PaymentAdmin(admin.ModelAdmin):
             return format_html('<span style="color: #dc3545;">-{} ₽</span>', obj.amount)
         else:
             return format_html('<span style="color: #17a2b8;">{} ₽</span>', obj.amount)
+
     amount_colored.short_description = 'Сумма'
 
     def payment_type_badge(self, obj):
         type_colors = {
             'income': ('#28a745', 'Пополнение'),
             'expense': ('#dc3545', 'Списание'),
-            'teacher_payment': ('#17a2b8', 'Выплата учителю'),
+            'teacher_payment': ('#17a2b8', 'Начисление учителю'),
+            'teacher_salary': ('#ffc107', 'Зарплата учителя'),
         }
         color, text = type_colors.get(obj.payment_type, ('#6c757d', obj.payment_type))
         return format_html(
             '<span style="background: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
             color, text)
+
     payment_type_badge.short_description = 'Тип'
 
     def lesson_link(self, obj):
@@ -914,6 +1034,7 @@ class PaymentAdmin(admin.ModelAdmin):
             url = f'/admin/school/lesson/{obj.lesson.id}/change/'
             return format_html('<a href="{}">Урок #{}</a>', url, obj.lesson.id)
         return '-'
+
     lesson_link.short_description = 'Урок'
 
     # ⚡⚡⚡ МЕТОД ДЛЯ СОХРАНЕНИЯ (ОБНОВЛЕНИЕ БАЛАНСА) ⚡⚡⚡
@@ -921,13 +1042,13 @@ class PaymentAdmin(admin.ModelAdmin):
         """Сохраняет платеж и обновляет баланс пользователя"""
         # Сначала сохраняем платеж
         super().save_model(request, obj, form, change)
-        
+
         # Обновляем баланс в зависимости от типа платежа
         if obj.payment_type == 'income':
             # Пополнение счета ученика
             obj.user.balance += obj.amount
             obj.user.save()
-            
+
             # Создаем уведомление о пополнении
             Notification.objects.create(
                 user=obj.user,
@@ -936,12 +1057,12 @@ class PaymentAdmin(admin.ModelAdmin):
                 notification_type='payment_received',
                 link='/student/dashboard/'
             )
-            
+
         elif obj.payment_type == 'expense':
             # Списание со счета ученика
             obj.user.balance -= obj.amount
             obj.user.save()
-            
+
             # Создаем уведомление о списании
             Notification.objects.create(
                 user=obj.user,
@@ -950,14 +1071,14 @@ class PaymentAdmin(admin.ModelAdmin):
                 notification_type='payment_withdrawn',
                 link='/student/dashboard/'
             )
-            
+
         elif obj.payment_type == 'teacher_payment':
             # Выплата учителю
             try:
                 teacher = obj.user.teacher_profile
                 teacher.wallet_balance += obj.amount
                 teacher.save()
-                
+
                 # Уведомление учителю
                 Notification.objects.create(
                     user=obj.user,
@@ -978,13 +1099,13 @@ class PaymentAdmin(admin.ModelAdmin):
         amount = obj.amount
         payment_type = obj.payment_type
         description = obj.description
-        
+
         # Корректируем баланс в зависимости от типа платежа
         if payment_type == 'income':
             # Если удаляем пополнение - уменьшаем баланс
             user.balance -= amount
             user.save()
-            
+
             # Уведомление об удалении пополнения
             Notification.objects.create(
                 user=user,
@@ -992,12 +1113,12 @@ class PaymentAdmin(admin.ModelAdmin):
                 message=f'Пополнение на {amount} ₽ "{description}" было удалено. Баланс скорректирован.',
                 notification_type='system',
             )
-            
+
         elif payment_type == 'expense':
             # Если удаляем списание - увеличиваем баланс (возвращаем деньги)
             user.balance += amount
             user.save()
-            
+
             # Уведомление об удалении списания
             Notification.objects.create(
                 user=user,
@@ -1005,14 +1126,14 @@ class PaymentAdmin(admin.ModelAdmin):
                 message=f'Списание {amount} ₽ "{description}" отменено. Деньги возвращены на баланс.',
                 notification_type='system',
             )
-            
+
         elif payment_type == 'teacher_payment':
             # Для выплаты учителю - уменьшаем wallet_balance
             try:
                 teacher = user.teacher_profile
                 teacher.wallet_balance -= amount
                 teacher.save()
-                
+
                 # Уведомление учителю
                 Notification.objects.create(
                     user=user,
@@ -1022,25 +1143,26 @@ class PaymentAdmin(admin.ModelAdmin):
                 )
             except Teacher.DoesNotExist:
                 pass
-        
+
         # Удаляем сам платеж
         super().delete_model(request, obj)
-        
+
         # Добавляем сообщение в админку
         messages.success(request, f'✅ Платеж удален. Баланс пользователя {user.username} скорректирован.')
+
 
 # ⚡⚡⚡ ИСПРАВЛЕННЫЙ МЕТОД ДЛЯ МАССОВОГО УДАЛЕНИЯ ⚡⚡⚡
 def delete_queryset(self, request, queryset):
     """При массовом удалении корректируем балансы"""
     count = queryset.count()
-    
+
     with transaction.atomic():
         for obj in queryset:
             # Для каждого платежа применяем ту же логику
             user = obj.user
             amount = obj.amount
             payment_type = obj.payment_type
-            
+
             if payment_type == 'income':
                 user.balance -= amount
                 user.save()
@@ -1054,10 +1176,10 @@ def delete_queryset(self, request, queryset):
                     teacher.save()
                 except Teacher.DoesNotExist:
                     pass
-        
+
         # Удаляем все платежи разом
         super().delete_queryset(request, queryset)
-    
+
     # ✅ ИСПРАВЛЕНО: передаем request в messages
     self.message_user(request, f'✅ Удалено {count} платежей. Балансы пользователей скорректированы.', level='SUCCESS')
     actions = ['export_payments_excel']
@@ -1104,8 +1226,9 @@ def delete_queryset(self, request, queryset):
 
         wb.save(response)
         return response
+
     export_payments_excel.short_description = "📥 Экспорт платежей в Excel"
-    
+
 
 # ==================== SCHEDULE ADMIN ====================
 
@@ -1123,6 +1246,7 @@ class ScheduleAdmin(admin.ModelAdmin):
     def day_of_week_display(self, obj):
         days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
         return days[obj.date.weekday()]
+
     day_of_week_display.short_description = 'День'
 
     def get_urls(self):
@@ -1147,11 +1271,13 @@ class TrialRequestAdmin(admin.ModelAdmin):
         if obj.is_processed:
             return format_html('<span style="color: #28a745;">✅ Обработано</span>')
         return format_html('<span style="color: #ffc107;">⏳ Новое</span>')
+
     is_processed_badge.short_description = 'Статус'
 
     def mark_as_processed(self, request, queryset):
         updated = queryset.update(is_processed=True)
         self.message_user(request, f'✅ {updated} заявок отмечены как обработанные')
+
     mark_as_processed.short_description = "✅ Отметить как обработанные"
 
 
@@ -1180,12 +1306,14 @@ class NotificationAdmin(admin.ModelAdmin):
         }
         icon = icons.get(obj.notification_type, '📢')
         return f"{icon} {obj.get_notification_type_display()}"
+
     notification_type_icon.short_description = 'Тип'
 
     def is_read_badge(self, obj):
         if obj.is_read:
             return format_html('<span style="color: #6c757d;">✓ Прочитано</span>')
         return format_html('<span style="color: #007bff; font-weight: bold;">● Новое</span>')
+
     is_read_badge.short_description = 'Статус'
 
     actions = ['mark_as_read', 'mark_as_unread']
@@ -1193,11 +1321,13 @@ class NotificationAdmin(admin.ModelAdmin):
     def mark_as_read(self, request, queryset):
         updated = queryset.update(is_read=True)
         self.message_user(request, f'✅ {updated} уведомлений отмечены как прочитанные')
+
     mark_as_read.short_description = "✓ Отметить как прочитанные"
 
     def mark_as_unread(self, request, queryset):
         updated = queryset.update(is_read=False)
         self.message_user(request, f'🔄 {updated} уведомлений отмечены как непрочитанные')
+
     mark_as_unread.short_description = "🔄 Отметить как непрочитанные"
 
 
@@ -1205,8 +1335,8 @@ class NotificationAdmin(admin.ModelAdmin):
 
 @admin.register(LessonFeedback)
 class LessonFeedbackAdmin(admin.ModelAdmin):
-    list_display = ('id', 'lesson_link', 'student', 'teacher', 'rating_stars', 
-                   'comment_preview', 'is_public_badge', 'created_at')
+    list_display = ('id', 'lesson_link', 'student', 'teacher', 'rating_stars',
+                    'comment_preview', 'is_public_badge', 'created_at')
     list_filter = ('rating', 'is_public', 'created_at')
     search_fields = ('student__user__last_name', 'teacher__user__last_name', 'comment')
     raw_id_fields = ('lesson', 'student', 'teacher')
@@ -1216,32 +1346,38 @@ class LessonFeedbackAdmin(admin.ModelAdmin):
     def lesson_link(self, obj):
         url = f'/admin/school/lesson/{obj.lesson.id}/change/'
         return format_html('<a href="{}">{} #{}</a>', url, obj.lesson.subject, obj.lesson.id)
+
     lesson_link.short_description = 'Урок'
 
     def rating_stars(self, obj):
         return '⭐' * obj.rating
+
     rating_stars.short_description = 'Оценка'
 
     def comment_preview(self, obj):
         if obj.comment:
             return obj.comment[:50] + '...' if len(obj.comment) > 50 else obj.comment
         return '-'
+
     comment_preview.short_description = 'Комментарий'
 
     def is_public_badge(self, obj):
         if obj.is_public:
             return format_html('<span style="color: #28a745;">✅ Публичный</span>')
         return format_html('<span style="color: #6c757d;">🔒 Приватный</span>')
+
     is_public_badge.short_description = 'Видимость'
 
     def make_public(self, request, queryset):
         updated = queryset.update(is_public=True)
         self.message_user(request, f'✅ {updated} оценок опубликовано')
+
     make_public.short_description = '✅ Опубликовать'
 
     def make_private(self, request, queryset):
         updated = queryset.update(is_public=False)
         self.message_user(request, f'🔒 {updated} оценок скрыто')
+
     make_private.short_description = '🔒 Скрыть'
 
 
@@ -1249,16 +1385,17 @@ class LessonFeedbackAdmin(admin.ModelAdmin):
 
 @admin.register(TeacherRating)
 class TeacherRatingAdmin(admin.ModelAdmin):
-    list_display = ('teacher', 'average_rating_display', 'total_feedbacks', 
-                   'rating_distribution', 'updated_at')
+    list_display = ('teacher', 'average_rating_display', 'total_feedbacks',
+                    'rating_distribution', 'updated_at')
     list_select_related = ('teacher__user',)
-    readonly_fields = ('teacher', 'average_rating', 'total_feedbacks', 
-                      'rating_5_count', 'rating_4_count', 'rating_3_count', 
-                      'rating_2_count', 'rating_1_count', 'updated_at')
+    readonly_fields = ('teacher', 'average_rating', 'total_feedbacks',
+                       'rating_5_count', 'rating_4_count', 'rating_3_count',
+                       'rating_2_count', 'rating_1_count', 'updated_at')
 
     def average_rating_display(self, obj):
         stars = '⭐' * int(obj.average_rating)
         return f"{stars} ({obj.average_rating:.1f})"
+
     average_rating_display.short_description = 'Средний балл'
 
     def rating_distribution(self, obj):
@@ -1271,6 +1408,7 @@ class TeacherRatingAdmin(admin.ModelAdmin):
             html += f'<div style="margin: 2px 0;">{rating}⭐: <span style="display: inline-block; width: {width}px; height: 10px; background: #ffc107;"></span> {count}</div>'
         html += '</div>'
         return format_html(html)
+
     rating_distribution.short_description = 'Распределение'
 
 
@@ -1278,8 +1416,8 @@ class TeacherRatingAdmin(admin.ModelAdmin):
 
 @admin.register(Homework)
 class HomeworkAdmin(admin.ModelAdmin):
-    list_display = ('id', 'colored_title', 'student_link', 'teacher_link', 
-                   'subject', 'deadline_colored', 'status_badge')
+    list_display = ('id', 'colored_title', 'student_link', 'teacher_link',
+                    'subject', 'deadline_colored', 'status_badge')
     list_filter = ('subject', 'is_active', 'deadline')
     search_fields = ('title', 'student__user__last_name', 'teacher__user__last_name')
     date_hierarchy = 'deadline'
@@ -1290,15 +1428,18 @@ class HomeworkAdmin(admin.ModelAdmin):
     def student_link(self, obj):
         url = f'/admin/school/student/{obj.student.id}/change/'
         return format_html('<a href="{}">{}</a>', url, obj.student.user.get_full_name())
+
     student_link.short_description = 'Ученик'
 
     def teacher_link(self, obj):
         url = f'/admin/school/teacher/{obj.teacher.id}/change/'
         return format_html('<a href="{}">{}</a>', url, obj.teacher.user.get_full_name())
+
     teacher_link.short_description = 'Учитель'
 
     def colored_title(self, obj):
         return format_html('<span style="color: #2c3e50; font-weight: bold;">{}</span>', obj.title)
+
     colored_title.short_description = 'Название'
 
     def deadline_colored(self, obj):
@@ -1312,6 +1453,7 @@ class HomeworkAdmin(admin.ModelAdmin):
         else:
             return format_html('<span style="color: #28a745;">✅ {}</span>',
                                obj.deadline.strftime('%d.%m.%Y %H:%M'))
+
     deadline_colored.short_description = 'Срок сдачи'
 
     def status_badge(self, obj):
@@ -1326,6 +1468,7 @@ class HomeworkAdmin(admin.ModelAdmin):
         return format_html(
             '<span style="background: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
             color, text)
+
     status_badge.short_description = 'Статус'
 
 
@@ -1333,8 +1476,8 @@ class HomeworkAdmin(admin.ModelAdmin):
 
 @admin.register(HomeworkSubmission)
 class HomeworkSubmissionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'homework_link', 'student_name', 'submitted_at', 
-                   'status_colored', 'grade_display')
+    list_display = ('id', 'homework_link', 'student_name', 'submitted_at',
+                    'status_colored', 'grade_display')
     list_filter = ('status', 'submitted_at')
     search_fields = ('homework__title', 'student__user__last_name')
     date_hierarchy = 'submitted_at'
@@ -1343,16 +1486,19 @@ class HomeworkSubmissionAdmin(admin.ModelAdmin):
     def homework_link(self, obj):
         url = f'/admin/school/homework/{obj.homework.id}/change/'
         return format_html('<a href="{}">{}</a>', url, obj.homework.title)
+
     homework_link.short_description = 'Задание'
 
     def student_name(self, obj):
         return obj.student.user.get_full_name()
+
     student_name.short_description = 'Ученик'
 
     def status_colored(self, obj):
         if obj.status == 'submitted':
             return format_html('<span style="color: #17a2b8;">📤 Ожидает проверки</span>')
         return format_html('<span style="color: #28a745;">✅ Проверено</span>')
+
     status_colored.short_description = 'Статус'
 
     def grade_display(self, obj):
@@ -1361,6 +1507,7 @@ class HomeworkSubmissionAdmin(admin.ModelAdmin):
                 '<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 3px;">{}/5</span>',
                 obj.grade)
         return '—'
+
     grade_display.short_description = 'Оценка'
 
 
@@ -1368,8 +1515,8 @@ class HomeworkSubmissionAdmin(admin.ModelAdmin):
 
 @admin.register(GroupLesson)
 class GroupLessonAdmin(admin.ModelAdmin):
-    list_display = ('id', 'subject', 'teacher', 'date', 'start_time', 
-                   'students_count', 'status_badge', 'finance_preview')
+    list_display = ('id', 'subject', 'teacher', 'date', 'start_time',
+                    'students_count', 'status_badge', 'finance_preview')
     list_filter = ('status', 'subject', 'teacher', 'date')
     search_fields = ('subject__name', 'teacher__user__last_name', 'notes')
     inlines = [GroupEnrollmentInline]
@@ -1391,6 +1538,7 @@ class GroupLessonAdmin(admin.ModelAdmin):
 
     def students_count(self, obj):
         return obj.enrollments.count()
+
     students_count.short_description = 'Учеников'
 
     def status_badge(self, obj):
@@ -1403,6 +1551,7 @@ class GroupLessonAdmin(admin.ModelAdmin):
         return format_html(
             '<span style="background: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
             color, text)
+
     status_badge.short_description = 'Статус'
 
     def finance_preview(self, obj):
@@ -1410,6 +1559,7 @@ class GroupLessonAdmin(admin.ModelAdmin):
             '<span title="Сбор: {}₽\nВыплата: {}₽">💰 {}₽</span>',
             obj.get_total_cost(), obj.teacher_payment, obj.get_total_cost()
         )
+
     finance_preview.short_description = 'Финансы'
 
     def changelist_view(self, request, extra_context=None):
@@ -1447,6 +1597,7 @@ class GroupEnrollmentAdmin(admin.ModelAdmin):
         return format_html(
             '<span style="background: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
             color, text)
+
     status_badge.short_description = 'Статус'
 
 
@@ -1462,6 +1613,7 @@ class LessonAttendanceAdmin(admin.ModelAdmin):
     def lesson_link(self, obj):
         url = f'/admin/school/lesson/{obj.lesson.id}/change/'
         return format_html('<a href="{}">{} #{}</a>', url, obj.lesson.subject, obj.lesson.id)
+
     lesson_link.short_description = 'Урок'
 
     def status_badge(self, obj):
@@ -1475,6 +1627,7 @@ class LessonAttendanceAdmin(admin.ModelAdmin):
         return format_html(
             '<span style="background: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
             color, text)
+
     status_badge.short_description = 'Статус'
 
 
@@ -1482,8 +1635,8 @@ class LessonAttendanceAdmin(admin.ModelAdmin):
 
 @admin.register(ScheduleTemplate)
 class ScheduleTemplateAdmin(admin.ModelAdmin):
-    list_display = ('id', 'teacher', 'subject', 'start_time', 'repeat_type', 
-                   'get_days', 'start_date', 'is_active')
+    list_display = ('id', 'teacher', 'subject', 'start_time', 'repeat_type',
+                    'get_days', 'start_date', 'is_active')
     list_filter = ('repeat_type', 'is_active', 'teacher', 'subject')
     search_fields = ('teacher__user__last_name', 'subject__name')
     inlines = [ScheduleTemplateStudentInline]
@@ -1522,6 +1675,7 @@ class ScheduleTemplateAdmin(admin.ModelAdmin):
         if obj.saturday: days.append('Сб')
         if obj.sunday: days.append('Вс')
         return ', '.join(days) if days else 'Все'
+
     get_days.short_description = 'Дни'
 
     actions = ['generate_lessons', 'duplicate_template']
@@ -1532,6 +1686,7 @@ class ScheduleTemplateAdmin(admin.ModelAdmin):
             lessons = template.generate_lessons()
             count += len(lessons)
         self.message_user(request, f'✅ Создано {count} уроков')
+
     generate_lessons.short_description = '📅 Создать уроки по шаблону'
 
     def duplicate_template(self, request, queryset):
@@ -1541,6 +1696,7 @@ class ScheduleTemplateAdmin(admin.ModelAdmin):
             template.is_active = True
             template.save()
         self.message_user(request, f'✅ Скопировано {queryset.count()} шаблонов')
+
     duplicate_template.short_description = '📋 Дублировать шаблон'
 
 
@@ -1554,6 +1710,7 @@ class StudentSubjectPriceAdmin(admin.ModelAdmin):
     list_editable = ['cost', 'teacher_payment', 'is_active']
     autocomplete_fields = ['student', 'subject']
 
+
 # ==================== REGISTER ALL MODELS ====================
 
 admin.site.register(User, CustomUserAdmin)
@@ -1566,5 +1723,3 @@ admin.site.register(LessonFormat, LessonFormatAdmin)
 admin.site.site_header = 'Плюс Прогресс - Администрирование'
 admin.site.site_title = 'Плюс Прогресс'
 admin.site.index_title = 'Управление онлайн школой'
-
-

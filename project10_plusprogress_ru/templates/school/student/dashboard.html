@@ -473,83 +473,46 @@
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/ru.js'></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        var calendarEl = document.getElementById('calendar');
-        if (calendarEl) {
-            var calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'timeGridWeek',
-                locale: 'ru',
-                headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
-                },
-                buttonText: {
-                    today: 'Сегодня',
-                    month: 'Месяц',
-                    week: 'Неделя',
-                    day: 'День'
-                },
-                slotMinTime: '08:00:00',
-                slotMaxTime: '22:00:00',
-                allDaySlot: false,
-                events: [
-                    // ✅ ВСЕ запланированные уроки
-                    {% for lesson in all_scheduled_lessons %}
-                    {
-                    title: '{{ lesson.subject.name }} - {{ lesson.teacher.user.last_name }}',
-                    start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
-                    end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
-                    url: "{% url 'lesson_detail' lesson.id %}",
-                    backgroundColor: '#007bff',
-                    borderColor: '#007bff'
-                },
-                {% endfor %}
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    if (calendarEl) {
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            locale: 'ru',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            buttonText: {
+                today: 'Сегодня',
+                month: 'Месяц',
+                week: 'Неделя',
+                day: 'День'
+            },
+            slotMinTime: '08:00:00',
+            slotMaxTime: '22:00:00',
+            allDaySlot: false,
+            slotDuration: '00:30:00',
 
-        // Прошедшие уроки
-        {% for lesson in past_lessons %}
-        {
-            title: '{{ lesson.subject.name }} - {{ lesson.teacher.user.last_name }}',
-                start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
-                    end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
-                        backgroundColor: '#28a745',
-                            borderColor: '#28a745',
-                                url: "{% url 'lesson_detail' lesson.id %}"
-        },
-        {% endfor %}
+            events: {{ calendar_events|safe }},  // ⚡ КАК В АДМИНКЕ ⚡
 
-        // Групповые уроки
-        {% for lesson in group_lessons %}
-        {
-            title: '👥 {{ lesson.subject.name }} (группа)',
-                start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
-                    end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
-                        url: "{% url 'student_group_lesson_detail' lesson.id %}",
-                            backgroundColor: '#9b59b6',
-                                borderColor: '#9b59b6'
-        },
-        {% endfor %}
-                ],
-        eventClick: function(info) {
-            if (info.event.url) {
-                window.location.href = info.event.url;
-                info.jsEvent.preventDefault();
-            }
-        }
-    });
-    calendar.render();
-        }
-    });
+            eventClick: function(info) {
+                if (info.event.url) {
+                    window.location.href = info.event.url;
+                    info.jsEvent.preventDefault();
+                }
+            },
 
-    function filterMaterials(type) {
-        const items = document.querySelectorAll('.material-item');
-        items.forEach(item => {
-            if (type === 'all' || item.dataset.type === type) {
-                item.style.display = 'block';
-            } else {
-                item.style.display = 'none';
+            eventDidMount: function(info) {
+                var title = info.event.title;
+                info.el.setAttribute('title', title);
             }
         });
+
+        calendar.render();
+        console.log('📅 Календарь загружен, событий:', {{ calendar_events|length }});
     }
+});
 </script>
 {% endblock %}

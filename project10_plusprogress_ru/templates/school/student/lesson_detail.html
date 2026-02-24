@@ -1,8 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}Урок {{ lesson.subject.name }} - {{ lesson.date }}{% endblock %}
-
 {% block extra_css %}
 <style>
     .lesson-header {
@@ -86,6 +84,53 @@
     .status-completed { background: #d4edda; color: #155724; }
     .status-cancelled { background: #f8d7da; color: #721c24; }
     .status-overdue { background: #fff3cd; color: #856404; }
+
+    /* ✅ НОВЫЕ СТИЛИ ДЛЯ КРУПНОГО СТАТУСА */
+    .status-badge-large {
+        font-size: 1.5rem;
+        font-weight: bold;
+        padding: 15px 20px;
+        border-radius: 50px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .status-scheduled-large {
+        background: #cce5ff;
+        color: #004085;
+        border: 2px solid #004085;
+    }
+    .status-completed-large {
+        background: #d4edda;
+        color: #155724;
+        border: 2px solid #155724;
+    }
+    .status-cancelled-large {
+        background: #f8d7da;
+        color: #721c24;
+        border: 2px solid #721c24;
+    }
+    .status-overdue-large {
+        background: #fff3cd;
+        color: #856404;
+        border: 2px solid #856404;
+    }
+    .status-rescheduled-large {
+        background: #fff3cd;
+        color: #856404;
+        border: 2px solid #856404;
+    }
+    .status-no_show-large {
+        background: #e2e3e5;
+        color: #383d41;
+        border: 2px solid #383d41;
+    }
+
+    /* ✅ СТИЛЬ ДЛЯ ЗАЧЕРКНУТОЙ СТОИМОСТИ */
+    .strikethrough {
+        text-decoration: line-through;
+        color: #999;
+    }
+
     .rating-stars-input {
         display: flex;
         flex-direction: row-reverse;
@@ -177,9 +222,19 @@
     }
 </style>
 {% endblock %}
-
 {% block content %}
+    <!-- КРУПНЫЙ СТАТУС УРОКА -->
+    <div class="status-badge-large status-{{ lesson.status }}-large" style="font-size: 2.5rem; padding: 30px; text-align: center;">
+        {% if lesson.status == 'scheduled' %}🔵 Урок запланирован
+        {% elif lesson.status == 'completed' %}🟢 Урок проведен
+        {% elif lesson.status == 'cancelled' %}🔴 Урок отменен
+        {% elif lesson.status == 'overdue' %}🟠 Просрочено
+        {% elif lesson.status == 'rescheduled' %}🟡 Урок перенесен
+        {% elif lesson.status == 'no_show' %}⚪ Учащийся не явился
+        {% endif %}
+    </div>
 <div class="container mt-4">
+
     <!-- Заголовок урока -->
     <div class="lesson-header">
         <div class="row align-items-center">
@@ -195,6 +250,8 @@
                         {% elif lesson.status == 'completed' %}Проведено
                         {% elif lesson.status == 'cancelled' %}Отменено
                         {% elif lesson.status == 'overdue' %}Просрочено
+                        {% elif lesson.status == 'rescheduled' %}Перенесено
+                        {% elif lesson.status == 'no_show' %}Неявка
                         {% endif %}
                     </span>
                 </p>
@@ -208,7 +265,6 @@
             </div>
         </div>
     </div>
-
     <div class="row">
         <!-- Левая колонка -->
         <div class="col-md-4">
@@ -229,115 +285,124 @@
                     {% endfor %}
                 </p>
             </div>
-
-            <!-- Информация об уроке -->
+            <!-- Информация об уроке (МОДИФИЦИРОВАНО) -->
             <div class="info-card">
                 <h5><i class="fa fa-info-circle"></i> Информация</h5>
                 <table class="table table-sm table-borderless">
-                    <tr><td><strong>Предмет:</strong></td><td>{{ lesson.subject.name }}</td></tr>
-                    <tr><td><strong>Стоимость:</strong></td><td>{{ attendance.cost }} ₽</td></tr>
-                    <tr><td><strong>Дата:</strong></td><td>{{ lesson.date|date:"d.m.Y" }}</td></tr>
-                    <tr><td><strong>Время:</strong></td><td>{{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}</td></tr>
+                    <tr>
+                        <td><strong>Предмет:</strong></td>
+                        <td>{{ lesson.subject.name }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Стоимость:</strong></td>
+                        <td>
+                            {% if lesson.status == 'completed' or lesson.status == 'scheduled' %}
+                            <span class="font-weight-bold">{{ attendance.cost }} ₽</span>
+                            {% else %}
+                            <span class="strikethrough">{{ attendance.cost }} ₽</span>
+                            <span class="badge badge-secondary ml-2">не оплачивается</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Дата:</strong></td>
+                        <td>{{ lesson.date|date:"d.m.Y" }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Время:</strong></td>
+                        <td>{{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}</td>
+                    </tr>
                 </table>
             </div>
-
             <!-- ВИДЕО-ЗВОНОК JITSI ДЛЯ УЧЕНИКА -->
             {% if lesson.status == 'scheduled' %}
             <div class="info-card">
                 <h5><i class="fa fa-video-camera"></i> Видео-урок</h5>
-
                 {% if lesson.video_room %}
-                    <!-- Комната создана учителем -->
-                    <div class="alert alert-success">
-                        <i class="fa fa-check-circle"></i> Учитель создал комнату для урока!
-                    </div>
-
-                    {% with room_name="plusprogress-"|add:lesson.id|stringformat:"s"|add:"-"|add:lesson.video_room %}
-                        <a href="https://meet.jit.si/{{ room_name }}#userInfo.displayName={{ request.user.get_full_name|urlencode }}&userInfo.email={{ request.user.email|urlencode }}&config.startWithAudioMuted=false"
-                           target="_blank"
-                           class="btn-video">
-                            <i class="fa fa-video-camera"></i> Присоединиться к уроку
-                        </a>
-
-                        <div class="video-note text-left mt-3">
-                            <p><i class="fa fa-info-circle text-primary"></i> <strong>Важно:</strong></p>
-                            <ul class="pl-3 mb-0">
-                                <li>Вы войдете под своим именем: <strong>{{ request.user.get_full_name }}</strong></li>
-                                <li>Если учитель еще не зашел, подождите его в комнате</li>
-                            </ul>
-                        </div>
-                    {% endwith %}
+                <!-- Комната создана учителем -->
+                <div class="alert alert-success">
+                    <i class="fa fa-check-circle"></i> Учитель создал комнату для урока!
+                </div>
+                {% with room_name="plusprogress-"|add:lesson.id|stringformat:"s"|add:"-"|add:lesson.video_room %}
+                <a href="https://meet.jit.si/{{ room_name }}#userInfo.displayName={{ request.user.get_full_name|urlencode }}&userInfo.email={{ request.user.email|urlencode }}&config.startWithAudioMuted=false"
+                   target="_blank"
+                   class="btn-video">
+                    <i class="fa fa-video-camera"></i> Присоединиться к уроку
+                </a>
+                <div class="video-note text-left mt-3">
+                    <p><i class="fa fa-info-circle text-primary"></i> <strong>Важно:</strong></p>
+                    <ul class="pl-3 mb-0">
+                        <li>Вы войдете под своим именем: <strong>{{ request.user.get_full_name }}</strong></li>
+                        <li>Если учитель еще не зашел, подождите его в комнате</li>
+                    </ul>
+                </div>
+                {% endwith %}
                 {% else %}
-                    <!-- Комната еще не создана -->
-                    <div class="waiting-room">
-                        <i class="fa fa-clock fa-2x text-warning mb-2"></i>
-                        <h6>Ожидание создания комнаты</h6>
-                        <p class="mb-0">Учитель еще не создал комнату для урока. Ссылка появится здесь, как только учитель начнет урок.</p>
+                <!-- Комната еще не создана -->
+                <div class="waiting-room">
+                    <i class="fa fa-clock fa-2x text-warning mb-2"></i>
+                    <h6>Ожидание создания комнаты</h6>
+                    <p class="mb-0">Учитель еще не создал комнату для урока. Ссылка появится здесь, как только учитель
+                        начнет урок.</p>
+                </div>
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Ожидание...</span>
                     </div>
-
-                    <div class="text-center">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="sr-only">Ожидание...</span>
-                        </div>
-                        <p class="mt-2 text-muted">Ожидаем учителя...</p>
-                    </div>
-
-                    <!-- Автообновление страницы каждые 30 секунд -->
-                    <script>
-                        setTimeout(function() {
-                            location.reload();
-                        }, 30000);
-                    </script>
+                    <p class="mt-2 text-muted">Ожидаем учителя...</p>
+                </div>
+                <!-- Автообновление страницы каждые 30 секунд -->
+                <script>
+                    setTimeout(function() {
+                        location.reload();
+                    }, 30000);
+                </script>
                 {% endif %}
             </div>
             {% endif %}
         </div>
-
         <!-- Правая колонка -->
         <div class="col-md-8">
             <!-- Состав группы -->
             <div class="info-card">
                 <h5 class="section-title"><i class="fa fa-users"></i> Участники урока</h5>
-
                 <div class="students-list">
                     {% for student_attendance in attendances %}
-                        <div class="student-item {% if student_attendance.student.user == request.user %}current-user{% endif %}">
-                            {% if student_attendance.student.user.photo %}
-                                <img src="{{ student_attendance.student.user.photo.url }}" class="student-photo-small" alt="">
-                            {% else %}
-                                <div class="student-photo-small bg-secondary d-flex align-items-center justify-content-center">
-                                    <i class="fa fa-user fa-lg text-white"></i>
-                                </div>
-                            {% endif %}
-                            <div class="student-info">
-                                <div class="student-name">
-                                    {{ student_attendance.student.user.get_full_name }}
-                                    {% if student_attendance.student.user == request.user %}
-                                        <span class="badge badge-primary ml-2">Это вы</span>
-                                    {% endif %}
-                                </div>
-                                <div class="student-status">
-                                    {% if lesson.status == 'completed' %}
-                                        <span class="badge badge-success">Присутствовал</span>
-                                    {% else %}
-                                        <span class="badge badge-info">Зарегистрирован</span>
-                                    {% endif %}
-                                </div>
+                    <div class="student-item {% if student_attendance.student.user == request.user %}current-user{% endif %}">
+                        {% if student_attendance.student.user.photo %}
+                        <img src="{{ student_attendance.student.user.photo.url }}" class="student-photo-small" alt="">
+                        {% else %}
+                        <div class="student-photo-small bg-secondary d-flex align-items-center justify-content-center">
+                            <i class="fa fa-user fa-lg text-white"></i>
+                        </div>
+                        {% endif %}
+                        <div class="student-info">
+                            <div class="student-name">
+                                {{ student_attendance.student.user.get_full_name }}
+                                {% if student_attendance.student.user == request.user %}
+                                <span class="badge badge-primary ml-2">Это вы</span>
+                                {% endif %}
+                            </div>
+                            <div class="student-status">
+                                {% if lesson.status == 'completed' %}
+                                <span class="badge badge-success">Присутствовал</span>
+                                {% else %}
+                                <span class="badge badge-info">Зарегистрирован</span>
+                                {% endif %}
                             </div>
                         </div>
+                    </div>
                     {% empty %}
-                        <p class="text-muted">Нет участников</p>
+                    <p class="text-muted">Нет участников</p>
                     {% endfor %}
                 </div>
-
                 {% if attendances.count > 1 %}
-                    <div class="alert alert-info mt-3">
-                        <i class="fa fa-info-circle"></i>
-                        Всего участников: <strong>{{ attendances.count }}</strong>
-                    </div>
+                <div class="alert alert-info mt-3">
+                    <i class="fa fa-info-circle"></i>
+                    Всего участников: <strong>{{ attendances.count }}</strong>
+                </div>
                 {% endif %}
             </div>
-
             {% if lesson.status == 'completed' and lesson.report %}
             <!-- Отчет -->
             <div class="info-card">
@@ -347,7 +412,6 @@
                 <p><strong>ДЗ:</strong> {{ lesson.report.homework }}</p>
                 <p><strong>Прогресс:</strong> {{ lesson.report.student_progress }}</p>
             </div>
-
             <!-- Оценка -->
             <div class="info-card">
                 <h5><i class="fa fa-star"></i> Оценка</h5>
@@ -355,7 +419,7 @@
                 <div class="text-center">
                     <div class="rating-stars mb-3">
                         {% for i in "12345"|make_list %}
-                            {% if forloop.counter <= lesson.feedback.rating %}★{% else %}☆{% endif %}
+                        {% if forloop.counter <= lesson.feedback.rating %}★{% else %}☆{% endif %}
                         {% endfor %}
                     </div>
                     {% if lesson.feedback.comment %}
@@ -387,34 +451,33 @@
         </div>
     </div>
 </div>
-
 <!-- Скрипт для звездочек -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const labels = document.querySelectorAll('.rating-stars-input label');
-    labels.forEach(label => {
-        label.addEventListener('mouseover', function() {
-            let val = this.getAttribute('for').replace('star', '');
-            labels.forEach(l => l.style.color = '#ddd');
-            for(let i = 5; i >= val; i--) {
-                let l = document.querySelector(`label[for="star${i}"]`);
-                if(l) l.style.color = '#ffd700';
-            }
-        });
-        label.addEventListener('mouseout', function() {
-            let checked = document.querySelector('input[name="rating"]:checked');
-            if(checked) {
-                let val = checked.value;
+    document.addEventListener('DOMContentLoaded', function() {
+        const labels = document.querySelectorAll('.rating-stars-input label');
+        labels.forEach(label => {
+            label.addEventListener('mouseover', function() {
+                let val = this.getAttribute('for').replace('star', '');
                 labels.forEach(l => l.style.color = '#ddd');
                 for(let i = 5; i >= val; i--) {
                     let l = document.querySelector(`label[for="star${i}"]`);
                     if(l) l.style.color = '#ffd700';
                 }
-            } else {
-                labels.forEach(l => l.style.color = '#ddd');
-            }
+            });
+            label.addEventListener('mouseout', function() {
+                let checked = document.querySelector('input[name="rating"]:checked');
+                if(checked) {
+                    let val = checked.value;
+                    labels.forEach(l => l.style.color = '#ddd');
+                    for(let i = 5; i >= val; i--) {
+                        let l = document.querySelector(`label[for="star${i}"]`);
+                        if(l) l.style.color = '#ffd700';
+                    }
+                } else {
+                    labels.forEach(l => l.style.color = '#ddd');
+                }
+            });
         });
     });
-});
 </script>
 {% endblock %}

@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
+
 {% block title %}Урок {{ lesson.subject.name }} - {{ lesson.date }}{% endblock %}
+
 {% block extra_css %}
 <style>
     .lesson-header {
@@ -66,6 +68,51 @@
     .status-completed { background: #d4edda; color: #155724; }
     .status-cancelled { background: #f8d7da; color: #721c24; }
     .status-overdue { background: #fff3cd; color: #856404; }
+
+    /* ⚡ СТИЛИ ДЛЯ КРУПНОГО СТАТУСА ⚡ */
+    .status-badge-large {
+        font-size: 2.5rem;
+        font-weight: 900;
+        padding: 30px;
+        border-radius: 60px;
+        text-align: center;
+        margin-bottom: 30px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        border: 4px solid;
+    }
+    .status-scheduled-large {
+        background: #cce5ff;
+        color: #004085;
+        border-color: #004085;
+    }
+    .status-completed-large {
+        background: #d4edda;
+        color: #155724;
+        border-color: #155724;
+    }
+    .status-cancelled-large {
+        background: #f8d7da;
+        color: #721c24;
+        border-color: #721c24;
+    }
+    .status-overdue-large {
+        background: #fff3cd;
+        color: #856404;
+        border-color: #856404;
+    }
+    .status-rescheduled-large {
+        background: #fff3cd;
+        color: #856404;
+        border-color: #856404;
+    }
+    .status-no_show-large {
+        background: #e2e3e5;
+        color: #383d41;
+        border-color: #383d41;
+    }
+
     .info-row {
         display: flex;
         justify-content: space-between;
@@ -176,7 +223,19 @@
     }
 </style>
 {% endblock %}
+
 {% block content %}
+<!-- ⚡ КРУПНЫЙ СТАТУС УРОКА ⚡ -->
+<div class="status-badge-large status-{{ lesson.status }}-large" style="font-size: 2.5rem; padding: 30px; text-align: center;">
+    {% if lesson.status == 'scheduled' %}🔵 Урок запланирован
+    {% elif lesson.status == 'completed' %}🟢 Урок проведен
+    {% elif lesson.status == 'cancelled' %}🔴 Урок отменен
+    {% elif lesson.status == 'overdue' %}🟠 Просрочено
+    {% elif lesson.status == 'rescheduled' %}🟡 Урок перенесен
+    {% elif lesson.status == 'no_show' %}⚪ Учащийся не явился
+    {% endif %}
+</div>
+
 <div class="container mt-4">
     <!-- Заголовок урока -->
     <div class="lesson-header">
@@ -185,9 +244,7 @@
                 <h1>{{ lesson.subject.name }}</h1>
                 <p class="mb-2">
                     <i class="fa fa-calendar"></i> {{ lesson.date|date:"d.m.Y" }}
-                    <i class="fa fa-clock ml-3"></i> <!--
-    --> {{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}<!--
-    -->
+                    <i class="fa fa-clock ml-3"></i> {{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}
                 </p>
                 <p class="mb-0">
                     <span class="badge status-{{ lesson.status }} status-badge">
@@ -195,6 +252,8 @@
                         {% elif lesson.status == 'completed' %}Проведено
                         {% elif lesson.status == 'cancelled' %}Отменено
                         {% elif lesson.status == 'overdue' %}Просрочено
+                        {% elif lesson.status == 'rescheduled' %}Перенесено
+                        {% elif lesson.status == 'no_show' %}Неявка
                         {% endif %}
                     </span>
                 </p>
@@ -209,65 +268,61 @@
             </div>
         </div>
     </div>
+
     <div class="row">
         <!-- Левая колонка - информация об учениках и финансах -->
         <div class="col-md-4">
-            <!-- Карточки учеников -->
-            <div class="info-card">
-                <h5><i class="fa fa-users"></i> Ученики</h5>
-                {% for attendance in attendances %}
-                <div class="student-item">
-                    <div class="row">
-                        <div class="col-3">
-                            {% if attendance.student.user.photo %}
-                            <img src="{{ attendance.student.user.photo.url }}" class="student-photo"
-                                 style="width: 50px; height: 50px;" alt="">
-                            {% else %}
-                            <div class="student-photo bg-secondary d-flex align-items-center justify-content-center"
-                                 style="width: 50px; height: 50px;">
-                                <i class="fa fa-user fa-2x text-white"></i>
-                            </div>
-                            {% endif %}
-                        </div>
-                        <div class="col-9">
-                            <h6>{{ attendance.student.user.get_full_name }}</h6>
-                            <p class="small text-muted mb-1">
-                                <i class="fa fa-envelope"></i> {{ attendance.student.user.email|truncatechars:20 }}
-                            </p>
-                            <div class="info-row">
-                                <!--                                <span class="info-label">Стоимость:</span>
-                                                                <span class="info-value">{{ attendance.cost }} ₽</span>-->
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">Статус:</span>
-                                <span class="badge badge-{% if attendance.status == 'attended' %}success{% else %}warning{% endif %}">
-                                    {{ attendance.get_status_display }}
-                                </span>
-                            </div>
-                            <!--                            <div class="info-row">
-                                                            <span class="info-label">Баланс кошелька ученика:</span>
-                                                            <span class="info-value {% if attendance.student.user.balance < attendance.cost %}text-danger{% endif %}">
-                                                                {{ attendance.student.user.balance|floatformat:0 }} ₽
-                                                            </span>
-                                                        </div>-->
-                        </div>
-                    </div>
+<!-- Карточки учеников -->
+<div class="info-card">
+    <h5><i class="fa fa-users"></i> Ученики</h5>
+    {% for attendance in attendances %}
+    <div class="student-item">
+        <div class="row">
+            <div class="col-3">
+                {% if attendance.student.user.photo %}
+                <img src="{{ attendance.student.user.photo.url }}" class="student-photo"
+                     style="width: 50px; height: 50px;" alt="">
+                {% else %}
+                <div class="student-photo bg-secondary d-flex align-items-center justify-content-center"
+                     style="width: 50px; height: 50px;">
+                    <i class="fa fa-user fa-2x text-white"></i>
                 </div>
-                {% empty %}
-                <p class="text-muted">Нет учеников</p>
-                {% endfor %}
-                <!-- Итого по финансам -->
-                <div class="total-cost">
-                    <div class="info-row">
-                        <!--<span class="info-label">Общая стоимость:</span>-->
-                        <!--<span class="info-value">{{ total_cost }} ₽</span>-->
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Ваш гонорар:</span>
-                        <span class="info-value payment-positive">{{ teacher_payment }} ₽</span>
-                    </div>
+                {% endif %}
+            </div>
+            <div class="col-9">
+                <h6>{{ attendance.student.user.get_full_name }}</h6>
+                <p class="small text-muted mb-1">
+                    <i class="fa fa-envelope"></i> {{ attendance.student.user.email|truncatechars:20 }}
+                </p>
+                <!-- ТОЛЬКО СТАТУС УЧЕНИКА -->
+                <div class="info-row">
+                    <span class="info-label">Статус:</span>
+                    <span class="badge badge-{% if attendance.status == 'attended' %}success{% else %}warning{% endif %}">
+                        {{ attendance.get_status_display }}
+                    </span>
                 </div>
             </div>
+        </div>
+    </div>
+    {% empty %}
+    <p class="text-muted">Нет учеников</p>
+    {% endfor %}
+
+    <!-- ТОЛЬКО ВАШ ГОНОРАР (без стоимости учеников) -->
+    <div class="total-cost">
+        <div class="info-row">
+            <span class="info-label">Ваш гонорар:</span>
+            <span class="info-value payment-positive">
+                {% if lesson.status == 'completed' or lesson.status == 'scheduled' %}
+                    {{ finance.teacher_payment }} ₽
+                {% else %}
+                    <span class="badge badge-secondary">не выплачивается</span>
+                {% endif %}
+            </span>
+        </div>
+    </div>
+</div>
+
             <!-- ВИДЕО-ЗВОНОК JITSI -->
             {% if lesson.status == 'scheduled' %}
             <div class="info-card">
@@ -331,6 +386,7 @@
                 {% endif %}
             </div>
             {% endif %}
+
             <!-- Кнопка завершения урока -->
             {% if lesson.status == 'scheduled' %}
             <div class="info-card">
@@ -340,6 +396,7 @@
                 </button>
             </div>
             {% endif %}
+
             <!-- Предыдущие уроки -->
             {% if previous_lessons %}
             <div class="info-card">
@@ -360,6 +417,7 @@
             </div>
             {% endif %}
         </div>
+
         <!-- Правая колонка - информация об уроке и отчет -->
         <div class="col-md-8">
             {% if lesson.status == 'completed' and lesson.report %}
@@ -391,6 +449,7 @@
                 </div>
             </div>
             {% endif %}
+
             {% elif lesson.status == 'scheduled' %}
             <!-- Запланированный урок -->
             <div class="info-card">
@@ -405,6 +464,7 @@
                 {% if lesson.format %}
                 <p><i class="fa fa-tag"></i> <strong>Формат:</strong> {{ lesson.format.name }}</p>
                 {% endif %}
+
                 {% if lesson.notes %}
                 <hr>
                 <p><strong>Заметки:</strong><br>{{ lesson.notes }}</p>
@@ -414,6 +474,7 @@
         </div>
     </div>
 </div>
+
 <!-- Простое модальное окно (без Bootstrap) -->
 <div id="simpleModal"
      style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; z-index: 999999; border-radius: 10px; box-shadow: 0 5px 30px rgba(0,0,0,0.3); width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto;">
@@ -498,6 +559,7 @@
         </div>
     </form>
 </div>
+
 <!-- Скрипты -->
 <script>
     function getCookie(name) {
@@ -557,10 +619,9 @@
         }, 2000);
     }
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Никакого confirm - просто отправляем форму
-    // Модальное окно само по себе уже подтверждение
-});
+    document.addEventListener('DOMContentLoaded', function() {
+        // Никакого confirm - просто отправляем форму
+        // Модальное окно само по себе уже подтверждение
     });
 </script>
 {% endblock %}

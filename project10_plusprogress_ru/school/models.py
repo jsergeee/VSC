@@ -141,31 +141,66 @@ class Teacher(models.Model):
         return self.user.get_full_name()
 
 
-def get_available_slots(self, date):
-    """Возвращает доступные временные слоты учителя на указанную дату"""
-    schedules = Schedule.objects.filter(
-        teacher=self,
-        date=date,  # Фильтруем по конкретной дате
-        is_active=True
-    )
 
-    available_slots = []
-    for schedule in schedules:
-        existing_lessons = Lesson.objects.filter(
+    def get_available_slots(self, date):
+        """Возвращает доступные временные слоты учителя на указанную дату"""
+        schedules = Schedule.objects.filter(
             teacher=self,
-            date=date,
-            start_time=schedule.start_time,
-            status__in=['scheduled', 'completed']
+            date=date,  # Фильтруем по конкретной дате
+            is_active=True
         )
 
-        if not existing_lessons.exists():
-            available_slots.append({
-                'start': schedule.start_time,
-                'end': schedule.end_time,
-                'schedule_id': schedule.id
-            })
+        available_slots = []
+        for schedule in schedules:
+            existing_lessons = Lesson.objects.filter(
+                teacher=self,
+                date=date,
+                start_time=schedule.start_time,
+                status__in=['scheduled', 'completed']
+            )
 
-    return available_slots
+            if not existing_lessons.exists():
+                available_slots.append({
+                    'start': schedule.start_time,
+                    'end': schedule.end_time,
+                    'schedule_id': schedule.id
+                })
+
+        return available_slots
+
+    def get_teacher_earnings(self, start_date=None, end_date=None):
+        """Возвращает статистику по заработку учителя за период"""
+        from django.db.models import Sum
+        from .models import Payment
+
+        payments = Payment.objects.filter(
+            user=self.user,
+            payment_type='teacher_payment'
+        )
+
+        salaries = Payment.objects.filter(
+            user=self.user,
+            payment_type='teacher_salary'
+        )
+
+        if start_date:
+            payments = payments.filter(created_at__date__gte=start_date)
+            salaries = salaries.filter(created_at__date__gte=start_date)
+        if end_date:
+            payments = payments.filter(created_at__date__lte=end_date)
+            salaries = salaries.filter(created_at__date__lte=end_date)
+
+        total_payments = payments.aggregate(Sum('amount'))['amount__sum'] or 0
+        total_salaries = salaries.aggregate(Sum('amount'))['amount__sum'] or 0
+
+        return {
+            'total_payments': float(total_payments),
+            'total_salaries': float(total_salaries),
+            'net_income': float(total_payments - total_salaries),  # Чистый доход
+            'payments_count': payments.count(),
+            'salaries_count': salaries.count(),
+        }
+
 
 
 class Student(models.Model):
@@ -322,6 +357,8 @@ class LessonFormat(models.Model):
     def get_teacher_notes(self):
         """Возвращает заметки учителей об этом ученике"""
         return self.notes.all()
+
+
 
 
 class Schedule(models.Model):
@@ -810,7 +847,7 @@ class Payment(models.Model):
     PAYMENT_TYPE_CHOICES = (
         ('income', 'Пополнение'),
         ('expense', 'Списание'),
-        ('teacher_payment', 'Выплата учителю'),
+        ('teacher_payment', 'Начисление учителю', 'Зарплата учителя'),
     )
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payments', verbose_name='Пользователь')
@@ -830,20 +867,29 @@ class Payment(models.Model):
         return f"{self.get_payment_type_display()} - {self.amount} руб."
 
 
-class TrialRequest(models.Model):
-    name = models.CharField('Имя', max_length=100)
-    email = models.EmailField('Email')
-    phone = models.CharField('Телефон', max_length=20)
-    subject = models.CharField('Предмет', max_length=50)
-    created_at = models.DateTimeField('Дата заявки', auto_now_add=True)
-    is_processed = models.BooleanField('Обработано', default=False)
+class Payment(models.Model):
+    PAYMENT_TYPE_CHOICES = (
+        ('income', 'Пополнение'),
+        ('expense', 'Списание'),
+        ('teacher_payment', 'Начисление учителю'),  # ← Убрал второе значение
+        ('teacher_salary', 'Зарплата учителя'),     # ← Добавил отдельную строку
+    )
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payments', verbose_name='Пользователь')
+    amount = models.DecimalField('Сумма', max_digits=10, decimal_places=2)
+    payment_type = models.CharField('Тип', max_length=20, choices=PAYMENT_TYPE_CHOICES)
+    description = models.CharField('Описание', max_length=200)
+    lesson = models.ForeignKey(Lesson, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Занятие')
+
+    created_at = models.DateTimeField('Дата', auto_now_add=True)
 
     class Meta:
-        verbose_name = 'Заявка на пробный урок'
-        verbose_name_plural = 'Заявки на пробный урок'
+        verbose_name = 'Платеж'
+        verbose_name_plural = 'Платежи'
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.name} - {self.subject}"
+        return f"{self.get_payment_type_display()} - {self.amount} руб."
 
 
 class Material(models.Model):
@@ -1337,7 +1383,7 @@ class GroupLesson(models.Model):
     )
     base_price = models.DecimalField('Базовая стоимость', max_digits=10, decimal_places=2,
                                      help_text='Для per_student: цена за одного, для fixed: цена за всю группу')
-    teacher_payment = models.DecimalField('Выплата учителю', max_digits=10, decimal_places=2,
+    teacher_payment = models.DecimalField('Начисление учителю', max_digits=10, decimal_places=2,
                                           help_text='Базовая выплата (может корректироваться в зависимости от числа учеников)')
 
     meeting_link = models.URLField('Ссылка на занятие', blank=True)
@@ -1745,7 +1791,7 @@ class StudentSubjectPrice(models.Model):
         help_text='Сколько платит ученик'
     )
     teacher_payment = models.DecimalField(
-        'Выплата учителю',
+        'Начисление учителю',
         max_digits=10,
         decimal_places=2,
         help_text='Сколько получает учитель'
@@ -1796,3 +1842,21 @@ class StudentSubjectPrice(models.Model):
             return price.cost, price.teacher_payment
         except cls.DoesNotExist:
             return None, None
+
+
+class TrialRequest(models.Model):
+    """Заявка на пробный урок"""
+    name = models.CharField('Имя', max_length=100)
+    email = models.EmailField('Email')
+    phone = models.CharField('Телефон', max_length=20)
+    subject = models.CharField('Предмет', max_length=50)
+    created_at = models.DateTimeField('Дата заявки', auto_now_add=True)
+    is_processed = models.BooleanField('Обработано', default=False)
+
+    class Meta:
+        verbose_name = 'Заявка на пробный урок'
+        verbose_name_plural = 'Заявки на пробный урок'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name} - {self.subject}"

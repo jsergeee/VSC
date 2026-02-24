@@ -1,0 +1,62 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div id="content-main">
+    <!-- Фильтр по периоду -->
+    <div class="module" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+        <h3>Фильтр по периоду</h3>
+        <form method="get" class="form-inline">
+            <!-- Сохраняем существующие параметры -->
+            {% for key, value in request.GET.items %}
+                {% if key != 'start_date' and key != 'end_date' and key != 'e' %}
+                    <input type="hidden" name="{{ key }}" value="{{ value }}">
+                {% endif %}
+            {% endfor %}
+
+            <div style="display: flex; gap: 15px; align-items: flex-end;">
+                <div>
+                    <label>Дата с:</label>
+                    <input type="date" name="start_date" value="{{ start_date|default:'' }}" class="vTextField">
+                </div>
+                <div>
+                    <label>Дата по:</label>
+                    <input type="date" name="end_date" value="{{ end_date|default:'' }}" class="vTextField">
+                </div>
+                <div>
+                    <button type="submit" class="button" style="background: #417690; color: white;">Применить</button>
+                    <a href="{% url 'admin:school_teacher_changelist' %}" class="button" style="background: #6c757d;">Сброс</a>
+                </div>
+            </div>
+        </form>
+
+        {% if teachers_data %}
+        <div style="margin-top: 20px;">
+            <h4>Статистика за период {{ start_date }} - {{ end_date }}</h4>
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <th style="padding: 8px; border-bottom: 2px solid #dee2e6;">Учитель</th>
+                        <th style="padding: 8px; border-bottom: 2px solid #dee2e6;">Всего выплат</th>
+                        <th style="padding: 8px; border-bottom: 2px solid #dee2e6;">Выплачено зарплаты</th>
+                        <th style="padding: 8px; border-bottom: 2px solid #dee2e6;">Чистый доход</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in teachers_data %}
+                    <tr>
+                        <td style="padding: 8px;">{{ item.teacher.user.get_full_name }}</td>
+                        <td style="padding: 8px; color: #28a745;">{{ item.earnings.total_payments|floatformat:2 }} ₽</td>
+                        <td style="padding: 8px; color: #ffc107;">{{ item.earnings.total_salaries|floatformat:2 }} ₽</td>
+                        <td style="padding: 8px; font-weight: bold; color: #17a2b8;">{{ item.earnings.net_income|floatformat:2 }} ₽</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    {{ block.super }}
+</div>
+{% endblock %}
