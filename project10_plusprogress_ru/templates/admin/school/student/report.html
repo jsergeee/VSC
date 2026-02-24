@@ -173,6 +173,15 @@
         color: #999;
         font-style: italic;
     }
+
+    /* ✅ СТИЛИ ДЛЯ БАЛАНСА */
+    .balance-positive {
+        color: #28a745 !important;
+    }
+
+    .balance-negative {
+        color: #dc3545 !important;
+    }
 </style>
 {% endblock %}
 
@@ -190,20 +199,16 @@
     <!-- Краткая статистика -->
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-value">{{ attended_lessons }}</div>
-            <div class="stat-label">Оплачено занятий</div>
-        </div>
-        <div class="stat-card">
             <div class="stat-value">{{ total_attended_cost|floatformat:2 }} ₽</div>
-            <div class="stat-label">Оплачено</div>
+            <div class="stat-label">Списано за проведенные занятия</div>
         </div>
+        <!-- ✅ БЛОК С БАЛАНСОМ -->
         <div class="stat-card">
-            <div class="stat-value">{{ debt_lessons }}</div>
-            <div class="stat-label">Занятий в долг</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value">{{ total_debt_cost|floatformat:2 }} ₽</div>
-            <div class="stat-label">Задолженность</div>
+            <div
+                class="stat-value {% if student.user.balance < 0 %}balance-negative{% else %}balance-positive{% endif %}">
+                {{ student.user.balance|floatformat:2 }} ₽
+            </div>
+            <div class="stat-label">Текущий баланс</div>
         </div>
     </div>
 

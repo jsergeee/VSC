@@ -24,7 +24,9 @@ class User(AbstractUser):
     phone = models.CharField('Телефон', max_length=20, blank=True)
     photo = models.ImageField('Фото', upload_to='users/', null=True, blank=True)
     patronymic = models.CharField('Отчество', max_length=50, blank=True)
-    # balance = models.DecimalField('Баланс', max_digits=10, decimal_places=2, default=0)
+    
+    # ✅ РАСКОММЕНТИРУЕМ поле баланса
+    balance = models.DecimalField('Баланс', max_digits=10, decimal_places=2, default=0)
 
     # ✅ Добавляем значение по умолчанию
     is_email_verified = models.BooleanField(default=False)
@@ -62,9 +64,9 @@ class User(AbstractUser):
         """Разделяет полное имя на фамилию, имя и отчество"""
         parts = full_name.strip().split()
         if len(parts) >= 1:
-            self.last_name = parts[0]  # Исправлено: Фамилия должна быть первой
+            self.last_name = parts[0]
         if len(parts) >= 2:
-            self.first_name = parts[1]  # Исправлено: Имя должно быть второй
+            self.first_name = parts[1]
         if len(parts) >= 3:
             self.patronymic = ' '.join(parts[2:])
 
@@ -74,7 +76,6 @@ class User(AbstractUser):
         if self.patronymic:
             return f"{full_name} {self.patronymic}".strip()
         return full_name
-
 
 
 class EmailVerificationToken(models.Model):

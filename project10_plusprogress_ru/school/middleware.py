@@ -44,6 +44,35 @@ class EmailVerificationMiddleware:
             '/admin/',
         ]
 
+        # Отладка удалена!
+
+        if request.user.is_authenticated:
+            if not request.user.is_email_verified:
+                current_path = request.path
+                allowed = any(current_path.startswith(path) for path in allowed_paths)
+
+                if not allowed:
+                    messages.warning(
+                        request,
+                        'Пожалуйста, подтвердите ваш email для доступа к личному кабинету'
+                    )
+                    return redirect('resend_verification')
+
+        return self.get_response(request)
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Список разрешенных URL для неподтвержденных пользователей
+        allowed_paths = [
+            '/logout/',
+            '/login/',
+            '/register/',
+            '/resend-verification/',
+            '/verify-email/',
+            '/admin/',
+        ]
+
         print(f"\n📋 MIDDLEWARE CHECK:")
         print(f"   Path: {request.path}")
         print(f"   User authenticated: {request.user.is_authenticated}")
@@ -54,7 +83,7 @@ class EmailVerificationMiddleware:
             print(f"   From DB: {User.objects.get(id=request.user.id).is_email_verified}")
 
             if not request.user.is_email_verified:
-                print(f"   ❌ Email not verified")
+                
                 current_path = request.path
                 allowed = any(current_path.startswith(path) for path in allowed_paths)
                 print(f"   Path allowed: {allowed}")

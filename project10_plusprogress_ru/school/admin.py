@@ -11,6 +11,7 @@ from django.db import models
 from django.utils import timezone
 from datetime import datetime
 from django.db.models import Prefetch, Sum, Count
+from django.db import transaction
 
 from .models import (
     User, Subject, Teacher, Student, Lesson, LessonFormat,
@@ -915,6 +916,150 @@ class PaymentAdmin(admin.ModelAdmin):
         return '-'
     lesson_link.short_description = 'Урок'
 
+    # ⚡⚡⚡ МЕТОД ДЛЯ СОХРАНЕНИЯ (ОБНОВЛЕНИЕ БАЛАНСА) ⚡⚡⚡
+    def save_model(self, request, obj, form, change):
+        """Сохраняет платеж и обновляет баланс пользователя"""
+        # Сначала сохраняем платеж
+        super().save_model(request, obj, form, change)
+        
+        # Обновляем баланс в зависимости от типа платежа
+        if obj.payment_type == 'income':
+            # Пополнение счета ученика
+            obj.user.balance += obj.amount
+            obj.user.save()
+            
+            # Создаем уведомление о пополнении
+            Notification.objects.create(
+                user=obj.user,
+                title='💰 Пополнение баланса',
+                message=f'Ваш баланс пополнен на {obj.amount} ₽',
+                notification_type='payment_received',
+                link='/student/dashboard/'
+            )
+            
+        elif obj.payment_type == 'expense':
+            # Списание со счета ученика
+            obj.user.balance -= obj.amount
+            obj.user.save()
+            
+            # Создаем уведомление о списании
+            Notification.objects.create(
+                user=obj.user,
+                title='💸 Списание средств',
+                message=f'С вашего баланса списано {obj.amount} ₽',
+                notification_type='payment_withdrawn',
+                link='/student/dashboard/'
+            )
+            
+        elif obj.payment_type == 'teacher_payment':
+            # Выплата учителю
+            try:
+                teacher = obj.user.teacher_profile
+                teacher.wallet_balance += obj.amount
+                teacher.save()
+                
+                # Уведомление учителю
+                Notification.objects.create(
+                    user=obj.user,
+                    title='💰 Выплата начислена',
+                    message=f'Вам начислена выплата {obj.amount} ₽',
+                    notification_type='payment_received',
+                    link='/teacher/dashboard/'
+                )
+            except Teacher.DoesNotExist:
+                # Если у пользователя нет профиля учителя - просто логируем
+                print(f"⚠️ Пользователь {obj.user.username} не является учителем")
+
+    # ⚡⚡⚡ МЕТОД ДЛЯ УДАЛЕНИЯ ОДНОГО ПЛАТЕЖА ⚡⚡⚡
+    def delete_model(self, request, obj):
+        """При удалении платежа корректируем баланс"""
+        # Запоминаем данные до удаления
+        user = obj.user
+        amount = obj.amount
+        payment_type = obj.payment_type
+        description = obj.description
+        
+        # Корректируем баланс в зависимости от типа платежа
+        if payment_type == 'income':
+            # Если удаляем пополнение - уменьшаем баланс
+            user.balance -= amount
+            user.save()
+            
+            # Уведомление об удалении пополнения
+            Notification.objects.create(
+                user=user,
+                title='⚠️ Пополнение удалено',
+                message=f'Пополнение на {amount} ₽ "{description}" было удалено. Баланс скорректирован.',
+                notification_type='system',
+            )
+            
+        elif payment_type == 'expense':
+            # Если удаляем списание - увеличиваем баланс (возвращаем деньги)
+            user.balance += amount
+            user.save()
+            
+            # Уведомление об удалении списания
+            Notification.objects.create(
+                user=user,
+                title='⚠️ Списание отменено',
+                message=f'Списание {amount} ₽ "{description}" отменено. Деньги возвращены на баланс.',
+                notification_type='system',
+            )
+            
+        elif payment_type == 'teacher_payment':
+            # Для выплаты учителю - уменьшаем wallet_balance
+            try:
+                teacher = user.teacher_profile
+                teacher.wallet_balance -= amount
+                teacher.save()
+                
+                # Уведомление учителю
+                Notification.objects.create(
+                    user=user,
+                    title='⚠️ Выплата отменена',
+                    message=f'Выплата {amount} ₽ "{description}" была отменена. Баланс кошелька скорректирован.',
+                    notification_type='system',
+                )
+            except Teacher.DoesNotExist:
+                pass
+        
+        # Удаляем сам платеж
+        super().delete_model(request, obj)
+        
+        # Добавляем сообщение в админку
+        messages.success(request, f'✅ Платеж удален. Баланс пользователя {user.username} скорректирован.')
+
+# ⚡⚡⚡ ИСПРАВЛЕННЫЙ МЕТОД ДЛЯ МАССОВОГО УДАЛЕНИЯ ⚡⚡⚡
+def delete_queryset(self, request, queryset):
+    """При массовом удалении корректируем балансы"""
+    count = queryset.count()
+    
+    with transaction.atomic():
+        for obj in queryset:
+            # Для каждого платежа применяем ту же логику
+            user = obj.user
+            amount = obj.amount
+            payment_type = obj.payment_type
+            
+            if payment_type == 'income':
+                user.balance -= amount
+                user.save()
+            elif payment_type == 'expense':
+                user.balance += amount
+                user.save()
+            elif payment_type == 'teacher_payment':
+                try:
+                    teacher = user.teacher_profile
+                    teacher.wallet_balance -= amount
+                    teacher.save()
+                except Teacher.DoesNotExist:
+                    pass
+        
+        # Удаляем все платежи разом
+        super().delete_queryset(request, queryset)
+    
+    # ✅ ИСПРАВЛЕНО: передаем request в messages
+    self.message_user(request, f'✅ Удалено {count} платежей. Балансы пользователей скорректированы.', level='SUCCESS')
     actions = ['export_payments_excel']
 
     def export_payments_excel(self, request, queryset):
@@ -922,6 +1067,7 @@ class PaymentAdmin(admin.ModelAdmin):
         import openpyxl
         from openpyxl.styles import Font, Alignment, PatternFill
         from django.http import HttpResponse
+        from datetime import datetime
 
         wb = openpyxl.Workbook()
         ws = wb.active
@@ -959,7 +1105,7 @@ class PaymentAdmin(admin.ModelAdmin):
         wb.save(response)
         return response
     export_payments_excel.short_description = "📥 Экспорт платежей в Excel"
-
+    
 
 # ==================== SCHEDULE ADMIN ====================
 
@@ -1420,3 +1566,5 @@ admin.site.register(LessonFormat, LessonFormatAdmin)
 admin.site.site_header = 'Плюс Прогресс - Администрирование'
 admin.site.site_title = 'Плюс Прогресс'
 admin.site.index_title = 'Управление онлайн школой'
+
+

@@ -500,7 +500,7 @@ def dashboard(request):
 
 @login_required
 def student_dashboard(request):
-    """Личный кабинет ученика - РЕФАКТОРИНГ"""
+    """Личный кабинет ученика"""
     if request.user.role != 'student':
         messages.error(request, 'Доступ запрещен')
         return redirect('dashboard')
@@ -515,17 +515,45 @@ def student_dashboard(request):
     
     student.refresh_from_db()
     
-    # ИСПОЛЬЗУЕМ StudentFinanceHelper
-    finance_helper = StudentFinanceHelper(student)
+    # ✅ Баланс
+    balance = float(user.balance)
+    
+    # Статистика по урокам
+    attended_lessons = LessonAttendance.objects.filter(
+        student=student,
+        status='attended'
+    ).count()
+    
+    attended_cost = LessonAttendance.objects.filter(
+        student=student,
+        status='attended'
+    ).aggregate(Sum('cost'))['cost__sum'] or 0
+    
+    debt_lessons = LessonAttendance.objects.filter(
+        student=student,
+        status='debt'
+    ).count()
+    
+    debt_cost = LessonAttendance.objects.filter(
+        student=student,
+        status='debt'
+    ).aggregate(Sum('cost'))['cost__sum'] or 0
     
     teachers = student.teachers.all()
     recent_deposits = student.deposits.all()[:5]
     
-    upcoming_lessons = Lesson.objects.filter(
+    # ✅ ДЛЯ СПИСКА: ближайшие 10 уроков
+    upcoming_lessons_list = Lesson.objects.filter(
         attendance__student=student,
         date__gte=date.today(),
         status='scheduled'
     ).select_related('teacher__user', 'subject', 'format').distinct().order_by('date', 'start_time')[:10]
+    
+    # ✅ ДЛЯ КАЛЕНДАРЯ: ВСЕ уроки (без ограничений)
+    all_upcoming_lessons = Lesson.objects.filter(
+        attendance__student=student,
+        status='scheduled'  # Убрали фильтр по дате, чтобы были все запланированные
+    ).select_related('teacher__user', 'subject', 'format').distinct().order_by('date', 'start_time')
     
     past_lessons = Lesson.objects.filter(
         attendance__student=student,
@@ -543,33 +571,17 @@ def student_dashboard(request):
         submission__status='checked'
     ).select_related('teacher__user', 'subject').order_by('deadline')[:4]
     
-    context = {
-        'student': student,
-        'finance': {  # УНИФИЦИРОВАННЫЙ объект с финансами
-            'balance': float(finance_helper.balance),
-            'debt': float(finance_helper.debt),
-            'positive_balance': float(finance_helper.positive_balance),
-            'stats': finance_helper.get_lessons_stats(30)
-        },
-        'recent_deposits': recent_deposits,
-        'upcoming_lessons': upcoming_lessons,
-        'past_lessons': past_lessons,
-        'teachers': teachers,
-        'materials': materials,
-        'recent_homeworks': recent_homeworks,
-    }
-    
-    # Групповые уроки
+    # Групповые уроки для календаря
     group_lessons = GroupLesson.objects.filter(
         enrollments__student=student,
-        date__gte=date.today(),
-        status='scheduled'
+        status='scheduled'  # Убрали фильтр по дате
     ).select_related('teacher__user', 'subject')
     
     # Календарь
     calendar_events = []
     
-    for lesson in upcoming_lessons:
+    # ✅ Добавляем ВСЕ запланированные уроки
+    for lesson in all_upcoming_lessons:
         calendar_events.append({
             'title': f"{lesson.subject.name} - {lesson.teacher.user.last_name}",
             'start': f"{lesson.date}T{lesson.start_time}",
@@ -577,6 +589,7 @@ def student_dashboard(request):
             'url': f"/lesson/{lesson.id}/",
             'backgroundColor': '#007bff',
         })
+        print(f"✅ Добавлен урок: {lesson.date} - {lesson.subject.name}")  # Отладка
     
     for lesson in group_lessons:
         calendar_events.append({
@@ -587,9 +600,30 @@ def student_dashboard(request):
             'backgroundColor': '#9b59b6',
         })
     
-    context['calendar_events'] = calendar_events
+    # ✅ Отладка
+    print(f"\n📊 ВСЕГО ЗАПЛАНИРОВАННЫХ УРОКОВ: {all_upcoming_lessons.count()}")
+    print(f"📊 ВСЕГО ГРУППОВЫХ УРОКОВ: {group_lessons.count()}")
+    print(f"📅 СОЗДАНО СОБЫТИЙ КАЛЕНДАРЯ: {len(calendar_events)}")
+    
+    context = {
+        'student': student,
+        'balance': balance,
+        'attended_lessons': attended_lessons,
+        'attended_cost': float(attended_cost),
+        'debt_lessons': debt_lessons,
+        'debt_cost': float(debt_cost),
+        'recent_deposits': recent_deposits,
+        'upcoming_lessons': upcoming_lessons_list,  # Для списка
+        'past_lessons': past_lessons,
+        'teachers': teachers,
+        'materials': materials,
+        'recent_homeworks': recent_homeworks,
+        'calendar_events': calendar_events,  # Для календаря
+    }
     
     return render(request, 'school/student/dashboard.html', context)
+
+
 
 
 @login_required
@@ -884,17 +918,18 @@ def admin_complete_lesson(request, lesson_id):
                 student = attendance.student
                 user = student.user
                 
-                student_data = {
-                    'name': user.get_full_name(),
-                    'cost': float(attendance.cost),
-                    'teacher_payment': float(attendance.teacher_payment_share)
-                }
+                # ✅ ЗАПОМИНАЕМ БАЛАНС ДО СПИСАНИЯ
+                old_balance = float(user.balance)
                 
-                # УРОК ВСЕГДА СЧИТАЕТСЯ ПРОВЕДЕННЫМ
+                # ✅ СПИСЫВАЕМ ДЕНЬГИ С БАЛАНСА УЧЕНИКА
+                user.balance -= attendance.cost
+                user.save()
+                
+                # УРОК СЧИТАЕТСЯ ПРОВЕДЕННЫМ
                 attendance.status = 'attended'
                 attendance.save()
                 
-                # СОЗДАЕМ ЗАПИСЬ О ПЛАТЕЖЕ (для истории)
+                # СОЗДАЕМ ЗАПИСЬ О ПЛАТЕЖЕ
                 Payment.objects.create(
                     user=user,
                     amount=attendance.cost,
@@ -903,8 +938,17 @@ def admin_complete_lesson(request, lesson_id):
                     lesson=lesson
                 )
                 
-                student_data['debt'] = False
+                student_data = {
+                    'name': user.get_full_name(),
+                    'cost': float(attendance.cost),
+                    'teacher_payment': float(attendance.teacher_payment_share),
+                    'old_balance': old_balance,
+                    'new_balance': float(user.balance),
+                    'debt': False
+                }
                 processed_students.append(student_data)
+                
+                print(f"💰 Баланс ученика {user.username}: {old_balance} → {user.balance} (списано {attendance.cost})")
             
             # НАЧИСЛЯЕМ УЧИТЕЛЮ
             old_teacher_balance = lesson.teacher.wallet_balance
@@ -944,8 +988,7 @@ def admin_complete_lesson(request, lesson_id):
         print(f"❌ ОШИБКА: {e}")
         traceback.print_exc()
         messages.error(request, f'Ошибка: {str(e)}')
-        return redirect('admin:school_lesson_change', lesson_id) 
-    
+        return redirect('admin:school_lesson_change', lesson_id)
 
 @staff_member_required
 def admin_finance_dashboard(request):
@@ -2423,6 +2466,9 @@ def student_report(request, student_id):
     debt_lessons = debt_attendances.count()
     total_debt_cost = debt_attendances.aggregate(Sum('cost'))['cost__sum'] or 0
     
+    # ✅ ПОЛУЧАЕМ БАЛАНС УЧЕНИКА
+    student_balance = float(student.user.balance)
+    
     context = {
         'student': student,
         'dates': dates,
@@ -2432,6 +2478,7 @@ def student_report(request, student_id):
         'total_attended_cost': float(total_attended_cost),
         'debt_lessons': debt_lessons,
         'total_debt_cost': float(total_debt_cost),
+        'student_balance': student_balance,  # ✅ Добавлено
     }
     
     # Для отладки
@@ -2441,11 +2488,13 @@ def student_report(request, student_id):
     print(f"Сумма проведенных: {total_attended_cost}")
     print(f"Уроков в долг: {debt_lessons}")
     print(f"Сумма долга: {total_debt_cost}")
+    print(f"Баланс ученика: {student_balance}")  # ✅ Добавлено
     print(f"Предметы: {list(subjects)}")
     print(f"Даты: {[d.strftime('%d.%m.%Y') for d in dates]}")
     print(f"{'='*60}\n")
     
     return render(request, 'admin/school/student/report.html', context)
+
 
 
 @staff_member_required

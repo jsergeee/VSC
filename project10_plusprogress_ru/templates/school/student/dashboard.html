@@ -196,20 +196,19 @@
                                     <td>{{ homework.deadline|date:"d.m.Y" }}</td>
                                     <td>
                                         {% with status=homework.get_status %}
-                                            {% if status == 'pending' %}
-                                                <span class="badge badge-warning">⏳ Ожидает</span>
-                                            {% elif status == 'submitted' %}
-                                                <span class="badge badge-info">📤 На проверке</span>
-                                            {% elif status == 'checked' %}
-                                                <span class="badge badge-success">✅ Проверено</span>
-                                            {% elif status == 'overdue' %}
-                                                <span class="badge badge-danger">⚠️ Просрочено</span>
-                                            {% endif %}
+                                        {% if status == 'pending' %}
+                                        <span class="badge badge-warning">⏳ Ожидает</span>
+                                        {% elif status == 'submitted' %}
+                                        <span class="badge badge-info">📤 На проверке</span>
+                                        {% elif status == 'checked' %}
+                                        <span class="badge badge-success">✅ Проверено</span>
+                                        {% elif status == 'overdue' %}
+                                        <span class="badge badge-danger">⚠️ Просрочено</span>
+                                        {% endif %}
                                         {% endwith %}
                                     </td>
                                     <td>
-                                        <a href="{% url 'student_homework_detail' homework.id %}"
-                                           class="btn btn-sm btn-primary">
+                                        <a href="{% url 'student_homework_detail' homework.id %}" class="btn btn-sm btn-primary">
                                             <i class="fa fa-eye"></i>
                                         </a>
                                     </td>
@@ -241,8 +240,7 @@
                 <div class="col-md-6 col-lg-4 mb-4">
                     <div class="teacher-card">
                         {% if teacher.user.photo %}
-                        <img src="{{ teacher.user.photo.url }}" class="teacher-photo"
-                            alt="{{ teacher.user.get_full_name }}">
+                        <img src="{{ teacher.user.photo.url }}" class="teacher-photo" alt="{{ teacher.user.get_full_name }}">
                         {% else %}
                         <div class="teacher-photo bg-secondary d-flex align-items-center justify-content-center">
                             <i class="fa fa-user fa-4x text-white"></i>
@@ -265,15 +263,13 @@
                             <div class="mb-2">
                                 <span class="rating-stars">
                                     {% for i in "12345"|make_list %}
-                                        {% if forloop.counter <= teacher.rating_stats.average_rating %}★{% else %}☆{% endif %}
-                                    {% endfor %}
-                                </span>
-                                <small class="text-muted ml-1">({{ teacher.rating_stats.total_feedbacks }} оценок)</small>
+                                    {% if forloop.counter <= teacher.rating_stats.average_rating %}★{% else %}☆{% endif%} {% endfor %} </span>
+                                        <small class="text-muted ml-1">({{ teacher.rating_stats.total_feedbacks }}
+                                            оценок)</small>
                             </div>
                             {% endif %}
 
-                            <a href="#" class="btn btn-outline-primary btn-sm" data-toggle="modal"
-                                data-target="#teacherModal{{ teacher.id }}">
+                            <a href="#" class="btn btn-outline-primary btn-sm" data-toggle="modal" data-target="#teacherModal{{ teacher.id }}">
                                 Подробнее
                             </a>
                         </div>
@@ -312,11 +308,11 @@
                                         <div class="mb-3">
                                             <div class="rating-stars mb-2">
                                                 {% for i in "12345"|make_list %}
-                                                    {% if forloop.counter <= teacher.rating_stats.average_rating %}★{% else %}☆{% endif %}
-                                                {% endfor %}
-                                                <span class="ml-2">{{ teacher.rating_stats.average_rating|floatformat:1 }} / 5</span>
+                                                {% if forloop.counter <= teacher.rating_stats.average_rating %}★{% else %}☆{% endif %} {% endfor %} <span class="ml-2">{{
+                                                    teacher.rating_stats.average_rating|floatformat:1 }} / 5</span>
                                             </div>
-                                            <small class="text-muted">На основе {{ teacher.rating_stats.total_feedbacks }} оценок</small>
+                                            <small class="text-muted">На основе {{ teacher.rating_stats.total_feedbacks
+                                                }} оценок</small>
                                         </div>
                                         {% endif %}
                                     </div>
@@ -438,15 +434,13 @@
                                         Ваша оценка:
                                         <span class="rating-stars">
                                             {% for i in "12345"|make_list %}
-                                                {% if forloop.counter <= lesson.feedback.rating %}★{% else %}☆{% endif %}
-                                            {% endfor %}
+                                            {% if forloop.counter <= lesson.feedback.rating %}★{% else %}☆{% endif %} {% endfor %} </span>
                                         </span>
-                                    </span>
-                                    {% else %}
-                                    <span class="btn btn-sm btn-rating disabled">
-                                        <i class="fa fa-star"></i> Оценить урок
-                                    </span>
-                                    {% endif %}
+                                        {% else %}
+                                        <span class="btn btn-sm btn-rating disabled">
+                                            <i class="fa fa-star"></i> Оценить урок
+                                        </span>
+                                        {% endif %}
                                 </div>
                             </div>
 
@@ -500,35 +494,50 @@
                 slotMaxTime: '22:00:00',
                 allDaySlot: false,
                 events: [
-                    {% for lesson in upcoming_lessons %}
+                    // ✅ ВСЕ запланированные уроки
+                    {% for lesson in all_scheduled_lessons %}
                     {
-                        title: '{{ lesson.subject.name }} - {{ lesson.teacher.user.last_name }}',
-                        start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
-                        end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
-                        url: "{% url 'lesson_detail' lesson.id %}",
-                        backgroundColor: '#007bff',
-                        borderColor: '#007bff'
-                    },
-                    {% endfor %}
-                    {% for lesson in past_lessons %}
-                    {
-                        title: '{{ lesson.subject.name }} - {{ lesson.teacher.user.last_name }}',
-                        start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
-                        end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
+                    title: '{{ lesson.subject.name }} - {{ lesson.teacher.user.last_name }}',
+                    start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
+                    end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
+                    url: "{% url 'lesson_detail' lesson.id %}",
+                    backgroundColor: '#007bff',
+                    borderColor: '#007bff'
+                },
+                {% endfor %}
+
+        // Прошедшие уроки
+        {% for lesson in past_lessons %}
+        {
+            title: '{{ lesson.subject.name }} - {{ lesson.teacher.user.last_name }}',
+                start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
+                    end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
                         backgroundColor: '#28a745',
-                        borderColor: '#28a745',
-                        url: "{% url 'lesson_detail' lesson.id %}"
-                    },
-                    {% endfor %}
+                            borderColor: '#28a745',
+                                url: "{% url 'lesson_detail' lesson.id %}"
+        },
+        {% endfor %}
+
+        // Групповые уроки
+        {% for lesson in group_lessons %}
+        {
+            title: '👥 {{ lesson.subject.name }} (группа)',
+                start: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.start_time|time:"H:i:s" }}',
+                    end: '{{ lesson.date|date:"Y-m-d" }}T{{ lesson.end_time|time:"H:i:s" }}',
+                        url: "{% url 'student_group_lesson_detail' lesson.id %}",
+                            backgroundColor: '#9b59b6',
+                                borderColor: '#9b59b6'
+        },
+        {% endfor %}
                 ],
-                eventClick: function(info) {
-                    if (info.event.url) {
-                        window.location.href = info.event.url;
-                        info.jsEvent.preventDefault();
-                    }
-                }
-            });
-            calendar.render();
+        eventClick: function(info) {
+            if (info.event.url) {
+                window.location.href = info.event.url;
+                info.jsEvent.preventDefault();
+            }
+        }
+    });
+    calendar.render();
         }
     });
 
