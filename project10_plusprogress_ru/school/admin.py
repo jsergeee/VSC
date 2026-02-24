@@ -1049,7 +1049,7 @@ class PaymentAdmin(admin.ModelAdmin):
             obj.user.balance += obj.amount
             obj.user.save()
 
-            # Создаем уведомление о пополнении
+            # ✅ Уведомление ТОЛЬКО ученику о пополнении
             Notification.objects.create(
                 user=obj.user,
                 title='💰 Пополнение баланса',
@@ -1063,7 +1063,7 @@ class PaymentAdmin(admin.ModelAdmin):
             obj.user.balance -= obj.amount
             obj.user.save()
 
-            # Создаем уведомление о списании
+            # Уведомление о списании
             Notification.objects.create(
                 user=obj.user,
                 title='💸 Списание средств',
@@ -1079,7 +1079,7 @@ class PaymentAdmin(admin.ModelAdmin):
                 teacher.wallet_balance += obj.amount
                 teacher.save()
 
-                # Уведомление учителю
+                # ✅ Уведомление учителю о выплате
                 Notification.objects.create(
                     user=obj.user,
                     title='💰 Выплата начислена',
@@ -1088,7 +1088,24 @@ class PaymentAdmin(admin.ModelAdmin):
                     link='/teacher/dashboard/'
                 )
             except Teacher.DoesNotExist:
-                # Если у пользователя нет профиля учителя - просто логируем
+                print(f"⚠️ Пользователь {obj.user.username} не является учителем")
+
+        elif obj.payment_type == 'teacher_salary':
+            # Зарплата учителя
+            try:
+                teacher = obj.user.teacher_profile
+                teacher.wallet_balance += obj.amount
+                teacher.save()
+
+                # ✅ Уведомление учителю о зарплате
+                Notification.objects.create(
+                    user=obj.user,
+                    title='💰 Зарплата начислена',
+                    message=f'Вам начислена зарплата {obj.amount} ₽',
+                    notification_type='payment_received',
+                    link='/teacher/dashboard/'
+                )
+            except Teacher.DoesNotExist:
                 print(f"⚠️ Пользователь {obj.user.username} не является учителем")
 
     # ⚡⚡⚡ МЕТОД ДЛЯ УДАЛЕНИЯ ОДНОГО ПЛАТЕЖА ⚡⚡⚡
