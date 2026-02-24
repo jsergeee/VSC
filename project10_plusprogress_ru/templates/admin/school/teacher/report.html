@@ -174,7 +174,7 @@
         font-style: italic;
     }
 
-    .payment-row {
+    .earnings-row {
         background: #f0f8ff;
     }
 </style>
@@ -187,23 +187,23 @@
         <div class="report-title">Детальный отчет по учителю</div>
         <div class="teacher-info">
             {{ teacher.user.get_full_name }}<br>
-            Телефон: {{ teacher.user.phone }} | Email: {{ teacher.user.email }}
+            Телефон: {{ teacher.user.phone|default:"—" }} | Email: {{ teacher.user.email|default:"—" }}
         </div>
     </div>
 
     <!-- Краткая статистика -->
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-value">{{ total_lessons }}</div>
+            <div class="stat-value">{{ total_lessons|default:"0" }}</div>
             <div class="stat-label">Всего занятий</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">{{ total_income|floatformat:2 }} ₽</div>
-            <div class="stat-label">Общая стоимость</div>
+            <div class="stat-value">{{ total_income|floatformat:2|default:"0.00" }} ₽</div>
+            <div class="stat-label">Стоимость уроков</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">{{ total_payment|floatformat:2 }} ₽</div>
-            <div class="stat-label">К выплате (50%)</div>
+            <div class="stat-value">{{ total_earnings|floatformat:2|default:"0.00" }} ₽</div>
+            <div class="stat-label">Заработок учителя</div>
         </div>
     </div>
 
@@ -227,8 +227,8 @@
         </form>
     </div>
 
-    <!-- Таблица 1: Занятия (стоимость для ученика) -->
-    <div class="section-title">📊 Занятия (стоимость для ученика)</div>
+    <!-- Таблица 1: Стоимость уроков для учеников -->
+    <div class="section-title">📊 Стоимость уроков (ученик платит)</div>
     <div class="table-container">
         <table class="report-table">
             <thead>
@@ -241,24 +241,25 @@
                 </tr>
             </thead>
             <tbody>
-                {% for student in students_data %}
+                {% for lesson in lessons_data %}
                 <tr>
-                    <td class="student-name">{{ student.name }}</td>
-                    {% for cost in student.daily_costs %}
+                    <td class="student-name">{{ lesson.name }}</td>
+                    {% for cost in lesson.daily_costs %}
                     <td>
-                        {% if cost %}
-                        {{ cost|floatformat:2 }} ₽
+                        {% if cost and cost > 0 %}
+                        <span style="color: #28a745;">{{ cost|floatformat:2 }} ₽</span>
                         {% else %}
                         <span class="empty-cell">—</span>
                         {% endif %}
                     </td>
                     {% endfor %}
-                    <td><strong>{{ student.total|floatformat:2 }} ₽</strong></td>
+                    <td><strong>{{ lesson.total|floatformat:2 }} ₽</strong></td>
                 </tr>
                 {% empty %}
                 <tr>
                     <td colspan="{{ dates|length|add:2 }}" style="text-align: center; padding: 50px;">
-                        Нет данных за выбранный период
+                        <h3>Нет данных за выбранный период</h3>
+                        <p style="color: #666;">Попробуйте изменить период фильтрации</p>
                     </td>
                 </tr>
                 {% endfor %}
@@ -275,8 +276,8 @@
         </table>
     </div>
 
-    <!-- Таблица 2: Выплаты учителю -->
-    <div class="section-title">💰 Выплаты учителю </div>
+    <!-- Таблица 2: Заработок учителя -->
+    <div class="section-title">💰 Заработок учителя</div>
     <div class="table-container">
         <table class="report-table">
             <thead>
@@ -289,24 +290,25 @@
                 </tr>
             </thead>
             <tbody>
-                {% for payment in payments_data %}
-                <tr class="payment-row">
-                    <td class="student-name">{{ payment.name }}</td>
-                    {% for amount in payment.daily_payments %}
+                {% for earning in earnings_data %}
+                <tr class="earnings-row">
+                    <td class="student-name">{{ earning.name }}</td>
+                    {% for amount in earning.daily_earnings %}
                     <td>
-                        {% if amount %}
-                        {{ amount|floatformat:2 }} ₽
+                        {% if amount and amount > 0 %}
+                        <span style="color: #17a2b8;">{{ amount|floatformat:2 }} ₽</span>
                         {% else %}
                         <span class="empty-cell">—</span>
                         {% endif %}
                     </td>
                     {% endfor %}
-                    <td><strong>{{ payment.total|floatformat:2 }} ₽</strong></td>
+                    <td><strong>{{ earning.total|floatformat:2 }} ₽</strong></td>
                 </tr>
                 {% empty %}
                 <tr>
                     <td colspan="{{ dates|length|add:2 }}" style="text-align: center; padding: 50px;">
-                        Нет данных за выбранный период
+                        <h3>Нет данных за выбранный период</h3>
+                        <p style="color: #666;">Попробуйте изменить период фильтрации</p>
                     </td>
                 </tr>
                 {% endfor %}
@@ -314,10 +316,10 @@
             <tfoot>
                 <tr class="total-row">
                     <td>ИТОГО за день</td>
-                    {% for daily_total in daily_totals_payments %}
+                    {% for daily_total in daily_totals_earnings %}
                     <td><strong>{{ daily_total|floatformat:2 }} ₽</strong></td>
                     {% endfor %}
-                    <td><strong>{{ total_payment|floatformat:2 }} ₽</strong></td>
+                    <td><strong>{{ total_earnings|floatformat:2 }} ₽</strong></td>
                 </tr>
             </tfoot>
         </table>

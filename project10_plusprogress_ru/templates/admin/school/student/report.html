@@ -53,69 +53,6 @@
         margin-top: 5px;
     }
 
-    .table-container {
-        overflow-x: auto;
-        margin-bottom: 30px;
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    .report-table {
-        width: 100%;
-        border-collapse: collapse;
-        min-width: 800px;
-    }
-
-    .report-table th {
-        background: #f8f9fa;
-        padding: 12px;
-        text-align: center;
-        font-weight: 600;
-        border: 1px solid #dee2e6;
-        white-space: nowrap;
-    }
-
-    .report-table td {
-        padding: 10px;
-        border: 1px solid #dee2e6;
-        text-align: center;
-    }
-
-    .report-table tbody tr:hover {
-        background: #f5f5f5;
-    }
-
-    .subject-name {
-        font-weight: bold;
-        text-align: left !important;
-        background: #f8f9fa;
-    }
-
-    .total-row {
-        background: #e9ecef !important;
-        font-weight: bold;
-    }
-
-    .total-row td {
-        background: #e9ecef;
-    }
-
-    .btn-reset {
-        background: #6c757d;
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-block;
-    }
-
-    .btn-reset:hover {
-        background: #5a6268;
-    }
-
     .filter-form {
         background: #f8f9fa;
         padding: 20px;
@@ -161,6 +98,77 @@
         background: #218838;
     }
 
+    .btn-reset {
+        background: #6c757d;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-reset:hover {
+        background: #5a6268;
+    }
+
+    .section-title {
+        font-size: 22px;
+        font-weight: bold;
+        margin: 30px 0 15px 0;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #007bff;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        margin-bottom: 40px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 800px;
+    }
+
+    .report-table th {
+        background: #f8f9fa;
+        padding: 12px;
+        text-align: center;
+        font-weight: 600;
+        border: 1px solid #dee2e6;
+        white-space: nowrap;
+    }
+
+    .report-table td {
+        padding: 10px;
+        border: 1px solid #dee2e6;
+        text-align: center;
+    }
+
+    .report-table tbody tr:hover {
+        background: #f5f5f5;
+    }
+
+    .subject-name {
+        font-weight: bold;
+        text-align: left !important;
+        background: #f8f9fa;
+    }
+
+    .total-row {
+        background: #e9ecef !important;
+        font-weight: bold;
+    }
+
+    .total-row td {
+        background: #e9ecef;
+    }
+
     .empty-cell {
         color: #999;
         font-style: italic;
@@ -175,27 +183,27 @@
         <div class="report-title">Детальный отчет по ученику</div>
         <div class="student-info">
             {{ student.user.get_full_name }}<br>
-            Телефон: {{ student.user.phone }} | Email: {{ student.user.email }}
+            Телефон: {{ student.user.phone|default:"—" }} | Email: {{ student.user.email|default:"—" }}
         </div>
     </div>
 
     <!-- Краткая статистика -->
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-value">{{ total_lessons }}</div>
-            <div class="stat-label">Всего занятий</div>
+            <div class="stat-value">{{ attended_lessons }}</div>
+            <div class="stat-label">Оплачено занятий</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">{{ subject_stats|length }}</div>
-            <div class="stat-label">Предметов</div>
+            <div class="stat-value">{{ total_attended_cost|floatformat:2 }} ₽</div>
+            <div class="stat-label">Оплачено</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">{{ total_cost|floatformat:2 }} ₽</div>
-            <div class="stat-label">Общая стоимость</div>
+            <div class="stat-value">{{ debt_lessons }}</div>
+            <div class="stat-label">Занятий в долг</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">{{ student.user.balance|floatformat:2 }} ₽</div>
-            <div class="stat-label">Текущий баланс</div>
+            <div class="stat-value">{{ total_debt_cost|floatformat:2 }} ₽</div>
+            <div class="stat-label">Задолженность</div>
         </div>
     </div>
 
@@ -237,10 +245,10 @@
                     <td class="subject-name">{{ subject.name }}</td>
                     {% for cost in subject.daily_costs %}
                     <td>
-                        {% if cost %}
-                            {{ cost|floatformat:2 }} ₽
+                        {% if cost and cost > 0 %}
+                        {{ cost|floatformat:2 }} ₽
                         {% else %}
-                            <span class="empty-cell">—</span>
+                        <span class="empty-cell">—</span>
                         {% endif %}
                     </td>
                     {% endfor %}
@@ -249,7 +257,8 @@
                 {% empty %}
                 <tr>
                     <td colspan="{{ dates|length|add:2 }}" style="text-align: center; padding: 50px;">
-                        Нет данных за выбранный период
+                        <h3>Нет данных за выбранный период</h3>
+                        <p style="color: #666;">Попробуйте изменить период фильтрации</p>
                     </td>
                 </tr>
                 {% endfor %}
@@ -260,7 +269,7 @@
                     {% for daily_total in daily_totals %}
                     <td><strong>{{ daily_total|floatformat:2 }} ₽</strong></td>
                     {% endfor %}
-                    <td><strong>{{ total_cost|floatformat:2 }} ₽</strong></td>
+                    <td><strong>{{ total_attended_cost|add:total_debt_cost|floatformat:2 }} ₽</strong></td>
                 </tr>
             </tfoot>
         </table>

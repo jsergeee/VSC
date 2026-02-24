@@ -2,17 +2,8 @@
 {% load i18n static %}
 
 {% block object-tools-items %}
-    {{ block.super }}
-    {% if original and original.status != 'completed' and original.status != 'cancelled' %}
-    <li>
-        <form method="post" action="{% url 'admin:complete-lesson' original.pk %}" style="display: inline;">
-            {% csrf_token %}
-            <button type="submit" style="background: #28a745; color: white; padding: 8px 15px; border-radius: 4px; font-weight: bold; border: none; cursor: pointer;">
-                ✅ Завершить занятие
-            </button>
-        </form>
-    </li>
-    {% endif %}
+{{ block.super }}
+<!-- УДАЛЯЕМ ДУБЛИРУЮЩУЮСЯ КНОПКУ ИЗ ВЕРХНЕЙ ПАНЕЛИ -->
 {% endblock %}
 
 {% block after_field_sets %}
@@ -46,7 +37,8 @@
 <div class="module" style="margin-top: 20px; border: 2px solid #28a745; padding: 15px; background: #f8fff8;">
     <h2 style="color: #28a745;">✅ Завершить занятие</h2>
 
-    <form method="post" action="{% url 'admin:complete-lesson' original.pk %}">
+    <!-- ПРОСТАЯ ФОРМА - без JavaScript, обычный POST -->
+    <form method="post" action="/admin/school/lesson/{{ original.pk }}/complete/">
         {% csrf_token %}
         <table style="width: 100%;">
             <tr>
@@ -75,9 +67,146 @@
         </table>
 
         <div class="submit-row" style="margin-top: 20px;">
-            <input type="submit" value="✅ Завершить занятие и списать средства" class="default" style="background: #28a745; font-size: 16px; padding: 10px 20px;">
+            <input type="submit" value="✅ Завершить занятие и списать средства" class="default"
+                style="background: #28a745; font-size: 16px; padding: 10px 20px;">
         </div>
     </form>
 </div>
 {% endif %}
+
+<!-- Простой скрипт только для отладки -->
+<script>
+    // Функция для создания формы, если её нет
+    function ensureCompleteForm() {
+        // Проверяем, есть ли уже форма
+        if (document.querySelector('form[action*="complete"]')) {
+            console.log('✅ Форма уже существует');
+            return;
+        }
+
+        // Находим блок для формы
+        const block = document.querySelector('.module[style*="28a745"]');
+        if (!block) {
+            console.log('❌ Блок для формы не найден');
+            return;
+        }
+
+        // Получаем ID урока из URL
+        const match = window.location.pathname.match(/\/lesson\/(\d+)\//);
+        if (!match) {
+            console.log('❌ Не удалось определить ID урока');
+            return;
+        }
+        const lessonId = match[1];
+
+        console.log(`🔧 Создаем форму для урока ${lessonId}...`);
+
+        // Сохраняем заголовок
+        const h2 = block.querySelector('h2');
+        const title = h2 ? h2.outerHTML : '<h2 style="color: #28a745;">✅ Завершить занятие</h2>';
+
+        // Очищаем блок
+        block.innerHTML = title;
+
+        // Создаем форму
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/admin/school/lesson/${lessonId}/complete/`;
+
+        // CSRF токен
+        const csrf = document.createElement('input');
+        csrf.type = 'hidden';
+        csrf.name = 'csrfmiddlewaretoken';
+        csrf.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        form.appendChild(csrf);
+
+        // Поля формы
+        const fields = [
+            {name: 'topic', label: 'Тема занятия:', type: 'text', required: true},
+            {name: 'covered_material', label: 'Пройденный материал:', type: 'textarea', required: true},
+            {name: 'homework', label: 'Домашнее задание:', type: 'textarea', required: true},
+            {name: 'student_progress', label: 'Прогресс ученика:', type: 'textarea', required: true},
+            {name: 'next_lesson_plan', label: 'План следующего занятия:', type: 'textarea', required: false}
+        ];
+
+        const table = document.createElement('table');
+        table.style.width = '100%';
+
+        fields.forEach(field => {
+            const tr = document.createElement('tr');
+
+            // Ячейка с label
+            const tdLabel = document.createElement('td');
+            tdLabel.style.width = '200px';
+            tdLabel.style.verticalAlign = 'top';
+            tdLabel.style.padding = '5px';
+            const label = document.createElement('label');
+            label.htmlFor = field.name;
+            label.textContent = field.label;
+            tdLabel.appendChild(label);
+            tr.appendChild(tdLabel);
+
+            // Ячейка с input
+            const tdInput = document.createElement('td');
+            tdInput.style.padding = '5px';
+
+            if (field.type === 'textarea') {
+                const textarea = document.createElement('textarea');
+                textarea.id = field.name;
+                textarea.name = field.name;
+                textarea.rows = field.name === 'covered_material' ? 4 : 3;
+                textarea.style.width = '100%';
+                textarea.style.padding = '5px';
+                if (field.required) textarea.required = true;
+                tdInput.appendChild(textarea);
+            } else {
+                const input = document.createElement('input');
+                input.type = field.type;
+                input.id = field.name;
+                input.name = field.name;
+                input.className = 'vTextField';
+                input.style.width = '100%';
+                input.style.padding = '5px';
+                if (field.required) input.required = true;
+                tdInput.appendChild(input);
+            }
+
+            tr.appendChild(tdInput);
+            table.appendChild(tr);
+        });
+
+        form.appendChild(table);
+
+        // Кнопка submit
+        const div = document.createElement('div');
+        div.className = 'submit-row';
+        div.style.marginTop = '20px';
+        div.style.padding = '10px';
+
+        const button = document.createElement('input');
+        button.type = 'submit';
+        button.value = '✅ Завершить занятие и списать средства';
+        button.className = 'default';
+        button.style.background = '#28a745';
+        button.style.fontSize = '16px';
+        button.style.padding = '10px 20px';
+        button.style.border = 'none';
+        button.style.cursor = 'pointer';
+        button.style.color = 'white';
+        button.style.borderRadius = '4px';
+
+        div.appendChild(button);
+        form.appendChild(div);
+
+        block.appendChild(form);
+
+        console.log('✅ Форма создана автоматически!');
+    }
+
+    // Запускаем после загрузки страницы
+    document.addEventListener('DOMContentLoaded', ensureCompleteForm);
+
+    // И еще раз через секунду (на случай, если DOM загрузился не полностью)
+    setTimeout(ensureCompleteForm, 1000);
+</script>
 {% endblock %}

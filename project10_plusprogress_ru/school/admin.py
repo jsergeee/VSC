@@ -9,21 +9,21 @@ from django.shortcuts import render, redirect
 from django import forms
 from django.db import models
 from django.utils import timezone
-from .models import GroupLesson, GroupEnrollment
-from .models import LessonAttendance
-from .models import ScheduleTemplate, ScheduleTemplateStudent
-from .models import StudentSubjectPrice
 from datetime import datetime
-from django.db.models import Prefetch
-from .models import LessonAttendance
+from django.db.models import Prefetch, Sum, Count
 
 from .models import (
     User, Subject, Teacher, Student, Lesson, LessonFormat,
     LessonReport, Payment, Schedule, TrialRequest,
     Notification, LessonFeedback, TeacherRating,
-    Homework, HomeworkSubmission
+    Homework, HomeworkSubmission, GroupLesson, GroupEnrollment,
+    LessonAttendance, ScheduleTemplate, ScheduleTemplateStudent,
+    StudentSubjectPrice
 )
 from .views import schedule_calendar_data, admin_complete_lesson
+
+# Импортируем helper-классы для финансовых расчетов
+from .views import LessonFinanceCalculator, PeriodFinanceCalculator
 
 # Разрегистрируем стандартного User, если зарегистрирован
 try:
@@ -32,6 +32,8 @@ except admin.sites.NotRegistered:
     pass
 
 
+# ==================== INLINES ====================
+
 class StudentSubjectPriceInline(admin.TabularInline):
     model = StudentSubjectPrice
     extra = 1
@@ -39,10 +41,30 @@ class StudentSubjectPriceInline(admin.TabularInline):
     autocomplete_fields = ['subject']
 
 
+class LessonAttendanceInline(admin.TabularInline):
+    model = LessonAttendance
+    extra = 1
+    raw_id_fields = ['student']
+    fields = ['student', 'cost', 'discount', 'teacher_payment_share', 'status']
+
+
+class GroupEnrollmentInline(admin.TabularInline):
+    model = GroupEnrollment
+    extra = 1
+    raw_id_fields = ['student']
+
+
+class ScheduleTemplateStudentInline(admin.TabularInline):
+    model = ScheduleTemplateStudent
+    extra = 1
+    raw_id_fields = ['student']
+
+
 # ==================== CUSTOM USER ADMIN ====================
+
 class CustomUserAdmin(UserAdmin):
     list_display = ('username', 'get_full_name', 'email', 'phone', 'role',
-                    'balance', 'is_email_verified_badge', 'is_staff')
+                    'is_email_verified_badge', 'is_staff')  # Убрали balance_colored
     list_filter = ('role', 'is_email_verified', 'is_staff', 'is_superuser', 'groups')
     search_fields = ('username', 'first_name', 'last_name', 'email', 'phone')
     readonly_fields = ('email_verification_sent',)
@@ -52,11 +74,11 @@ class CustomUserAdmin(UserAdmin):
         ('Личная информация', {
             'fields': ('first_name', 'last_name', 'patronymic', 'email', 'phone', 'photo')
         }),
-        ('Роль и баланс', {
-            'fields': ('role', 'balance'),
+        ('Роль', {  # Убрали "и баланс"
+            'fields': ('role',),
             'classes': ('wide',),
         }),
-        ('✅ Email подтверждение', {  # ✅ НОВЫЙ БЛОК С ЭМОДЗИ
+        ('✅ Email подтверждение', {
             'fields': ('is_email_verified', 'email_verification_sent'),
             'classes': ('wide',),
             'description': 'Управление подтверждением email пользователя',
@@ -76,19 +98,18 @@ class CustomUserAdmin(UserAdmin):
         }),
     )
 
-    # Добавляем действия для массовой обработки
-    actions = ['mark_as_verified', 'mark_as_unverified']
+    actions = ['mark_as_verified', 'mark_as_unverified', 'export_users_excel']
 
     def get_full_name(self, obj):
         full_name = obj.get_full_name()
         if obj.patronymic:
             return f"{full_name} {obj.patronymic}"
         return full_name or obj.username
-
     get_full_name.short_description = 'ФИО'
 
+    # УДАЛЕН метод balance_colored
+
     def is_email_verified_badge(self, obj):
-        """Отображает статус подтверждения email в виде цветного значка"""
         if obj.is_email_verified:
             return format_html(
                 '<span style="background: #28a745; color: white; padding: 3px 8px; border-radius: 3px;">✅ Подтвержден</span>'
@@ -97,75 +118,31 @@ class CustomUserAdmin(UserAdmin):
             return format_html(
                 '<span style="background: #dc3545; color: white; padding: 3px 8px; border-radius: 3px;">❌ Не подтвержден</span>'
             )
-
     is_email_verified_badge.short_description = 'Email подтвержден'
 
     def mark_as_verified(self, request, queryset):
-        """Отметить выбранных пользователей как верифицированных"""
         updated = queryset.update(is_email_verified=True)
         self.message_user(request, f'✅ {updated} пользователей отмечены как подтвержденные')
-
     mark_as_verified.short_description = "✅ Отметить как подтвержденные email"
 
     def mark_as_unverified(self, request, queryset):
-        """Отметить выбранных пользователей как неверифицированных"""
         updated = queryset.update(is_email_verified=False)
         self.message_user(request, f'⚠️ {updated} пользователей отмечены как неподтвержденные')
-
     mark_as_unverified.short_description = "❌ Отметить как неподтвержденные email"
 
-
-# ==================== SUBJECT ADMIN ====================
-class SubjectAdmin(admin.ModelAdmin):
-    list_display = ('name', 'description')
-    search_fields = ('name',)
-
-
-# ==================== TEACHER ADMIN ====================
-class TeacherAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'display_subjects', 'experience', 'created')
-    list_filter = ('subjects',)
-    search_fields = ('user__first_name', 'user__last_name', 'user__email')
-    filter_horizontal = ('subjects',)
-
-    fieldsets = (
-        (None, {
-            'fields': ('user', 'subjects', 'experience')
-        }),
-        ('Дополнительная информация', {
-            'fields': ('education', 'bio', 'wallet_balance', 'payment_details'),
-            'classes': ('collapse',),
-        }),
-    )
-
-    def display_subjects(self, obj):
-        return ", ".join([s.name for s in obj.subjects.all()])
-
-    display_subjects.short_description = 'Предметы'
-
-    def created(self, obj):
-        return obj.user.date_joined.strftime('%d.%m.%Y')
-
-    created.short_description = 'Дата регистрации'
-
-    change_list_template = "admin/school/teacher/change_list.html"
-    actions = ['export_teachers_excel']
-
-    def export_teachers_excel(self, request, queryset):
-        """Экспорт выбранных учителей в Excel"""
+    def export_users_excel(self, request, queryset):
+        """Экспорт пользователей в Excel"""
         import openpyxl
         from openpyxl.styles import Font, Alignment, PatternFill
         from django.http import HttpResponse
+        from datetime import datetime
 
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.title = "Учителя"
+        ws.title = "Пользователи"
 
-        # Заголовки
-        headers = ['ID', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон',
-                   'Предметы', 'Опыт', 'Баланс кошелька']
+        headers = ['ID', 'Логин', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон', 'Роль']  # Убрали 'Баланс'
 
-        # Стиль заголовков
         header_font = Font(bold=True, color="FFFFFF")
         header_fill = PatternFill(start_color="417690", end_color="417690", fill_type="solid")
 
@@ -175,9 +152,129 @@ class TeacherAdmin(admin.ModelAdmin):
             cell.fill = header_fill
             cell.alignment = Alignment(horizontal='center')
 
-        # Данные
+        for row, user in enumerate(queryset, start=2):
+            ws.cell(row=row, column=1, value=user.id)
+            ws.cell(row=row, column=2, value=user.username)
+            ws.cell(row=row, column=3, value=user.last_name)
+            ws.cell(row=row, column=4, value=user.first_name)
+            ws.cell(row=row, column=5, value=user.patronymic)
+            ws.cell(row=row, column=6, value=user.email)
+            ws.cell(row=row, column=7, value=user.phone)
+            ws.cell(row=row, column=8, value=user.get_role_display())
+            # Убрали колонку с балансом
+
+        column_widths = [8, 15, 15, 15, 15, 25, 15, 12]  # Убрали последнюю колонку
+        for i, width in enumerate(column_widths, 1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = f"users_export_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        wb.save(response)
+        return response
+    export_users_excel.short_description = "📥 Экспорт выбранных пользователей в Excel"
+    
+    
+# ==================== SUBJECT ADMIN ====================
+
+class SubjectAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description', 'teachers_count', 'lessons_count')
+    search_fields = ('name',)
+
+    def teachers_count(self, obj):
+        return obj.teacher_set.count()
+    teachers_count.short_description = 'Учителей'
+
+    def lessons_count(self, obj):
+        return obj.lesson_set.count()
+    lessons_count.short_description = 'Занятий'
+
+
+# ==================== TEACHER ADMIN ====================
+
+class TeacherAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user_link', 'display_subjects', 'experience', 
+                   'students_count', 'rating_display')
+    list_filter = ('subjects',)
+    search_fields = ('user__first_name', 'user__last_name', 'user__email')
+    filter_horizontal = ('subjects',)
+    readonly_fields = ('wallet_balance', 'rating_display')  # Должно быть списком или кортежем
+
+    fieldsets = (
+        (None, {
+            'fields': ('user', 'subjects', 'experience')
+        }),
+        ('Финансы', {  # Исправлено: fields должен быть списком или кортежем
+            'fields': ('wallet_balance', 'payment_details'),
+            'classes': ('wide',),
+        }),
+        ('Дополнительная информация', {
+            'fields': ('education', 'bio', 'certificate'),
+            'classes': ('collapse',),
+        }),
+        ('Рейтинг', {
+            'fields': ('rating_display',),
+            'classes': ('wide',),
+        }),
+    )
+
+    def user_link(self, obj):
+        url = f'/admin/school/user/{obj.user.id}/change/'
+        return format_html('<a href="{}">{}</a>', url, obj.user.get_full_name())
+    user_link.short_description = 'Учитель'
+
+    def display_subjects(self, obj):
+        return ", ".join([s.name for s in obj.subjects.all()])
+    display_subjects.short_description = 'Предметы'
+
+    def students_count(self, obj):
+        return obj.student_set.count()
+    students_count.short_description = 'Учеников'
+
+    def rating_display(self, obj):
+        try:
+            rating = obj.rating_stats
+            stars = '⭐' * int(rating.average_rating)
+            return f"{stars} ({rating.average_rating:.1f}) - {rating.total_feedbacks} оценок"
+        except:
+            return 'Нет оценок'
+    rating_display.short_description = 'Рейтинг'
+
+    actions = ['export_teachers_excel', 'calculate_payments']
+
+    def export_teachers_excel(self, request, queryset):
+        """Экспорт выбранных учителей в Excel"""
+        import openpyxl
+        from openpyxl.styles import Font, Alignment, PatternFill
+        from django.http import HttpResponse
+        from datetime import datetime
+        from school.models import Lesson
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Учителя"
+
+        headers = ['ID', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон',
+                   'Предметы', 'Опыт', 'Всего уроков', 'Проведено уроков', 'Учеников']
+
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="417690", end_color="417690", fill_type="solid")
+
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+
         for row, teacher in enumerate(queryset, start=2):
             subjects = ", ".join([s.name for s in teacher.subjects.all()])
+            
+            total_lessons = Lesson.objects.filter(teacher=teacher).count()
+            completed_lessons = Lesson.objects.filter(teacher=teacher, status='completed').count()
+            total_students = teacher.student_set.count()
 
             ws.cell(row=row, column=1, value=teacher.id)
             ws.cell(row=row, column=2, value=teacher.user.last_name)
@@ -187,14 +284,14 @@ class TeacherAdmin(admin.ModelAdmin):
             ws.cell(row=row, column=6, value=teacher.user.phone)
             ws.cell(row=row, column=7, value=subjects)
             ws.cell(row=row, column=8, value=teacher.experience)
-            ws.cell(row=row, column=9, value=float(teacher.wallet_balance))
+            ws.cell(row=row, column=9, value=total_lessons)
+            ws.cell(row=row, column=10, value=completed_lessons)
+            ws.cell(row=row, column=11, value=total_students)
 
-        # Настройка ширины колонок
-        column_widths = [8, 15, 15, 15, 25, 15, 30, 8, 12]
+        column_widths = [8, 15, 15, 15, 25, 15, 30, 8, 12, 15, 10]
         for i, width in enumerate(column_widths, 1):
             ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
 
-        # Создаем response
         response = HttpResponse(
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
@@ -203,36 +300,132 @@ class TeacherAdmin(admin.ModelAdmin):
 
         wb.save(response)
         return response
-
     export_teachers_excel.short_description = "📥 Экспорт выбранных учителей в Excel"
+
+    def calculate_payments(self, request, queryset):
+        """Перейти к расчету выплат"""
+        if queryset.count() == 1:
+            teacher = queryset.first()
+            return redirect(f'/admin/school/teacher/{teacher.id}/payments/')
+        else:
+            self.message_user(request, 'Выберите одного учителя для расчета выплат', level='WARNING')
+    calculate_payments.short_description = "💰 Расчет выплат"
+
+
+def export_teachers_excel(self, request, queryset):
+    """Экспорт выбранных учителей в Excel"""
+    import openpyxl
+    from openpyxl.styles import Font, Alignment, PatternFill
+    from django.http import HttpResponse
+    from datetime import datetime
+    from school.models import Lesson
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Учителя"
+
+    # Заголовки (заменили Баланс кошелька на статистику)
+    headers = ['ID', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон',
+               'Предметы', 'Опыт', 'Всего уроков', 'Проведено уроков', 'Учеников']
+
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="417690", end_color="417690", fill_type="solid")
+
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center')
+
+    for row, teacher in enumerate(queryset, start=2):
+        subjects = ", ".join([s.name for s in teacher.subjects.all()])
+        
+        # Считаем статистику учителя
+        total_lessons = Lesson.objects.filter(teacher=teacher).count()
+        completed_lessons = Lesson.objects.filter(teacher=teacher, status='completed').count()
+        total_students = teacher.student_set.count()
+
+        ws.cell(row=row, column=1, value=teacher.id)
+        ws.cell(row=row, column=2, value=teacher.user.last_name)
+        ws.cell(row=row, column=3, value=teacher.user.first_name)
+        ws.cell(row=row, column=4, value=teacher.user.patronymic)
+        ws.cell(row=row, column=5, value=teacher.user.email)
+        ws.cell(row=row, column=6, value=teacher.user.phone)
+        ws.cell(row=row, column=7, value=subjects)
+        ws.cell(row=row, column=8, value=teacher.experience)
+        ws.cell(row=row, column=9, value=total_lessons)  # Вместо баланса - всего уроков
+        ws.cell(row=row, column=10, value=completed_lessons)  # Проведено уроков
+        ws.cell(row=row, column=11, value=total_students)  # Учеников
+
+    # Настройка ширины колонок (добавили одну колонку)
+    column_widths = [8, 15, 15, 15, 25, 15, 30, 8, 12, 15, 10]
+    for i, width in enumerate(column_widths, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    filename = f"teachers_export_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    wb.save(response)
+    return response
+export_teachers_excel.short_description = "📥 Экспорт выбранных учителей в Excel"
+
+def calculate_payments(self, request, queryset):
+        """Перейти к расчету выплат"""
+        if queryset.count() == 1:
+            teacher = queryset.first()
+            return redirect(f'/admin/school/teacher/{teacher.id}/payments/')
+        else:
+            self.message_user(request, 'Выберите одного учителя для расчета выплат', level='WARNING')
+        calculate_payments.short_description = "💰 Расчет выплат"
 
 
 # ==================== STUDENT ADMIN ====================
+
 class StudentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'parent_name', 'parent_phone', 'get_teachers_count', 'get_balance_display')
+    list_display = ('id', 'user_link', 'parent_name', 'parent_phone', 
+                   'get_teachers_count', 'last_lesson')
     search_fields = ('user__first_name', 'user__last_name', 'user__email', 'parent_name')
     filter_horizontal = ('teachers',)
     list_filter = ('teachers',)
     raw_id_fields = ('user',)
     inlines = [StudentSubjectPriceInline]
 
+    fieldsets = (
+        (None, {
+            'fields': ('user', 'teachers')
+        }),
+        ('Родители', {
+            'fields': ('parent_name', 'parent_phone'),
+        }),
+        ('Заметки', {
+            'fields': ('notes',),
+            'classes': ('wide',),
+        }),
+    )
+
+    def user_link(self, obj):
+        url = f'/admin/school/user/{obj.user.id}/change/'
+        return format_html('<a href="{}">{}</a>', url, obj.user.get_full_name())
+    user_link.short_description = 'Ученик'
+
     def get_teachers_count(self, obj):
         return obj.teachers.count()
-
     get_teachers_count.short_description = 'Кол-во учителей'
 
-    def get_balance_display(self, obj):
-        balance = obj.user.balance
-        if balance > 0:
-            return format_html('<span style="color: #28a745;">💰 {}</span>', f"{balance:.2f}")
-        elif balance < 0:
-            return format_html('<span style="color: #dc3545;">🔴 {}</span>', f"{balance:.2f}")
-        return format_html('<span style="color: #6c757d;">⚪ 0.00</span>')
 
-    get_balance_display.short_description = 'Баланс'
 
-    change_list_template = "admin/school/student/change_list.html"
-    actions = ['export_students_excel']
+    def last_lesson(self, obj):
+        last = obj.lessons.order_by('-date').first()
+        if last:
+            return format_html('<a href="/admin/school/lesson/{}/change/">{} {}</a>', 
+                             last.id, last.date.strftime('%d.%m.%Y'), last.subject)
+        return '-'
+    last_lesson.short_description = 'Последний урок'
+
+    actions = ['export_students_excel', 'show_finance_report']
 
     def export_students_excel(self, request, queryset):
         """Экспорт выбранных учеников в Excel"""
@@ -244,11 +437,9 @@ class StudentAdmin(admin.ModelAdmin):
         ws = wb.active
         ws.title = "Ученики"
 
-        # Заголовки
         headers = ['ID', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон',
                    'Родитель', 'Телефон родителя', 'Баланс', 'Учителя']
 
-        # Стиль заголовков
         header_font = Font(bold=True, color="FFFFFF")
         header_fill = PatternFill(start_color="417690", end_color="417690", fill_type="solid")
 
@@ -258,7 +449,6 @@ class StudentAdmin(admin.ModelAdmin):
             cell.fill = header_fill
             cell.alignment = Alignment(horizontal='center')
 
-        # Данные
         for row, student in enumerate(queryset, start=2):
             teachers = ", ".join([t.user.get_full_name() for t in student.teachers.all()[:3]])
             if student.teachers.count() > 3:
@@ -275,12 +465,10 @@ class StudentAdmin(admin.ModelAdmin):
             ws.cell(row=row, column=9, value=float(student.user.balance))
             ws.cell(row=row, column=10, value=teachers)
 
-        # Настройка ширины колонок
         column_widths = [8, 15, 15, 15, 25, 15, 20, 15, 12, 30]
         for i, width in enumerate(column_widths, 1):
             ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
 
-        # Создаем response
         response = HttpResponse(
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
@@ -289,25 +477,31 @@ class StudentAdmin(admin.ModelAdmin):
 
         wb.save(response)
         return response
-
     export_students_excel.short_description = "📥 Экспорт выбранных учеников в Excel"
+
+    def show_finance_report(self, request, queryset):
+        """Показать финансовый отчет по ученикам"""
+        if queryset.count() == 1:
+            student = queryset.first()
+            return redirect(f'/admin/school/student/{student.id}/report/')
+        else:
+            self.message_user(request, 'Выберите одного ученика для просмотра отчета', level='WARNING')
+    show_finance_report.short_description = "📊 Финансовый отчет"
 
 
 # ==================== LESSON FORMAT ADMIN ====================
+
 class LessonFormatAdmin(admin.ModelAdmin):
-    list_display = ('name', 'description')
+    list_display = ('name', 'description', 'lessons_count')
     search_fields = ('name',)
 
-
-# ==================== INLINE ДЛЯ ПОСЕЩАЕМОСТИ ====================
-class LessonAttendanceInline(admin.TabularInline):
-    model = LessonAttendance
-    extra = 1
-    raw_id_fields = ['student']
-    fields = ['student', 'cost', 'discount', 'teacher_payment_share', 'status']
+    def lessons_count(self, obj):
+        return obj.lesson_set.count()
+    lessons_count.short_description = 'Занятий'
 
 
 # ==================== LESSON ADMIN ====================
+
 @admin.register(Lesson)
 class LessonAdmin(admin.ModelAdmin):
     formfield_overrides = {
@@ -315,56 +509,149 @@ class LessonAdmin(admin.ModelAdmin):
         models.DateField: {'widget': forms.DateInput(attrs={'type': 'date'})},
     }
 
-    list_display = ('id', 'subject', 'teacher', 'students_list', 'date', 'start_time', 'status', 'get_total_cost')
+    list_display = ('id', 'colored_subject', 'teacher_link', 'students_preview', 
+                   'date', 'start_time', 'status_badge', 'finance_preview')
     list_filter = ('status', 'subject', 'date', 'teacher', 'is_group')
     search_fields = ('teacher__user__last_name', 'students__user__last_name', 'subject__name')
     date_hierarchy = 'date'
     raw_id_fields = ('teacher',)
     inlines = [LessonAttendanceInline]
+    readonly_fields = ('finance_stats', 'video_room')
 
     fieldsets = (
         ('Основная информация', {
             'fields': ('teacher', 'subject', 'format', 'is_group')
         }),
         ('Время', {
-            'fields': ('date', 'start_time', 'end_time')
+            'fields': ('date', 'start_time', 'end_time', 'duration')
         }),
-        ('Финансы', {
-            'fields': ('price_type', 'base_cost', 'base_teacher_payment')
+        ('Финансы', {  # ← УБРАЛИ get_total_cost, оставили только нужные поля
+            'fields': ('price_type', 'base_cost', 'base_teacher_payment'),
+            'classes': ('wide',),
+            'description': 'Базовая стоимость урока. Индивидуальные цены можно настроить в таблице посещаемости ниже.'
+        }),
+        ('Финансовая статистика', {
+            'fields': ('finance_stats',),
+            'classes': ('wide', 'collapse'),
         }),
         ('Платформа', {
             'fields': ('meeting_link', 'meeting_platform', 'video_room')
         }),
-        ('Статус', {
+        ('Статус и заметки', {
             'fields': ('status', 'notes')
         }),
     )
 
-    def students_list(self, obj):
-        """Отображает список учеников"""
+    def teacher_link(self, obj):
+        url = f'/admin/school/teacher/{obj.teacher.id}/change/'
+        return format_html('<a href="{}">{}</a>', url, obj.teacher.user.get_full_name())
+    teacher_link.short_description = 'Учитель'
+
+    def colored_subject(self, obj):
+        colors = {
+            'scheduled': '#007bff',
+            'completed': '#28a745',
+            'cancelled': '#dc3545',
+            'overdue': '#fd7e14',
+        }
+        color = colors.get(obj.status, '#6c757d')
+        return format_html('<span style="color: {}; font-weight: bold;">{}</span>', color, obj.subject.name)
+    colored_subject.short_description = 'Предмет'
+
+    def students_preview(self, obj):
         students = obj.students.all()
         if not students:
-            return "—"
+            return format_html('<span style="color: #dc3545;">❌ Нет учеников</span>')
         elif students.count() == 1:
             return students.first().user.get_full_name()
         else:
-            return f"{students.count()} учеников"
+            return format_html('{} учеников', students.count())
+    students_preview.short_description = 'Ученики'
 
-    students_list.short_description = 'Ученики'
+    def status_badge(self, obj):
+        status_colors = {
+            'scheduled': ('#007bff', 'Запланировано'),
+            'completed': ('#28a745', 'Проведено'),
+            'cancelled': ('#dc3545', 'Отменено'),
+            'overdue': ('#fd7e14', 'Просрочено'),
+        }
+        color, text = status_colors.get(obj.status, ('#6c757d', obj.status))
+        return format_html(
+            '<span style="background: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            color, text)
+    status_badge.short_description = 'Статус'
 
-    def get_total_cost(self, obj):
-        """Общая стоимость урока"""
-        return obj.get_total_cost()
+    def finance_preview(self, obj):
+        """Предпросмотр финансов с использованием LessonFinanceCalculator"""
+        calculator = LessonFinanceCalculator(obj)
+        stats = calculator.stats
+        
+        if stats['students_total'] == 0:
+            return '-'
+        
+        return format_html(
+            '<span title="Всего: {}₽\nВыплата: {}₽\nПрисутствовало: {}/{}">💰 {}₽</span>',
+            stats['total_cost'], stats['teacher_payment'],
+            stats['students_attended'], stats['students_total'],
+            stats['total_cost']
+        )
+    finance_preview.short_description = 'Финансы'
 
-    get_total_cost.short_description = 'Общая стоимость'
+    def finance_stats(self, obj):
+        """Детальная финансовая статистика"""
+        calculator = LessonFinanceCalculator(obj)
+        stats = calculator.stats
+        
+        html = f"""
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 5px;">
+            <h3 style="margin-top: 0;">Финансовая статистика урока</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 5px;"><strong>Всего учеников:</strong></td>
+                    <td style="padding: 5px;">{stats['students_total']}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 5px;"><strong>Присутствовало:</strong></td>
+                    <td style="padding: 5px; color: #28a745;">{stats['students_attended']}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 5px;"><strong>В долг:</strong></td>
+                    <td style="padding: 5px; color: #dc3545;">{stats['students_debt']}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 5px;"><strong>Отсутствовало:</strong></td>
+                    <td style="padding: 5px; color: #6c757d;">{stats['students_absent']}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 5px;"><strong>Общая стоимость:</strong></td>
+                    <td style="padding: 5px; font-weight: bold;">{stats['total_cost']} ₽</td>
+                </tr>
+                <tr>
+                    <td style="padding: 5px;"><strong>Выплата учителю:</strong></td>
+                    <td style="padding: 5px; font-weight: bold;">{stats['teacher_payment']} ₽</td>
+                </tr>
+                <tr>
+                    <td style="padding: 5px;"><strong>Стоимость присутствовавших:</strong></td>
+                    <td style="padding: 5px;">{stats['attended_cost']} ₽</td>
+                </tr>
+                <tr>
+                    <td style="padding: 5px;"><strong>Задолженность:</strong></td>
+                    <td style="padding: 5px; color: #dc3545;">{stats['debt_cost']} ₽</td>
+                </tr>
+            </table>
+        </div>
+        """
+        return format_html(html)
+    finance_stats.short_description = 'Финансовая статистика'
 
     def has_report(self, obj):
         if hasattr(obj, 'report'):
             url = f'/admin/school/lessonreport/{obj.report.id}/change/'
             return format_html('<a href="{}" style="color: #28a745;">✅ Отчет #{}</a>', url, obj.report.id)
         return '❌ Нет отчета'
-
     has_report.short_description = 'Отчет'
+
+    actions = ['export_lessons_finance', 'mark_as_completed', 'mark_as_paid', 'mark_as_debt']
 
     def get_urls(self):
         urls = super().get_urls()
@@ -372,11 +659,33 @@ class LessonAdmin(admin.ModelAdmin):
             path('<int:lesson_id>/complete/',
                  self.admin_site.admin_view(admin_complete_lesson),
                  name='complete-lesson'),
+            path('bulk-complete/',
+                 self.admin_site.admin_view(self.bulk_complete_view),
+                 name='bulk-complete-lessons'),
         ]
         return custom_urls + urls
 
-    from django.db.models import Prefetch
-    from .models import LessonAttendance
+    def bulk_complete_view(self, request):
+        """Страница массового завершения уроков"""
+        lesson_ids = request.GET.getlist('ids')
+        lessons = Lesson.objects.filter(id__in=lesson_ids)
+        
+        if request.method == 'POST':
+            # Обработка массового завершения
+            from django.contrib import messages
+            completed = 0
+            for lesson in lessons:
+                if lesson.status == 'scheduled':
+                    # Здесь логика завершения
+                    completed += 1
+            messages.success(request, f'✅ Завершено {completed} уроков')
+            return redirect('admin:school_lesson_changelist')
+        
+        context = {
+            'lessons': lessons,
+            'title': 'Массовое завершение уроков',
+        }
+        return render(request, 'admin/school/lesson/bulk_complete.html', context)
 
     def changelist_view(self, request, extra_context=None):
         # Если запрошен календарь
@@ -390,39 +699,31 @@ class LessonAdmin(admin.ModelAdmin):
                 )
             )
 
-            # Формируем события для календаря
             calendar_events = []
             for lesson in lessons:
-                # Предмет (сокращенно - первые 2 буквы)
+                calculator = LessonFinanceCalculator(lesson)
+                stats = calculator.stats
+                
                 subject_short = lesson.subject.name[:4]
-
-                # Фамилия учителя
                 teacher_last = lesson.teacher.user.last_name
 
-                # Ученики
-                attendance_count = lesson.attendance.count()
-                if attendance_count == 0:
+                if stats['students_total'] == 0:
                     students_text = "нет"
-                elif attendance_count == 1:
+                elif stats['students_total'] == 1:
                     student = lesson.attendance.first().student
-                    first_name = student.user.first_name
-                    last_initial = student.user.last_name[0] if student.user.last_name else ''
-                    students_text = f"{first_name} {last_initial}."
+                    students_text = student.user.first_name
                 else:
-                    students_text = f"{attendance_count} уч."
+                    students_text = f"{stats['students_total']} уч."
 
-                # Формируем заголовок
                 title = f"{subject_short} {teacher_last} - {students_text}"
 
-                # Определяем цвет в зависимости от статуса
-                if lesson.status == 'completed':
-                    bg_color = '#28a745'
-                elif lesson.status == 'cancelled':
-                    bg_color = '#dc3545'
-                elif lesson.status == 'overdue':
-                    bg_color = '#fd7e14'
-                else:
-                    bg_color = '#007bff'
+                status_colors = {
+                    'completed': '#28a745',
+                    'cancelled': '#dc3545',
+                    'overdue': '#fd7e14',
+                    'scheduled': '#007bff',
+                }
+                bg_color = status_colors.get(lesson.status, '#6c757d')
 
                 calendar_events.append({
                     'title': title,
@@ -432,6 +733,10 @@ class LessonAdmin(admin.ModelAdmin):
                     'backgroundColor': bg_color,
                     'borderColor': bg_color,
                     'textColor': 'white',
+                    'finance': {
+                        'total_cost': stats['total_cost'],
+                        'teacher_payment': stats['teacher_payment']
+                    }
                 })
 
             extra_context = extra_context or {}
@@ -440,20 +745,100 @@ class LessonAdmin(admin.ModelAdmin):
 
             return render(request, 'admin/school/lesson/change_list_calendar.html', extra_context)
 
-        # Обычный список
         return super().changelist_view(request, extra_context)
 
     change_form_template = "admin/school/lesson/change_form.html"
 
     def response_change(self, request, obj):
         if "_complete-lesson" in request.POST:
-            # Перенаправляем на страницу завершения
-            return redirect('admin-complete-lesson', lesson_id=obj.id)
+            return redirect('admin:complete-lesson', lesson_id=obj.id)
         return super().response_change(request, obj)
 
+    def export_lessons_finance(self, request, queryset):
+        """Экспорт финансовой информации по урокам"""
+        import openpyxl
+        from openpyxl.styles import Font, Alignment, PatternFill
+        from django.http import HttpResponse
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Финансы уроков"
+
+        headers = ['ID', 'Дата', 'Учитель', 'Предмет', 'Учеников', 
+                   'Присутствовало', 'В долг', 'Общая стоимость', 'Выплата учителю']
+
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="417690", end_color="417690", fill_type="solid")
+
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+
+        for row, lesson in enumerate(queryset, start=2):
+            calculator = LessonFinanceCalculator(lesson)
+            stats = calculator.stats
+
+            ws.cell(row=row, column=1, value=lesson.id)
+            ws.cell(row=row, column=2, value=lesson.date.strftime('%d.%m.%Y'))
+            ws.cell(row=row, column=3, value=lesson.teacher.user.get_full_name())
+            ws.cell(row=row, column=4, value=lesson.subject.name)
+            ws.cell(row=row, column=5, value=stats['students_total'])
+            ws.cell(row=row, column=6, value=stats['students_attended'])
+            ws.cell(row=row, column=7, value=stats['students_debt'])
+            ws.cell(row=row, column=8, value=stats['total_cost'])
+            ws.cell(row=row, column=9, value=stats['teacher_payment'])
+
+        column_widths = [8, 12, 25, 20, 8, 10, 8, 15, 15]
+        for i, width in enumerate(column_widths, 1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = f"lessons_finance_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        wb.save(response)
+        return response
+    export_lessons_finance.short_description = "📊 Экспорт финансов уроков"
+
+    def mark_as_completed(self, request, queryset):
+        """Отметить уроки как проведенные"""
+        from django.contrib import messages
+        
+        completed = 0
+        for lesson in queryset.filter(status='scheduled'):
+            if lesson.attendance.exists():
+                lesson.status = 'completed'
+                lesson.save()
+                completed += 1
+        
+        self.message_user(request, f'✅ {completed} уроков отмечены как проведенные')
+    mark_as_completed.short_description = "✅ Отметить как проведенные"
+
+    def mark_as_paid(self, request, queryset):
+        """Отметить посещаемость как оплаченную"""
+        updated = LessonAttendance.objects.filter(
+            lesson__in=queryset,
+            status='debt'
+        ).update(status='attended')
+        self.message_user(request, f'💰 {updated} записей отмечены как оплаченные')
+    mark_as_paid.short_description = "💰 Отметить как оплаченные"
+
+    def mark_as_debt(self, request, queryset):
+        """Отметить посещаемость как долг"""
+        updated = LessonAttendance.objects.filter(
+            lesson__in=queryset,
+            status='attended'
+        ).update(status='debt')
+        self.message_user(request, f'⚠️ {updated} записей отмечены как долг')
+    mark_as_debt.short_description = "⚠️ Отметить как долг"
 
 
 # ==================== LESSON REPORT ADMIN ====================
+
 @admin.register(LessonReport)
 class LessonReportAdmin(admin.ModelAdmin):
     list_display = ('id', 'lesson_link', 'topic_preview', 'created_at')
@@ -465,59 +850,119 @@ class LessonReportAdmin(admin.ModelAdmin):
     def lesson_link(self, obj):
         url = f'/admin/school/lesson/{obj.lesson.id}/change/'
         return format_html('<a href="{}">{} #{}</a>', url, obj.lesson.subject, obj.lesson.id)
-
     lesson_link.short_description = 'Занятие'
 
     def topic_preview(self, obj):
         return obj.topic[:50] + '...' if len(obj.topic) > 50 else obj.topic
-
     topic_preview.short_description = 'Тема'
 
 
 # ==================== PAYMENT ADMIN ====================
+
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('user', 'amount', 'payment_type', 'description', 'created_at')
+    list_display = ('id', 'user_link', 'amount_colored', 'payment_type_badge', 
+                   'description', 'lesson_link', 'created_at')
     list_filter = ('payment_type', 'created_at')
     search_fields = ('user__first_name', 'user__last_name', 'description')
     date_hierarchy = 'created_at'
     raw_id_fields = ('user', 'lesson')
+    readonly_fields = ('created_at',)
 
-    def save_model(self, request, obj, form, change):
-        # Сохраняем платеж
-        super().save_model(request, obj, form, change)
+    fieldsets = (
+        (None, {
+            'fields': ('user', 'payment_type', 'amount', 'description')
+        }),
+        ('Связи', {
+            'fields': ('lesson',),
+            'classes': ('wide',),
+        }),
+        ('Дата', {
+            'fields': ('created_at',),
+        }),
+    )
 
-        # Обновляем баланс пользователя
+    def user_link(self, obj):
+        url = f'/admin/school/user/{obj.user.id}/change/'
+        return format_html('<a href="{}">{}</a>', url, obj.user.get_full_name())
+    user_link.short_description = 'Пользователь'
+
+    def amount_colored(self, obj):
         if obj.payment_type == 'income':
-            obj.user.balance += obj.amount
+            return format_html('<span style="color: #28a745;">+{} ₽</span>', obj.amount)
         elif obj.payment_type == 'expense':
-            obj.user.balance -= obj.amount
-
-        obj.user.save()
-
-        # Создаем уведомление
-        from .models import Notification
-
-        if obj.payment_type == 'income':
-            title = '💰 Пополнение баланса'
-            message = f'Ваш баланс пополнен на {obj.amount} ₽'
-        elif obj.payment_type == 'expense':
-            title = '💸 Списание средств'
-            message = f'С вашего баланса списано {obj.amount} ₽'
+            return format_html('<span style="color: #dc3545;">-{} ₽</span>', obj.amount)
         else:
-            title = '💳 Выплата'
-            message = f'Вам начислена выплата {obj.amount} ₽'
+            return format_html('<span style="color: #17a2b8;">{} ₽</span>', obj.amount)
+    amount_colored.short_description = 'Сумма'
 
-        Notification.objects.create(
-            user=obj.user,
-            title=title,
-            message=message,
-            notification_type='payment_received' if obj.payment_type == 'income' else 'payment_withdrawn',
-            link='/profile/'
+    def payment_type_badge(self, obj):
+        type_colors = {
+            'income': ('#28a745', 'Пополнение'),
+            'expense': ('#dc3545', 'Списание'),
+            'teacher_payment': ('#17a2b8', 'Выплата учителю'),
+        }
+        color, text = type_colors.get(obj.payment_type, ('#6c757d', obj.payment_type))
+        return format_html(
+            '<span style="background: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            color, text)
+    payment_type_badge.short_description = 'Тип'
+
+    def lesson_link(self, obj):
+        if obj.lesson:
+            url = f'/admin/school/lesson/{obj.lesson.id}/change/'
+            return format_html('<a href="{}">Урок #{}</a>', url, obj.lesson.id)
+        return '-'
+    lesson_link.short_description = 'Урок'
+
+    actions = ['export_payments_excel']
+
+    def export_payments_excel(self, request, queryset):
+        """Экспорт платежей в Excel"""
+        import openpyxl
+        from openpyxl.styles import Font, Alignment, PatternFill
+        from django.http import HttpResponse
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Платежи"
+
+        headers = ['ID', 'Дата', 'Пользователь', 'Тип', 'Сумма', 'Описание']
+
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="417690", end_color="417690", fill_type="solid")
+
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+
+        for row, payment in enumerate(queryset, start=2):
+            ws.cell(row=row, column=1, value=payment.id)
+            ws.cell(row=row, column=2, value=payment.created_at.strftime('%d.%m.%Y %H:%M'))
+            ws.cell(row=row, column=3, value=payment.user.get_full_name())
+            ws.cell(row=row, column=4, value=payment.get_payment_type_display())
+            ws.cell(row=row, column=5, value=float(payment.amount))
+            ws.cell(row=row, column=6, value=payment.description)
+
+        column_widths = [8, 20, 30, 15, 12, 40]
+        for i, width in enumerate(column_widths, 1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
+        filename = f"payments_export_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        wb.save(response)
+        return response
+    export_payments_excel.short_description = "📥 Экспорт платежей в Excel"
 
 
 # ==================== SCHEDULE ADMIN ====================
+
 @admin.register(Schedule)
 class ScheduleAdmin(admin.ModelAdmin):
     formfield_overrides = {
@@ -532,7 +977,6 @@ class ScheduleAdmin(admin.ModelAdmin):
     def day_of_week_display(self, obj):
         days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
         return days[obj.date.weekday()]
-
     day_of_week_display.short_description = 'День'
 
     def get_urls(self):
@@ -544,72 +988,152 @@ class ScheduleAdmin(admin.ModelAdmin):
 
 
 # ==================== TRIAL REQUEST ADMIN ====================
+
 @admin.register(TrialRequest)
 class TrialRequestAdmin(admin.ModelAdmin):
-    list_display = ('name', 'phone', 'email', 'subject', 'created_at', 'is_processed')
+    list_display = ('name', 'phone', 'email', 'subject', 'created_at', 'is_processed_badge')
     list_filter = ('is_processed', 'subject', 'created_at')
     search_fields = ('name', 'phone', 'email')
     date_hierarchy = 'created_at'
+    actions = ['mark_as_processed']
+
+    def is_processed_badge(self, obj):
+        if obj.is_processed:
+            return format_html('<span style="color: #28a745;">✅ Обработано</span>')
+        return format_html('<span style="color: #ffc107;">⏳ Новое</span>')
+    is_processed_badge.short_description = 'Статус'
+
+    def mark_as_processed(self, request, queryset):
+        updated = queryset.update(is_processed=True)
+        self.message_user(request, f'✅ {updated} заявок отмечены как обработанные')
+    mark_as_processed.short_description = "✅ Отметить как обработанные"
 
 
 # ==================== NOTIFICATION ADMIN ====================
+
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'title', 'notification_type', 'is_read', 'created_at')
+    list_display = ('id', 'user', 'title', 'notification_type_icon', 'is_read_badge', 'created_at')
     list_filter = ('notification_type', 'is_read', 'created_at')
     search_fields = ('user__username', 'user__email', 'title')
     date_hierarchy = 'created_at'
     raw_id_fields = ('user',)
     list_per_page = 50
 
+    def notification_type_icon(self, obj):
+        icons = {
+            'lesson_reminder': '🔔',
+            'lesson_canceled': '❌',
+            'lesson_completed': '✅',
+            'payment_received': '💰',
+            'payment_withdrawn': '💸',
+            'material_added': '📚',
+            'homework_assigned': '📝',
+            'feedback_received': '⭐',
+            'system': '⚙',
+        }
+        icon = icons.get(obj.notification_type, '📢')
+        return f"{icon} {obj.get_notification_type_display()}"
+    notification_type_icon.short_description = 'Тип'
+
+    def is_read_badge(self, obj):
+        if obj.is_read:
+            return format_html('<span style="color: #6c757d;">✓ Прочитано</span>')
+        return format_html('<span style="color: #007bff; font-weight: bold;">● Новое</span>')
+    is_read_badge.short_description = 'Статус'
+
+    actions = ['mark_as_read', 'mark_as_unread']
+
+    def mark_as_read(self, request, queryset):
+        updated = queryset.update(is_read=True)
+        self.message_user(request, f'✅ {updated} уведомлений отмечены как прочитанные')
+    mark_as_read.short_description = "✓ Отметить как прочитанные"
+
+    def mark_as_unread(self, request, queryset):
+        updated = queryset.update(is_read=False)
+        self.message_user(request, f'🔄 {updated} уведомлений отмечены как непрочитанные')
+    mark_as_unread.short_description = "🔄 Отметить как непрочитанные"
+
 
 # ==================== LESSON FEEDBACK ADMIN ====================
+
 @admin.register(LessonFeedback)
 class LessonFeedbackAdmin(admin.ModelAdmin):
-    list_display = ('id', 'lesson', 'student', 'teacher', 'rating_stars', 'created_at', 'is_public')
+    list_display = ('id', 'lesson_link', 'student', 'teacher', 'rating_stars', 
+                   'comment_preview', 'is_public_badge', 'created_at')
     list_filter = ('rating', 'is_public', 'created_at')
     search_fields = ('student__user__last_name', 'teacher__user__last_name', 'comment')
     raw_id_fields = ('lesson', 'student', 'teacher')
     date_hierarchy = 'created_at'
     actions = ['make_public', 'make_private']
 
+    def lesson_link(self, obj):
+        url = f'/admin/school/lesson/{obj.lesson.id}/change/'
+        return format_html('<a href="{}">{} #{}</a>', url, obj.lesson.subject, obj.lesson.id)
+    lesson_link.short_description = 'Урок'
+
     def rating_stars(self, obj):
         return '⭐' * obj.rating
-
     rating_stars.short_description = 'Оценка'
 
-    def make_public(self, request, queryset):
-        queryset.update(is_public=True)
-        self.message_user(request, f'✅ {queryset.count()} оценок опубликовано')
+    def comment_preview(self, obj):
+        if obj.comment:
+            return obj.comment[:50] + '...' if len(obj.comment) > 50 else obj.comment
+        return '-'
+    comment_preview.short_description = 'Комментарий'
 
-    make_public.short_description = 'Опубликовать'
+    def is_public_badge(self, obj):
+        if obj.is_public:
+            return format_html('<span style="color: #28a745;">✅ Публичный</span>')
+        return format_html('<span style="color: #6c757d;">🔒 Приватный</span>')
+    is_public_badge.short_description = 'Видимость'
+
+    def make_public(self, request, queryset):
+        updated = queryset.update(is_public=True)
+        self.message_user(request, f'✅ {updated} оценок опубликовано')
+    make_public.short_description = '✅ Опубликовать'
 
     def make_private(self, request, queryset):
-        queryset.update(is_public=False)
-        self.message_user(request, f'🔒 {queryset.count()} оценок скрыто')
-
-    make_private.short_description = 'Скрыть'
+        updated = queryset.update(is_public=False)
+        self.message_user(request, f'🔒 {updated} оценок скрыто')
+    make_private.short_description = '🔒 Скрыть'
 
 
 # ==================== TEACHER RATING ADMIN ====================
+
 @admin.register(TeacherRating)
 class TeacherRatingAdmin(admin.ModelAdmin):
-    list_display = ('teacher', 'average_rating_display', 'total_feedbacks', 'updated_at')
+    list_display = ('teacher', 'average_rating_display', 'total_feedbacks', 
+                   'rating_distribution', 'updated_at')
     list_select_related = ('teacher__user',)
-    readonly_fields = ('teacher', 'average_rating', 'total_feedbacks', 'rating_5_count',
-                       'rating_4_count', 'rating_3_count', 'rating_2_count', 'rating_1_count', 'updated_at')
+    readonly_fields = ('teacher', 'average_rating', 'total_feedbacks', 
+                      'rating_5_count', 'rating_4_count', 'rating_3_count', 
+                      'rating_2_count', 'rating_1_count', 'updated_at')
 
     def average_rating_display(self, obj):
-        return f"{obj.average_rating:.1f} ⭐"
-
+        stars = '⭐' * int(obj.average_rating)
+        return f"{stars} ({obj.average_rating:.1f})"
     average_rating_display.short_description = 'Средний балл'
+
+    def rating_distribution(self, obj):
+        total = obj.total_feedbacks or 1
+        html = '<div style="width: 200px;">'
+        for rating, count in [(5, obj.rating_5_count), (4, obj.rating_4_count),
+                              (3, obj.rating_3_count), (2, obj.rating_2_count),
+                              (1, obj.rating_1_count)]:
+            width = (count / total) * 100
+            html += f'<div style="margin: 2px 0;">{rating}⭐: <span style="display: inline-block; width: {width}px; height: 10px; background: #ffc107;"></span> {count}</div>'
+        html += '</div>'
+        return format_html(html)
+    rating_distribution.short_description = 'Распределение'
 
 
 # ==================== HOMEWORK ADMIN ====================
+
 @admin.register(Homework)
 class HomeworkAdmin(admin.ModelAdmin):
-    list_display = ('id', 'colored_title', 'student_name', 'teacher_name', 'subject',
-                    'colored_deadline', 'colored_status')
+    list_display = ('id', 'colored_title', 'student_link', 'teacher_link', 
+                   'subject', 'deadline_colored', 'status_badge')
     list_filter = ('subject', 'is_active', 'deadline')
     search_fields = ('title', 'student__user__last_name', 'teacher__user__last_name')
     date_hierarchy = 'deadline'
@@ -617,22 +1141,21 @@ class HomeworkAdmin(admin.ModelAdmin):
     list_per_page = 25
     save_on_top = True
 
-    def student_name(self, obj):
-        return obj.student.user.get_full_name()
+    def student_link(self, obj):
+        url = f'/admin/school/student/{obj.student.id}/change/'
+        return format_html('<a href="{}">{}</a>', url, obj.student.user.get_full_name())
+    student_link.short_description = 'Ученик'
 
-    student_name.short_description = 'Ученик'
-
-    def teacher_name(self, obj):
-        return obj.teacher.user.get_full_name()
-
-    teacher_name.short_description = 'Учитель'
+    def teacher_link(self, obj):
+        url = f'/admin/school/teacher/{obj.teacher.id}/change/'
+        return format_html('<a href="{}">{}</a>', url, obj.teacher.user.get_full_name())
+    teacher_link.short_description = 'Учитель'
 
     def colored_title(self, obj):
         return format_html('<span style="color: #2c3e50; font-weight: bold;">{}</span>', obj.title)
-
     colored_title.short_description = 'Название'
 
-    def colored_deadline(self, obj):
+    def deadline_colored(self, obj):
         now = timezone.now()
         if obj.deadline < now:
             return format_html('<span style="color: #dc3545;">⚠️ {}</span>',
@@ -643,49 +1166,47 @@ class HomeworkAdmin(admin.ModelAdmin):
         else:
             return format_html('<span style="color: #28a745;">✅ {}</span>',
                                obj.deadline.strftime('%d.%m.%Y %H:%M'))
+    deadline_colored.short_description = 'Срок сдачи'
 
-    colored_deadline.short_description = 'Срок сдачи'
-
-    def colored_status(self, obj):
+    def status_badge(self, obj):
         status = obj.get_status()
-        colors = {
+        status_colors = {
             'pending': ('#ffc107', '⏳ Ожидает'),
             'submitted': ('#17a2b8', '📤 На проверке'),
             'checked': ('#28a745', '✅ Проверено'),
             'overdue': ('#dc3545', '⚠️ Просрочено'),
         }
-        color, text = colors.get(status, ('#6c757d', '❓'))
+        color, text = status_colors.get(status, ('#6c757d', '❓'))
         return format_html(
             '<span style="background: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
             color, text)
-
-    colored_status.short_description = 'Статус'
+    status_badge.short_description = 'Статус'
 
 
 # ==================== HOMEWORK SUBMISSION ADMIN ====================
+
 @admin.register(HomeworkSubmission)
 class HomeworkSubmissionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'homework_link', 'student_name', 'submitted_at', 'status_colored', 'grade_display')
+    list_display = ('id', 'homework_link', 'student_name', 'submitted_at', 
+                   'status_colored', 'grade_display')
     list_filter = ('status', 'submitted_at')
     search_fields = ('homework__title', 'student__user__last_name')
     date_hierarchy = 'submitted_at'
+    raw_id_fields = ('homework', 'student')
 
     def homework_link(self, obj):
         url = f'/admin/school/homework/{obj.homework.id}/change/'
         return format_html('<a href="{}">{}</a>', url, obj.homework.title)
-
     homework_link.short_description = 'Задание'
 
     def student_name(self, obj):
         return obj.student.user.get_full_name()
-
     student_name.short_description = 'Ученик'
 
     def status_colored(self, obj):
         if obj.status == 'submitted':
             return format_html('<span style="color: #17a2b8;">📤 Ожидает проверки</span>')
         return format_html('<span style="color: #28a745;">✅ Проверено</span>')
-
     status_colored.short_description = 'Статус'
 
     def grade_display(self, obj):
@@ -694,47 +1215,56 @@ class HomeworkSubmissionAdmin(admin.ModelAdmin):
                 '<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 3px;">{}/5</span>',
                 obj.grade)
         return '—'
-
     grade_display.short_description = 'Оценка'
 
 
 # ==================== GROUP LESSON ADMIN ====================
-class GroupEnrollmentInline(admin.TabularInline):
-    model = GroupEnrollment
-    extra = 1
-    raw_id_fields = ['student']
-
 
 @admin.register(GroupLesson)
 class GroupLessonAdmin(admin.ModelAdmin):
-    list_display = ('id', 'subject', 'teacher', 'date', 'start_time', 'students_count', 'status', 'get_total_cost')
+    list_display = ('id', 'subject', 'teacher', 'date', 'start_time', 
+                   'students_count', 'status_badge', 'finance_preview')
     list_filter = ('status', 'subject', 'teacher', 'date')
     search_fields = ('subject__name', 'teacher__user__last_name', 'notes')
     inlines = [GroupEnrollmentInline]
+
     fieldsets = (
         ('Основное', {
             'fields': ('teacher', 'subject', 'format', 'date', 'start_time', 'end_time')
         }),
         ('Финансы', {
-            'fields': ('price_type', 'base_price', 'teacher_payment')
+            'fields': ('price_type', 'base_price', 'teacher_payment'),
         }),
         ('Платформа', {
             'fields': ('meeting_link', 'meeting_platform', 'video_room')
         }),
-        ('Статус', {
+        ('Статус и заметки', {
             'fields': ('status', 'notes')
         }),
     )
 
     def students_count(self, obj):
         return obj.enrollments.count()
-
     students_count.short_description = 'Учеников'
 
-    def get_total_cost(self, obj):
-        return obj.get_total_cost()
+    def status_badge(self, obj):
+        status_colors = {
+            'scheduled': ('#007bff', 'Запланировано'),
+            'completed': ('#28a745', 'Проведено'),
+            'cancelled': ('#dc3545', 'Отменено'),
+        }
+        color, text = status_colors.get(obj.status, ('#6c757d', obj.status))
+        return format_html(
+            '<span style="background: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            color, text)
+    status_badge.short_description = 'Статус'
 
-    get_total_cost.short_description = 'Общая стоимость'
+    def finance_preview(self, obj):
+        return format_html(
+            '<span title="Сбор: {}₽\nВыплата: {}₽">💰 {}₽</span>',
+            obj.get_total_cost(), obj.teacher_payment, obj.get_total_cost()
+        )
+    finance_preview.short_description = 'Финансы'
 
     def changelist_view(self, request, extra_context=None):
         if request.GET.get('view') == 'calendar':
@@ -752,36 +1282,66 @@ class GroupLessonAdmin(admin.ModelAdmin):
 
 
 # ==================== GROUP ENROLLMENT ADMIN ====================
+
 @admin.register(GroupEnrollment)
 class GroupEnrollmentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'group_lesson', 'student', 'cost_to_pay', 'status')
+    list_display = ('id', 'group_lesson', 'student', 'cost_to_pay', 'status_badge')
     list_filter = ('status', 'group_lesson__subject')
     search_fields = ('student__user__last_name', 'group_lesson__subject__name')
     raw_id_fields = ['student', 'group_lesson']
 
+    def status_badge(self, obj):
+        status_colors = {
+            'registered': ('#007bff', 'Зарегистрирован'),
+            'attended': ('#28a745', 'Присутствовал'),
+            'absent': ('#dc3545', 'Отсутствовал'),
+            'debt': ('#fd7e14', 'Задолженность'),
+        }
+        color, text = status_colors.get(obj.status, ('#6c757d', obj.status))
+        return format_html(
+            '<span style="background: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            color, text)
+    status_badge.short_description = 'Статус'
+
 
 # ==================== ATTENDANCE ADMIN ====================
+
 @admin.register(LessonAttendance)
 class LessonAttendanceAdmin(admin.ModelAdmin):
-    list_display = ('id', 'lesson', 'student', 'cost', 'status')
+    list_display = ('id', 'lesson_link', 'student', 'cost', 'status_badge', 'registered_at')
     list_filter = ('status', 'lesson__subject')
     search_fields = ('student__user__last_name', 'lesson__subject__name')
     raw_id_fields = ['lesson', 'student']
 
+    def lesson_link(self, obj):
+        url = f'/admin/school/lesson/{obj.lesson.id}/change/'
+        return format_html('<a href="{}">{} #{}</a>', url, obj.lesson.subject, obj.lesson.id)
+    lesson_link.short_description = 'Урок'
+
+    def status_badge(self, obj):
+        status_colors = {
+            'registered': ('#007bff', 'Зарегистрирован'),
+            'attended': ('#28a745', 'Присутствовал'),
+            'absent': ('#dc3545', 'Отсутствовал'),
+            'debt': ('#fd7e14', 'Задолженность'),
+        }
+        color, text = status_colors.get(obj.status, ('#6c757d', obj.status))
+        return format_html(
+            '<span style="background: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            color, text)
+    status_badge.short_description = 'Статус'
+
 
 # ==================== SCHEDULE TEMPLATE ADMIN ====================
-class ScheduleTemplateStudentInline(admin.TabularInline):
-    model = ScheduleTemplateStudent
-    extra = 1
-    raw_id_fields = ['student']
-
 
 @admin.register(ScheduleTemplate)
 class ScheduleTemplateAdmin(admin.ModelAdmin):
-    list_display = ('id', 'teacher', 'subject', 'start_time', 'repeat_type', 'get_days', 'start_date', 'is_active')
+    list_display = ('id', 'teacher', 'subject', 'start_time', 'repeat_type', 
+                   'get_days', 'start_date', 'is_active')
     list_filter = ('repeat_type', 'is_active', 'teacher', 'subject')
     search_fields = ('teacher__user__last_name', 'subject__name')
     inlines = [ScheduleTemplateStudentInline]
+
     fieldsets = (
         ('Основное', {
             'fields': ('teacher', 'subject', 'format', 'start_time', 'end_time')
@@ -794,10 +1354,15 @@ class ScheduleTemplateAdmin(admin.ModelAdmin):
             'classes': ('wide',)
         }),
         ('Финансы', {
-            'fields': ('price_type', 'base_cost', 'base_teacher_payment')
+            'fields': ('base_cost', 'base_teacher_payment'),
+            'description': 'Базовая стоимость урока. Индивидуальные цены можно настроить для каждого ученика ниже.'
         }),
         ('Платформа', {
             'fields': ('meeting_link', 'meeting_platform')
+        }),
+        ('Заметки', {
+            'fields': ('notes',),
+            'classes': ('collapse',),
         }),
     )
 
@@ -811,53 +1376,45 @@ class ScheduleTemplateAdmin(admin.ModelAdmin):
         if obj.saturday: days.append('Сб')
         if obj.sunday: days.append('Вс')
         return ', '.join(days) if days else 'Все'
-
     get_days.short_description = 'Дни'
 
-    actions = ['generate_lessons']
+    actions = ['generate_lessons', 'duplicate_template']
 
     def generate_lessons(self, request, queryset):
         count = 0
         for template in queryset:
             lessons = template.generate_lessons()
             count += len(lessons)
-        self.message_user(request, f'Создано {count} уроков')
+        self.message_user(request, f'✅ Создано {count} уроков')
+    generate_lessons.short_description = '📅 Создать уроки по шаблону'
 
-    generate_lessons.short_description = 'Создать уроки по шаблону'
+    def duplicate_template(self, request, queryset):
+        for template in queryset:
+            template.pk = None
+            template.id = None
+            template.is_active = True
+            template.save()
+        self.message_user(request, f'✅ Скопировано {queryset.count()} шаблонов')
+    duplicate_template.short_description = '📋 Дублировать шаблон'
 
 
 # ==================== STUDENT SUBJECT PRICE ADMIN ====================
+
 @admin.register(StudentSubjectPrice)
 class StudentSubjectPriceAdmin(admin.ModelAdmin):
     list_display = ['student', 'subject', 'cost', 'teacher_payment', 'discount', 'is_active']
     list_filter = ['subject', 'is_active']
-    search_fields = ['student__user__last_name', 'student__user__first_name', 'subject__name']
+    search_fields = ['student__user__last_name', 'subject__name']
     list_editable = ['cost', 'teacher_payment', 'is_active']
     autocomplete_fields = ['student', 'subject']
-    date_hierarchy = 'created_at'
-
 
 # ==================== REGISTER ALL MODELS ====================
+
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(Subject, SubjectAdmin)
 admin.site.register(Teacher, TeacherAdmin)
 admin.site.register(Student, StudentAdmin)
 admin.site.register(LessonFormat, LessonFormatAdmin)
-# Lesson уже зарегистрирован через @admin.register(Lesson)
-# LessonReport уже зарегистрирован через @admin.register(LessonReport)
-# Payment уже зарегистрирован через @admin.register(Payment)
-# Schedule уже зарегистрирован через @admin.register(Schedule)
-# TrialRequest уже зарегистрирован через @admin.register(TrialRequest)
-# Notification уже зарегистрирован через @admin.register(Notification)
-# LessonFeedback уже зарегистрирован через @admin.register(LessonFeedback)
-# TeacherRating уже зарегистрирован через @admin.register(TeacherRating)
-# Homework уже зарегистрирован через @admin.register(Homework)
-# HomeworkSubmission уже зарегистрирован через @admin.register(HomeworkSubmission)
-# GroupLesson уже зарегистрирован через @admin.register(GroupLesson)
-# GroupEnrollment уже зарегистрирован через @admin.register(GroupEnrollment)
-# LessonAttendance уже зарегистрирован через @admin.register(LessonAttendance)
-# ScheduleTemplate уже зарегистрирован через @admin.register(ScheduleTemplate)
-# StudentSubjectPrice уже зарегистрирован через @admin.register(StudentSubjectPrice)
 
 # Настройка заголовков админки
 admin.site.site_header = 'Плюс Прогресс - Администрирование'

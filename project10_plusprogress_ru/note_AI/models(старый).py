@@ -10,7 +10,6 @@ from django.db.models import Avg, Sum, Count
 from datetime import timedelta, date
 import uuid
 from datetime import timedelta
-from django.db.models import Sum
 
 
 class User(AbstractUser):
@@ -24,13 +23,13 @@ class User(AbstractUser):
     phone = models.CharField('Телефон', max_length=20, blank=True)
     photo = models.ImageField('Фото', upload_to='users/', null=True, blank=True)
     patronymic = models.CharField('Отчество', max_length=50, blank=True)
-    # balance = models.DecimalField('Баланс', max_digits=10, decimal_places=2, default=0)
+    balance = models.DecimalField('Баланс', max_digits=10, decimal_places=2, default=0)
 
     # ✅ Добавляем значение по умолчанию
     is_email_verified = models.BooleanField(default=False)
     email_verification_sent = models.DateTimeField(null=True, blank=True)
 
-    # ✅ ИСПРАВЛЕННЫЕ related_name для групп и разрешений
+    # Добавьте эти строки для решения конфликта
     groups = models.ManyToManyField(
         'auth.Group',
         verbose_name='groups',
@@ -62,9 +61,9 @@ class User(AbstractUser):
         """Разделяет полное имя на фамилию, имя и отчество"""
         parts = full_name.strip().split()
         if len(parts) >= 1:
-            self.last_name = parts[0]  # Исправлено: Фамилия должна быть первой
+            self.first_name = parts[0]
         if len(parts) >= 2:
-            self.first_name = parts[1]  # Исправлено: Имя должно быть второй
+            self.last_name = parts[1]
         if len(parts) >= 3:
             self.patronymic = ' '.join(parts[2:])
 
@@ -74,6 +73,7 @@ class User(AbstractUser):
         if self.patronymic:
             return f"{full_name} {self.patronymic}".strip()
         return full_name
+
 
 
 
@@ -134,10 +134,6 @@ class Teacher(models.Model):
 
     def __str__(self):
         return self.user.get_full_name() or self.user.username
-    
-    def get_full_name(self):
-        """Возвращает полное имя учителя"""
-        return self.user.get_full_name()
 
 
 def get_available_slots(self, date):
@@ -181,119 +177,26 @@ class Student(models.Model):
     def __str__(self):
         return self.user.get_full_name() or self.user.username
 
-    # ===== БАЛАНС (опционально, можете удалить если не нужен) =====
     def get_balance(self):
-        """Возвращает текущий баланс ученика из связанного пользователя"""
-        return self.user.balance
-    
-    @property
-    def balance(self):
-        """Текущий баланс ученика (property для доступа как student.balance)"""
-        return self.user.balance
-    
-    # ===== ДЕПОЗИТЫ =====
-    @property
-    def total_deposits(self):
-        """Сумма всех депозитов ученика"""
+        """Рассчитывает баланс ученика (депозиты - оплаченные уроки)"""
         from django.db.models import Sum
-        return self.deposits.aggregate(Sum('amount'))['amount__sum'] or 0
-    
-    @property
-    def deposits_count(self):
-        """Количество депозитов"""
-        return self.deposits.count()
-    
-    # ===== СТАТИСТИКА ПО УРОКАМ =====
-    @property
-    def total_attended_cost(self):
-        """Сумма всех оплаченных уроков"""
-        from django.db.models import Sum
-        return self.lesson_attendance.filter(
+
+        # Сумма всех депозитов
+        total_deposits = self.deposits.aggregate(Sum('amount'))['amount__sum'] or 0
+
+        # Сумма всех проведенных уроков (через attendance)
+        total_lessons = LessonAttendance.objects.filter(
+            student=self,
             status='attended'
         ).aggregate(Sum('cost'))['cost__sum'] or 0
-    
-    @property
-    def total_debt_cost(self):
-        """Сумма всех уроков в долг"""
-        from django.db.models import Sum
-        return self.lesson_attendance.filter(
-            status='debt'
-        ).aggregate(Sum('cost'))['cost__sum'] or 0
-    
-    @property
-    def total_lessons_cost(self):
-        """Общая стоимость всех уроков (оплаченные + долги)"""
-        return self.total_attended_cost + self.total_debt_cost
-    
-    @property
-    def attended_lessons_count(self):
-        """Количество оплаченных уроков"""
-        return self.lesson_attendance.filter(status='attended').count()
-    
-    @property
-    def debt_lessons_count(self):
-        """Количество уроков в долг"""
-        return self.lesson_attendance.filter(status='debt').count()
-    
-    @property
-    def total_lessons_count(self):
-        """Общее количество уроков"""
-        return self.lesson_attendance.count()
-    
-    # ===== СТАТИСТИКА ПО ДАТАМ =====
-    def get_lessons_by_period(self, start_date=None, end_date=None):
-        """Возвращает уроки за период"""
-        queryset = self.lesson_attendance.all()
-        
-        if start_date:
-            queryset = queryset.filter(lesson__date__gte=start_date)
-        if end_date:
-            queryset = queryset.filter(lesson__date__lte=end_date)
-        
-        return queryset
-    
-    def get_stats_by_period(self, start_date=None, end_date=None):
-        """Статистика за период"""
-        lessons = self.get_lessons_by_period(start_date, end_date)
-        
-        from django.db.models import Sum
-        return {
-            'total': lessons.count(),
-            'attended': lessons.filter(status='attended').count(),
-            'debt': lessons.filter(status='debt').count(),
-            'attended_cost': lessons.filter(status='attended').aggregate(Sum('cost'))['cost__sum'] or 0,
-            'debt_cost': lessons.filter(status='debt').aggregate(Sum('cost'))['cost__sum'] or 0,
-            'total_cost': lessons.aggregate(Sum('cost'))['cost__sum'] or 0,
-        }
-    
-    # ===== УЧИТЕЛЯ И ЗАМЕТКИ =====
-    def get_teachers_list(self):
-        """Список учителей ученика"""
-        return ", ".join([t.user.get_full_name() for t in self.teachers.all()])
-    
+
+        return total_deposits - total_lessons
+
     def get_teacher_notes(self):
         """Возвращает заметки учителей об этом ученике"""
         return self.teacher_notes.all()
-    
-    # ===== ПОЛНОЕ ИМЯ =====
-    def get_full_name(self):
-        """Возвращает полное имя ученика"""
-        return self.user.get_full_name()
-    
-    # ===== ИНФОРМАЦИЯ ДЛЯ АДМИНКИ =====
-    @property
-    def last_lesson_date(self):
-        """Дата последнего урока"""
-        last = self.lesson_attendance.order_by('-lesson__date').first()
-        return last.lesson.date if last else None
-    
-    @property
-    def last_lesson_subject(self):
-        """Предмет последнего урока"""
-        last = self.lesson_attendance.order_by('-lesson__date').first()
-        return last.lesson.subject.name if last else None
-    
-    
+
+
 class LessonFormat(models.Model):
     name = models.CharField('Название', max_length=100)
     description = models.TextField('Описание', blank=True)
@@ -712,21 +615,6 @@ class Lesson(models.Model):
             )
 
         return new_lesson
-    
-    def get_finance_stats(self):
-        """Возвращает финансовую статистику урока (для совместимости с helper-классами)"""
-        from django.db.models import Sum
-        
-        stats = {
-            'total_cost': self.attendance.aggregate(Sum('cost'))['cost__sum'] or 0,
-            'teacher_payment': self.attendance.aggregate(Sum('teacher_payment_share'))['teacher_payment_share__sum'] or 0,
-            'students_total': self.attendance.count(),
-            'students_attended': self.attendance.filter(status='attended').count(),
-            'students_debt': self.attendance.filter(status='debt').count(),
-            'students_absent': self.attendance.filter(status='absent').count(),
-            'students_registered': self.attendance.filter(status='registered').count(),
-        }
-        return stats
 
 
 class LessonAttendance(models.Model):
