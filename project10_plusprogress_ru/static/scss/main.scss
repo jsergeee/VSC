@@ -975,7 +975,7 @@ img {
 // Переключатель вида
 .view-toggle {
     margin-bottom: 20px;
-    text-align: right;
+    text-align: left !important;
 
     a,
     button {

@@ -836,8 +836,6 @@ def teacher_lesson_detail(request, lesson_id):
 def lesson_detail(request, lesson_id):
     """Детальная страница урока для ученика - РЕФАКТОРИНГ"""
 
-    """Детальная страница урока для ученика - РЕФАКТОРИНГ"""
-
     lesson = get_object_or_404(Lesson, id=lesson_id)
 
     # ✅ ПРОВЕРКА НА ПРОСРОЧКУ
@@ -868,7 +866,8 @@ def lesson_detail(request, lesson_id):
             messages.error(request, 'Доступ запрещен')
             return redirect('dashboard')
 
-        attendances = lesson.attendance.all().select_related('student__user')
+        # ✅ ПОЛУЧАЕМ ВСЕХ УЧАСТНИКОВ (для отображения)
+        all_attendances = lesson.attendance.all().select_related('student__user')
 
     elif user.role == 'teacher' and lesson.teacher.user != user:
         messages.error(request, 'Доступ запрещен')
@@ -920,7 +919,8 @@ def lesson_detail(request, lesson_id):
     context = {
         'lesson': lesson,
         'attendance': attendance,
-        'attendances': calculator.get_attendance_details(),  # Детализация
+        'attendances': all_attendances,  # ✅ ВСЕ ученики для отображения в шаблоне
+        'attendance_details': calculator.get_attendance_details(),  # Детализация для финансов
         'finance': {  # Финансовая информация для ученика
             'student_cost': float(attendance.cost),
             'total_cost': calculator.stats['total_cost'],
@@ -931,7 +931,6 @@ def lesson_detail(request, lesson_id):
     }
 
     return render(request, 'school/student/lesson_detail.html', context)
-
 
 @staff_member_required
 @require_POST
@@ -1059,6 +1058,7 @@ def admin_complete_lesson(request, lesson_id):
         traceback.print_exc()
         messages.error(request, f'Ошибка: {str(e)}')
         return redirect('admin:school_lesson_change', lesson_id)
+
 
 @staff_member_required
 def admin_finance_dashboard(request):
@@ -1532,7 +1532,7 @@ def export_lessons_csv(lessons, title, completed_count, cancelled_count, overdue
     writer.writerow([title])
     writer.writerow([f"Дата экспорта: {datetime.now().strftime('%d.%m.%Y %H:%M')}"])
     writer.writerow([
-                        f"Всего: {lessons.count()} | Проведено: {completed_count} | Отменено: {cancelled_count} | Просрочено: {overdue_count}"])
+        f"Всего: {lessons.count()} | Проведено: {completed_count} | Отменено: {cancelled_count} | Просрочено: {overdue_count}"])
     writer.writerow([f"Общая стоимость: {total_cost:.2f} ₽ | Общая сумма выплат: {total_payment:.2f} ₽"])
     writer.writerow([])
 
@@ -1672,18 +1672,20 @@ def import_students(request):
 
                 try:
                     student_id = row[0]
-                    last_name = row[1]
-                    first_name = row[2]
-                    patronymic = row[3]
-                    email = row[4]
-                    phone = row[5]
-                    parent_name = row[6]
-                    parent_phone = row[7]
+                    last_name = row[1] or ''
+                    first_name = row[2] or ''
+                    patronymic = row[3] or ''
+                    email = row[4] or ''
+                    phone = row[5] or ''
+                    parent_name = row[6] or ''
+                    parent_phone = row[7] or ''
 
                     if student_id:
                         user = User.objects.get(id=student_id)
                     else:
-                        username = f"student_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                        # Создаем нового с уникальным username
+                        import uuid
+                        username = f"student_{uuid.uuid4().hex[:8]}"
                         user = User.objects.create_user(
                             username=username,
                             email=email,
@@ -1694,7 +1696,7 @@ def import_students(request):
                     user.last_name = last_name
                     user.first_name = first_name
                     user.patronymic = patronymic
-                    user.phone = phone
+                    user.phone = phone or ''
                     user.save()
 
                     student, created = Student.objects.get_or_create(user=user)
@@ -2179,6 +2181,7 @@ def import_from_excel(file, request):
         messages.error(request, f'Ошибка при импорте: {str(e)}')
         return redirect('admin:school_lesson_changelist')
 
+
 @staff_member_required
 def download_user_template(request):
     """Скачать шаблон для импорта пользователей"""
@@ -2186,44 +2189,45 @@ def download_user_template(request):
     from openpyxl.styles import Font, PatternFill, Alignment
     from django.http import HttpResponse
     from datetime import datetime
-    
+
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Импорт пользователей"
-    
+
     headers = ['Username', 'Имя', 'Фамилия', 'Отчество', 'Email', 'Телефон', 'Роль', 'Пароль']
-    
+
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="417690", end_color="417690", fill_type="solid")
-    
+
     for col, header in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=header)
         cell.font = header_font
         cell.fill = header_fill
         cell.alignment = Alignment(horizontal='center')
-    
+
     # Пример данных
     examples = [
         ['ivanov', 'Иван', 'Иванов', 'Иванович', 'ivan@mail.ru', '+79991234567', 'student', 'pass123'],
         ['petrova', 'Мария', 'Петрова', 'Сергеевна', 'maria@mail.ru', '+79997654321', 'teacher', 'pass123'],
     ]
-    
+
     for row_num, example in enumerate(examples, start=2):
         for col_num, value in enumerate(example, 1):
             ws.cell(row=row_num, column=col_num, value=value)
-    
+
     column_widths = [15, 15, 15, 15, 25, 15, 10, 15]
     for i, width in enumerate(column_widths, 1):
         ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
-    
+
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
     filename = f"user_import_template_{datetime.now().strftime('%Y%m%d')}.xlsx"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    
+
     wb.save(response)
     return response
+
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, redirect
@@ -2233,24 +2237,25 @@ from datetime import datetime
 import traceback
 from .models import User
 
+
 @staff_member_required
 def import_users_view(request):
     """Отдельное представление для импорта пользователей"""
     if request.method == 'POST' and request.FILES.get('import_file'):
         file = request.FILES['import_file']
-        
+
         try:
             wb = openpyxl.load_workbook(file)
             ws = wb.active
-            
+
             success_count = 0
             error_count = 0
             errors = []
-            
+
             for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
                 if not any(row):
                     continue
-                
+
                 try:
                     username = str(row[0]) if row[0] else None
                     first_name = str(row[1]) if row[1] else ''
@@ -2260,16 +2265,16 @@ def import_users_view(request):
                     phone = str(row[5]) if row[5] else ''
                     role = str(row[6]) if row[6] else 'student'
                     password = str(row[7]) if row[7] else 'default123'
-                    
+
                     if not username:
                         raise ValueError("Имя пользователя обязательно")
-                    
+
                     if User.objects.filter(username=username).exists():
                         raise ValueError(f"Пользователь с username '{username}' уже существует")
-                    
+
                     if email and User.objects.filter(email=email).exists():
                         raise ValueError(f"Пользователь с email '{email}' уже существует")
-                    
+
                     user = User.objects.create_user(
                         username=username,
                         password=password,
@@ -2281,26 +2286,28 @@ def import_users_view(request):
                     )
                     user.patronymic = patronymic
                     user.save()
-                    
+
                     success_count += 1
-                    
+
                 except Exception as e:
                     error_count += 1
                     errors.append(f"Строка {row_num}: {str(e)}")
-            
+
             messages.success(request, f'✅ Импортировано пользователей: {success_count}')
             if error_count > 0:
                 error_text = '\n'.join(errors[:5])
                 if len(errors) > 5:
                     error_text += f'\n... и еще {len(errors) - 5} ошибок'
                 messages.warning(request, f'⚠️ Ошибок: {error_count}\n{error_text}')
-            
+
         except Exception as e:
             messages.error(request, f'Ошибка при импорте: {str(e)}')
-        
+
         return redirect('admin:school_user_changelist')
-    
+
     return render(request, 'admin/school/user/import.html')
+
+
 # ============================================
 # ЧАСТЬ 6: API И JSON ФУНКЦИИ
 # ============================================

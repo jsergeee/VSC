@@ -5,113 +5,15 @@
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'scss/main.css' %}">
 <style>
-    /* Контейнер для переключателей и экспорта */
-    .view-export-container {
-        margin: 20px 0;
-        padding: 15px 20px;
-        background: #f8f9fa;
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
+    /* Контейнер для верхней панели */
+    .top-bar {
         display: flex;
-        align-items: center;
         justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 15px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-    }
-
-    /* Группа левых кнопок (импорт + экспорт) */
-    .left-button-group {
-        display: flex;
-        gap: 10px;
         align-items: center;
-        flex-wrap: wrap;
+        margin: 20px 0;
     }
 
-    /* Кнопка импорта */
-    .import-btn {
-        padding: 8px 16px;
-        border: none;
-        border-radius: 4px;
-        font-size: 14px;
-        font-weight: 500;
-        text-decoration: none;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: #17a2b8;
-        color: white;
-    }
-
-    .import-btn:hover {
-        background: #138496;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
-    }
-
-    /* Разделитель */
-    .separator {
-        color: #ccc;
-        font-size: 20px;
-        font-weight: 300;
-        margin: 0 5px;
-    }
-
-    /* Группа кнопок экспорта */
-    .export-group {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-    }
-
-    .export-btn {
-        padding: 8px 16px;
-        border: none;
-        border-radius: 4px;
-        font-size: 14px;
-        font-weight: 500;
-        text-decoration: none;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        color: white;
-    }
-
-    .export-btn.csv {
-        background: #28a745;
-    }
-
-    .export-btn.csv:hover {
-        background: #218838;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
-    }
-
-    .export-btn.excel {
-        background: #007bff;
-    }
-
-    .export-btn.excel:hover {
-        background: #0056b3;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
-    }
-
-    .export-btn.pdf {
-        background: #dc3545;
-    }
-
-    .export-btn.pdf:hover {
-        background: #c82333;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
-    }
-
-    /* Группа переключателей */
+    /* Группа переключателей список/календарь (возвращаем на левую сторону) */
     .view-toggle-group {
         display: flex;
         gap: 8px;
@@ -141,6 +43,144 @@
     .view-toggle-group .view-btn.active {
         background: #79aec8;
         color: white;
+    }
+
+    /* Гамбургер меню */
+    .hamburger-menu {
+        position: relative;
+    }
+
+    .hamburger-icon {
+        width: 40px;
+        height: 40px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        gap: 6px;
+        transition: all 0.2s;
+    }
+
+    .hamburger-icon:hover {
+        background: #e9ecef;
+    }
+
+    .hamburger-icon span {
+        width: 20px;
+        height: 2px;
+        background: #495057;
+        border-radius: 2px;
+        transition: all 0.2s;
+    }
+
+    /* Выпадающее меню */
+    .dropdown-menu {
+        position: absolute;
+        top: 45px;
+        right: 0;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        min-width: 250px;
+        z-index: 1000;
+        display: none;
+    }
+
+    .dropdown-menu.show {
+        display: block;
+    }
+
+    /* Заголовок меню */
+    .dropdown-header {
+        padding: 12px 16px;
+        background: #f1f3f5;
+        font-weight: 500;
+        color: #495057;
+        border-bottom: 1px solid #dee2e6;
+        border-radius: 8px 8px 0 0;
+    }
+
+    /* Секции меню */
+    .dropdown-section {
+        padding: 12px 16px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .dropdown-section:last-child {
+        border-bottom: none;
+    }
+
+    .dropdown-section-title {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #6c757d;
+        margin-bottom: 10px;
+        font-weight: 600;
+    }
+
+    /* Группа кнопок в меню */
+    .menu-button-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    /* Кнопка импорта */
+    .menu-import-btn {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: #17a2b8;
+        color: white;
+        transition: all 0.2s;
+    }
+
+    .menu-import-btn:hover {
+        background: #138496;
+    }
+
+    /* Кнопки экспорта */
+    .menu-export-btn {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: white;
+        transition: all 0.2s;
+    }
+
+    .menu-export-btn.csv { background: #28a745; }
+    .menu-export-btn.csv:hover { background: #218838; }
+
+    .menu-export-btn.excel { background: #007bff; }
+    .menu-export-btn.excel:hover { background: #0056b3; }
+
+    .menu-export-btn.pdf { background: #dc3545; }
+    .menu-export-btn.pdf:hover { background: #c82333; }
+
+    /* Иконки в меню */
+    .menu-icon {
+        width: 20px;
+        text-align: center;
+        font-size: 16px;
     }
 
     /* Календарь */
@@ -176,21 +216,10 @@
         border-radius: 4px;
     }
 
-    .legend-color.scheduled {
-        background: #007bff;
-    }
-
-    .legend-color.completed {
-        background: #28a745;
-    }
-
-    .legend-color.overdue {
-        background: #dc3545;
-    }
-
-    .legend-color.cancelled {
-        background: #fd7e14;
-    }
+    .legend-color.scheduled { background: #007bff; }
+    .legend-color.completed { background: #28a745; }
+    .legend-color.overdue { background: #dc3545; }
+    .legend-color.cancelled { background: #fd7e14; }
 </style>
 {% endblock %}
 
@@ -200,33 +229,9 @@
 
 {% block content %}
 <div id="content-main">
-    <!-- Контейнер с переключателями, импортом и экспортом -->
-    <div class="view-export-container">
-        <!-- Левая группа: импорт + экспорт -->
-        <div class="left-button-group">
-            <!-- Кнопка импорта -->
-            <a href="{% url 'admin-lesson-import' %}" class="import-btn">
-                <i class="fa fa-upload"></i> Импорт
-            </a>
-
-            <!-- Разделитель -->
-            <span class="separator">|</span>
-
-            <!-- Кнопки экспорта -->
-            <div class="export-group">
-                <a href="{% url 'admin-lesson-export' 'csv' %}" class="export-btn csv">
-                    <i class="fa fa-file-csv"></i> CSV
-                </a>
-                <a href="{% url 'admin-lesson-export' 'excel' %}" class="export-btn excel">
-                    <i class="fa fa-file-excel"></i> Excel
-                </a>
-                <a href="{% url 'admin-lesson-export' 'pdf' %}" class="export-btn pdf">
-                    <i class="fa fa-file-pdf"></i> PDF
-                </a>
-            </div>
-        </div>
-
-        <!-- Правая группа: переключатели список/календарь -->
+    <!-- Верхняя панель с переключателями и гамбургером -->
+    <div class="top-bar">
+        <!-- Группа переключателей список/календарь (слева) -->
         <div class="view-toggle-group">
             <a href="." class="view-btn {% if not request.GET.view %}active{% endif %}">
                 <i class="fa fa-list"></i> Список
@@ -234,6 +239,48 @@
             <a href="?view=calendar" class="view-btn {% if request.GET.view == 'calendar' %}active{% endif %}">
                 <i class="fa fa-calendar"></i> Календарь
             </a>
+        </div>
+
+        <!-- Гамбургер меню справа -->
+        <div class="hamburger-menu">
+            <div class="hamburger-icon" onclick="toggleMenu()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <div class="dropdown-menu" id="importExportMenu">
+                <div class="dropdown-header">
+                    <i class="fa fa-database"></i> Импорт и экспорт
+                </div>
+
+                <!-- Секция импорта -->
+                <div class="dropdown-section">
+                    <div class="dropdown-section-title">ИМПОРТ</div>
+                    <a href="{% url 'admin-lesson-import' %}" class="menu-import-btn">
+                        <span class="menu-icon"><i class="fa fa-upload"></i></span>
+                        Импорт уроков
+                    </a>
+                </div>
+
+                <!-- Секция экспорта -->
+                <div class="dropdown-section">
+                    <div class="dropdown-section-title">ЭКСПОРТ</div>
+                    <div class="menu-button-group">
+                        <a href="{% url 'admin-lesson-export' 'csv' %}" class="menu-export-btn csv">
+                            <span class="menu-icon"><i class="fa fa-file-csv"></i></span>
+                            Экспорт в CSV
+                        </a>
+                        <a href="{% url 'admin-lesson-export' 'excel' %}" class="menu-export-btn excel">
+                            <span class="menu-icon"><i class="fa fa-file-excel"></i></span>
+                            Экспорт в Excel
+                        </a>
+                        <a href="{% url 'admin-lesson-export' 'pdf' %}" class="menu-export-btn pdf">
+                            <span class="menu-icon"><i class="fa fa-file-pdf"></i></span>
+                            Экспорт в PDF
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -265,7 +312,24 @@
     {{ block.super }}
     {% endif %}
 </div>
+
+<script>
+function toggleMenu() {
+    const menu = document.getElementById('importExportMenu');
+    menu.classList.toggle('show');
+}
+
+// Закрыть меню при клике вне его
+document.addEventListener('click', function(event) {
+    const menu = document.getElementById('importExportMenu');
+    const icon = document.querySelector('.hamburger-icon');
+
+    if (!icon.contains(event.target) && !menu.contains(event.target)) {
+        menu.classList.remove('show');
+    }
+});
+</script>
 {% endblock %}
 
-<!-- Подключаем Font Awesome для иконок -->
+<!-- Подключаем Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">

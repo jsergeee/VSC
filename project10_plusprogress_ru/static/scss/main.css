@@ -807,7 +807,7 @@ img {
 
 .view-toggle {
   margin-bottom: 20px;
-  text-align: right;
+  text-align: left;
 }
 .view-toggle a,
 .view-toggle button {

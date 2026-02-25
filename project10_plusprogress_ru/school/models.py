@@ -21,7 +21,7 @@ class User(AbstractUser):
     )
 
     role = models.CharField('Роль', max_length=20, choices=ROLE_CHOICES, default='student')
-    phone = models.CharField('Телефон', max_length=20, blank=True)
+    phone = models.CharField('Телефон', max_length=20, null=True)
     photo = models.ImageField('Фото', upload_to='users/', null=True, blank=True)
     patronymic = models.CharField('Отчество', max_length=50, blank=True)
     

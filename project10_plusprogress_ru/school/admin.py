@@ -587,7 +587,7 @@ class LessonAdmin(admin.ModelAdmin):
         models.DateField: {'widget': forms.DateInput(attrs={'type': 'date'})},
     }
 
-    list_display = ('id', 'colored_subject', 'teacher_link', 'students_preview',
+    list_display = ('id', 'colored_subject', 'teacher_link', 'students_count', 'students_preview',
                     'date', 'start_time', 'status_badge', 'finance_preview')
     list_filter = ('status', 'subject', 'date', 'teacher', 'is_group')
     search_fields = ('teacher__user__last_name', 'students__user__last_name', 'subject__name')
@@ -637,15 +637,39 @@ class LessonAdmin(admin.ModelAdmin):
         return format_html('<span style="color: {}; font-weight: bold;">{}</span>', color, obj.subject.name)
 
     colored_subject.short_description = 'Предмет'
+    def students_count(self, obj):
+        """Количество учеников"""
+        count = obj.students.count()
+        if count == 0:
+            return format_html('<span style="color: #dc3545;">❌ 0</span>')
+        elif count == 1:
+            return format_html('👤 1')
+        else:
+            return format_html('👥 {}', count)
+    students_count.short_description = 'Кол-во'
 
     def students_preview(self, obj):
+        """Отображает список учеников (Фамилия Имя)"""
         students = obj.students.all()
         if not students:
             return format_html('<span style="color: #dc3545;">❌ Нет учеников</span>')
-        elif students.count() == 1:
-            return students.first().user.get_full_name()
-        else:
-            return format_html('{} учеников', students.count())
+
+        # Формируем "Фамилия Имя"
+        names = []
+        for student in students:
+            last_name = student.user.last_name or ''
+            first_name = student.user.first_name or ''
+
+            if last_name and first_name:
+                names.append(f"{last_name} {first_name}")
+            elif last_name:
+                names.append(last_name)
+            elif first_name:
+                names.append(first_name)
+            else:
+                names.append(student.user.username)
+
+        return ", ".join(names)
 
     students_preview.short_description = 'Ученики'
 
