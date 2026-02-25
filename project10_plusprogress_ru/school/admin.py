@@ -1,6 +1,6 @@
 # school/admin.py
 
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
 from django.contrib.auth.models import User as AuthUser
@@ -66,7 +66,7 @@ class ScheduleTemplateStudentInline(admin.TabularInline):
 
 class CustomUserAdmin(UserAdmin):
     list_display = ('id', 'username', 'get_full_name', 'email', 'phone', 'role',
-                    'is_email_verified_badge', 'is_staff')  
+                    'is_email_verified_badge', 'is_staff')
     list_filter = ('role', 'is_email_verified', 'is_staff', 'is_superuser', 'groups')
     search_fields = ('username', 'first_name', 'last_name', 'email', 'phone')
     readonly_fields = ('email_verification_sent',)
@@ -101,7 +101,7 @@ class CustomUserAdmin(UserAdmin):
     )
 
     actions = ['mark_as_verified', 'mark_as_unverified', 'export_users_excel', 'import_users_excel']
-    
+
     def get_urls(self):
         from django.urls import path
         urls = super().get_urls()
@@ -109,7 +109,7 @@ class CustomUserAdmin(UserAdmin):
             path('import/', self.admin_site.admin_view(import_users_view), name='import_users'),
         ]
         return custom_urls + urls
-    
+
     def changelist_view(self, request, extra_context=None):
         extra_context = extra_context or {}
         extra_context['show_import_button'] = True
@@ -120,6 +120,7 @@ class CustomUserAdmin(UserAdmin):
         if obj.patronymic:
             return f"{full_name} {obj.patronymic}"
         return full_name or obj.username
+
     get_full_name.short_description = 'ФИО'
 
     def is_email_verified_badge(self, obj):
@@ -131,16 +132,19 @@ class CustomUserAdmin(UserAdmin):
             return format_html(
                 '<span style="background: #dc3545; color: white; padding: 3px 8px; border-radius: 3px;">❌ Не подтвержден</span>'
             )
+
     is_email_verified_badge.short_description = 'Email подтвержден'
 
     def mark_as_verified(self, request, queryset):
         updated = queryset.update(is_email_verified=True)
         self.message_user(request, f'✅ {updated} пользователей отмечены как подтвержденные')
+
     mark_as_verified.short_description = "✅ Отметить как подтвержденные email"
 
     def mark_as_unverified(self, request, queryset):
         updated = queryset.update(is_email_verified=False)
         self.message_user(request, f'⚠️ {updated} пользователей отмечены как неподтвержденные')
+
     mark_as_unverified.short_description = "❌ Отметить как неподтвержденные email"
 
     def export_users_excel(self, request, queryset):
@@ -187,11 +191,8 @@ class CustomUserAdmin(UserAdmin):
 
         wb.save(response)
         return response
+
     export_users_excel.short_description = "📥 Экспорт выбранных пользователей в Excel"
-
-
-    
-
 
 
 # ==================== SUBJECT ADMIN ====================
@@ -272,8 +273,6 @@ class TeacherAdmin(admin.ModelAdmin):
         self.request = request
         return super().get_queryset(request)
 
-
-
     # ⚡⚡⚡ МЕТОД ДЛЯ ОБРАБОТКИ СПИСКА (ТОЛЬКО ДЛЯ ТАБЛИЦЫ СТАТИСТИКИ) ⚡⚡⚡
     def changelist_view(self, request, extra_context=None):
         start_date = request.GET.get('start_date')
@@ -288,17 +287,41 @@ class TeacherAdmin(admin.ModelAdmin):
             start_date = request.session.get('teacher_filter_start')
             end_date = request.session.get('teacher_filter_end')
 
+        print("\n" + "=" * 80)
+        print("🔍 TEACHER ADMIN CHANGELIST VIEW")
+        print(f"📅 start_date: {start_date}")
+        print(f"📅 end_date: {end_date}")
+        print("=" * 80)
+
         if start_date and end_date:
             try:
                 from datetime import datetime
                 start = datetime.strptime(start_date, '%Y-%m-%d').date()
                 end = datetime.strptime(end_date, '%Y-%m-%d').date()
 
+                print(f"\n✅ Период преобразован: {start} - {end}")
+
                 extra_context = extra_context or {}
                 teachers_data = []
 
-                for teacher in self.get_queryset(request):
+                # Получаем всех учителей
+                teachers = self.get_queryset(request)
+                print(f"\n👥 Всего учителей: {teachers.count()}")
+
+                for teacher in teachers:
+                    print(f"\n{'─' * 50}")
+                    print(f"👨‍🏫 Обработка учителя: {teacher.user.get_full_name()} (ID: {teacher.id})")
+
+                    # Получаем статистику
                     earnings = teacher.get_teacher_earnings(start, end)
+
+                    print(f"📊 earnings получены:")
+                    print(f"   total_payments: {earnings.get('total_payments', 0)}")
+                    print(f"   total_salaries: {earnings.get('total_salaries', 0)}")
+                    print(f"   net_income: {earnings.get('net_income', 0)}")
+                    print(f"   payments_count: {earnings.get('payments_count', 0)}")
+                    print(f"   salaries_count: {earnings.get('salaries_count', 0)}")
+
                     teachers_data.append({
                         'teacher': teacher,
                         'earnings': earnings
@@ -307,11 +330,25 @@ class TeacherAdmin(admin.ModelAdmin):
                 extra_context['teachers_data'] = teachers_data
                 extra_context['start_date'] = start_date
                 extra_context['end_date'] = end_date
+
                 print(f"\n✅ teachers_data создан, размер: {len(teachers_data)}")
 
-            except Exception as e:
-                print(f"❌ Ошибка в changelist_view: {e}")
+                # Выводим итоговые данные для всех учителей
+                print(f"\n📊 ИТОГОВЫЕ ДАННЫЕ:")
+                for i, item in enumerate(teachers_data):
+                    teacher_name = item['teacher'].user.get_full_name()
+                    earnings = item['earnings']
+                    print(f"{i + 1}. {teacher_name}:")
+                    print(f"   💰 total_payments: {earnings.get('total_payments', 0)}")
+                    print(f"   💵 total_salaries: {earnings.get('total_salaries', 0)}")
+                    print(f"   💹 net_income: {earnings.get('net_income', 0)}")
 
+            except Exception as e:
+                print(f"❌ ОШИБКА в changelist_view: {e}")
+                import traceback
+                traceback.print_exc()
+
+        print("=" * 80 + "\n")
         return super().changelist_view(request, extra_context)
 
     actions = ['export_teachers_excel', 'calculate_payments']
@@ -383,6 +420,8 @@ class TeacherAdmin(admin.ModelAdmin):
             self.message_user(request, 'Выберите одного учителя для расчета выплат', level='WARNING')
 
     calculate_payments.short_description = "💰 Расчет выплат"
+
+
 def export_teachers_excel(self, request, queryset):
     """Экспорт выбранных учителей в Excel"""
     import openpyxl
@@ -637,6 +676,7 @@ class LessonAdmin(admin.ModelAdmin):
         return format_html('<span style="color: {}; font-weight: bold;">{}</span>', color, obj.subject.name)
 
     colored_subject.short_description = 'Предмет'
+
     def students_count(self, obj):
         """Количество учеников"""
         count = obj.students.count()
@@ -646,6 +686,7 @@ class LessonAdmin(admin.ModelAdmin):
             return format_html('👤 1')
         else:
             return format_html('👥 {}', count)
+
     students_count.short_description = 'Кол-во'
 
     def students_preview(self, obj):

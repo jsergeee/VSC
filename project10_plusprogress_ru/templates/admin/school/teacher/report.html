@@ -247,13 +247,13 @@
                     {% for cost in lesson.daily_costs %}
                     <td>
                         {% if cost and cost > 0 %}
-                        <span style="color: #28a745;">{{ cost|floatformat:2 }} ₽</span>
+                        <span style="color: #28a745;">{{ cost|floatformat:0 }} ₽</span>
                         {% else %}
                         <span class="empty-cell">—</span>
                         {% endif %}
                     </td>
                     {% endfor %}
-                    <td><strong>{{ lesson.total|floatformat:2 }} ₽</strong></td>
+                    <td><strong>{{ lesson.total|floatformat:0 }} ₽</strong></td>
                 </tr>
                 {% empty %}
                 <tr>
@@ -268,9 +268,9 @@
                 <tr class="total-row">
                     <td>ИТОГО за день</td>
                     {% for daily_total in daily_totals_lessons %}
-                    <td><strong>{{ daily_total|floatformat:2 }} ₽</strong></td>
+                    <td><strong>{{ daily_total|floatformat:0 }} ₽</strong></td>
                     {% endfor %}
-                    <td><strong>{{ total_income|floatformat:2 }} ₽</strong></td>
+                    <td><strong>{{ total_income|floatformat:0 }} ₽</strong></td>
                 </tr>
             </tfoot>
         </table>
@@ -296,13 +296,13 @@
                     {% for amount in earning.daily_earnings %}
                     <td>
                         {% if amount and amount > 0 %}
-                        <span style="color: #17a2b8;">{{ amount|floatformat:2 }} ₽</span>
+                        <span style="color: #17a2b8;">{{ amount|floatformat:0 }} ₽</span>
                         {% else %}
                         <span class="empty-cell">—</span>
                         {% endif %}
                     </td>
                     {% endfor %}
-                    <td><strong>{{ earning.total|floatformat:2 }} ₽</strong></td>
+                    <td><strong>{{ earning.total|floatformat:0 }} ₽</strong></td>
                 </tr>
                 {% empty %}
                 <tr>
@@ -317,9 +317,9 @@
                 <tr class="total-row">
                     <td>ИТОГО за день</td>
                     {% for daily_total in daily_totals_earnings %}
-                    <td><strong>{{ daily_total|floatformat:2 }} ₽</strong></td>
+                    <td><strong>{{ daily_total|floatformat:0 }} ₽</strong></td>
                     {% endfor %}
-                    <td><strong>{{ total_earnings|floatformat:2 }} ₽</strong></td>
+                    <td><strong>{{ total_earnings|floatformat:0 }} ₽</strong></td>
                 </tr>
             </tfoot>
         </table>

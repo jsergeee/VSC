@@ -1,8 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}Урок {{ lesson.subject.name }} - {{ lesson.date }}{% endblock %}
-
 {% block extra_css %}
 <style>
     .lesson-header {
@@ -223,7 +221,6 @@
     }
 </style>
 {% endblock %}
-
 {% block content %}
 <!-- ⚡ КРУПНЫЙ СТАТУС УРОКА ⚡ -->
 <div class="status-badge-large status-{{ lesson.status }}-large" style="font-size: 2.5rem; padding: 30px; text-align: center;">
@@ -235,7 +232,6 @@
     {% elif lesson.status == 'no_show' %}⚪ Учащийся не явился
     {% endif %}
 </div>
-
 <div class="container mt-4">
     <!-- Заголовок урока -->
     <div class="lesson-header">
@@ -268,61 +264,64 @@
             </div>
         </div>
     </div>
-
     <div class="row">
         <!-- Левая колонка - информация об учениках и финансах -->
         <div class="col-md-4">
-<!-- Карточки учеников -->
-<div class="info-card">
-    <h5><i class="fa fa-users"></i> Ученики</h5>
-    {% for attendance in attendances %}
-    <div class="student-item">
-        <div class="row">
-            <div class="col-3">
-                {% if attendance.student.user.photo %}
-                <img src="{{ attendance.student.user.photo.url }}" class="student-photo"
-                     style="width: 50px; height: 50px;" alt="">
-                {% else %}
-                <div class="student-photo bg-secondary d-flex align-items-center justify-content-center"
-                     style="width: 50px; height: 50px;">
-                    <i class="fa fa-user fa-2x text-white"></i>
+            <!-- Карточки учеников -->
+            <div class="info-card">
+                <h5><i class="fa fa-users"></i> Ученики</h5>
+                {% for attendance in attendances %}
+                <div class="student-item">
+                    <div class="row">
+                        <div class="col-3">
+                            {% if attendance.student_photo %}
+                            <img src="{{ attendance.student_photo }}" class="student-photo"
+                                 style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;"
+                                 alt="{{ attendance.student_name }}">
+                            {% else %}
+                            <div class="student-photo bg-secondary d-flex align-items-center justify-content-center"
+                                 style="width: 50px; height: 50px; border-radius: 50%;">
+                                <i class="fa fa-user fa-2x text-white"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-9">
+                            <h6 class="mb-1">{{ attendance.student_name }}</h6>
+                            <p class="small text-muted mb-1">
+                                <i class="fa fa-envelope"></i> {{ attendance.student_email|default:"Email не указан"|truncatechars:20 }}
+                            </p>
+                            <!-- Статус ученика -->
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="info-label">Статус:</span>
+                                <span class="badge badge-{% if attendance.status == 'attended' %}success{% elif attendance.status == 'absent' %}danger{% else %}warning{% endif %}">
+                                    {{ attendance.status_display }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                {% endif %}
-            </div>
-            <div class="col-9">
-                <h6>{{ attendance.student.user.get_full_name }}</h6>
-                <p class="small text-muted mb-1">
-                    <i class="fa fa-envelope"></i> {{ attendance.student.user.email|truncatechars:20 }}
-                </p>
-                <!-- ТОЛЬКО СТАТУС УЧЕНИКА -->
-                <div class="info-row">
-                    <span class="info-label">Статус:</span>
-                    <span class="badge badge-{% if attendance.status == 'attended' %}success{% else %}warning{% endif %}">
-                        {{ attendance.get_status_display }}
-                    </span>
+                {% empty %}
+                <div class="text-center py-4">
+                    <i class="fa fa-users fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Нет учеников на этом уроке</p>
+                </div>
+                {% endfor %}
+                <!-- Ваш гонорар -->
+                <div class="total-cost">
+                    <div class="info-row">
+                        <span class="info-label">Ваш гонорар:</span>
+                        <span class="info-value payment-positive">
+                            {% if lesson.status == 'completed' %}
+                                {{ finance.teacher_payment|floatformat:0 }} ₽
+                            {% elif lesson.status == 'scheduled' %}
+                                {{ finance.teacher_payment|floatformat:0 }} ₽ (макс.)
+                            {% else %}
+                                <span class="badge badge-secondary">не выплачивается</span>
+                            {% endif %}
+                        </span>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
-    {% empty %}
-    <p class="text-muted">Нет учеников</p>
-    {% endfor %}
-
-    <!-- ТОЛЬКО ВАШ ГОНОРАР (без стоимости учеников) -->
-    <div class="total-cost">
-        <div class="info-row">
-            <span class="info-label">Ваш гонорар:</span>
-            <span class="info-value payment-positive">
-                {% if lesson.status == 'completed' or lesson.status == 'scheduled' %}
-                    {{ finance.teacher_payment }} ₽
-                {% else %}
-                    <span class="badge badge-secondary">не выплачивается</span>
-                {% endif %}
-            </span>
-        </div>
-    </div>
-</div>
-
             <!-- ВИДЕО-ЗВОНОК JITSI -->
             {% if lesson.status == 'scheduled' %}
             <div class="info-card">
@@ -379,14 +378,13 @@
                     <i class="fa fa-play"></i> Начать урок
                 </a>
                 {% endwith %}
-                <!-- Кнопка редактирования (вне блока with) -->
+                <!-- Кнопка редактирования -->
                 <a href="{% url 'teacher_edit_lesson' lesson.id %}" class="btn btn-sm btn-outline-secondary mt-2">
                     <i class="fa fa-edit"></i> Редактировать урок
                 </a>
                 {% endif %}
             </div>
             {% endif %}
-
             <!-- Кнопка завершения урока -->
             {% if lesson.status == 'scheduled' %}
             <div class="info-card">
@@ -396,7 +394,6 @@
                 </button>
             </div>
             {% endif %}
-
             <!-- Предыдущие уроки -->
             {% if previous_lessons %}
             <div class="info-card">
@@ -417,7 +414,6 @@
             </div>
             {% endif %}
         </div>
-
         <!-- Правая колонка - информация об уроке и отчет -->
         <div class="col-md-8">
             {% if lesson.status == 'completed' and lesson.report %}
@@ -449,7 +445,6 @@
                 </div>
             </div>
             {% endif %}
-
             {% elif lesson.status == 'scheduled' %}
             <!-- Запланированный урок -->
             <div class="info-card">
@@ -464,7 +459,6 @@
                 {% if lesson.format %}
                 <p><i class="fa fa-tag"></i> <strong>Формат:</strong> {{ lesson.format.name }}</p>
                 {% endif %}
-
                 {% if lesson.notes %}
                 <hr>
                 <p><strong>Заметки:</strong><br>{{ lesson.notes }}</p>
@@ -474,8 +468,7 @@
         </div>
     </div>
 </div>
-
-<!-- Простое модальное окно (без Bootstrap) -->
+<!-- Простое модальное окно -->
 <div id="simpleModal"
      style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; z-index: 999999; border-radius: 10px; box-shadow: 0 5px 30px rgba(0,0,0,0.3); width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto;">
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 15px 20px; margin: -30px -30px 20px -30px; border-radius: 10px 10px 0 0; color: white; display: flex; justify-content: space-between; align-items: center;">
@@ -502,16 +495,20 @@
                 </h4>
                 {% for attendance in attendances %}
                 <div style="display: flex; align-items: center; margin-bottom: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                    <input type="checkbox" name="attended_{{ attendance.id }}" id="attended_{{ attendance.id }}"
+                    <input type="checkbox" name="attended_{{ attendance.id }}"
+                           id="attended_{{ attendance.id }}"
                            checked style="width: 20px; height: 20px; margin-right: 15px;">
                     <label for="attended_{{ attendance.id }}" style="flex: 1; cursor: pointer;">
-                        <strong>{{ attendance.student.user.get_full_name }}</strong>
+                        <strong>{{ attendance.student_name }}</strong>
                         <span style="color: #28a745; margin-left: 10px;">
-                +{{ attendance.teacher_payment_share|floatformat:0 }} ₽
+                +{{ attendance.teacher_payment|floatformat:0 }} ₽
             </span>
                     </label>
                 </div>
+                {% empty %}
+                <p class="text-muted">Нет учеников для отметки</p>
                 {% endfor %}
+                <!-- Максимальная выплата -->
                 <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #dee2e6; font-weight: bold;">
                     <span>Максимальная выплата: </span>
                     <span style="color: #28a745; font-size: 1.2rem;">{{ max_teacher_payment|floatformat:0 }} ₽</span>
@@ -559,7 +556,6 @@
         </div>
     </form>
 </div>
-
 <!-- Скрипты -->
 <script>
     function getCookie(name) {
@@ -618,10 +614,5 @@
             btn.innerHTML = originalHtml;
         }, 2000);
     }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        // Никакого confirm - просто отправляем форму
-        // Модальное окно само по себе уже подтверждение
-    });
 </script>
 {% endblock %}

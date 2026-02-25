@@ -115,6 +115,7 @@ class LessonFinanceCalculator:
         """Детализация по ученикам"""
         return [
             {
+                'id': a.id,
                 'student_id': a.student.id,
                 'student_name': a.student.user.get_full_name(),
                 'cost': float(a.cost),
@@ -3902,6 +3903,7 @@ def complete_lesson(request, lesson_id):
             attendance.status = 'absent'
             attendance.save()
 
+    # ✅ Создание отчета (триггерит сигнал lesson_completed_notifications)
     report = lesson.mark_as_completed(report_data, attended_students)
 
     if report:

@@ -24,7 +24,7 @@ class User(AbstractUser):
     phone = models.CharField('Телефон', max_length=20, null=True)
     photo = models.ImageField('Фото', upload_to='users/', null=True, blank=True)
     patronymic = models.CharField('Отчество', max_length=50, blank=True)
-    
+
     # ✅ РАСКОММЕНТИРУЕМ поле баланса
     balance = models.DecimalField('Баланс', max_digits=10, decimal_places=2, default=0)
 
@@ -135,12 +135,10 @@ class Teacher(models.Model):
 
     def __str__(self):
         return self.user.get_full_name() or self.user.username
-    
+
     def get_full_name(self):
         """Возвращает полное имя учителя"""
         return self.user.get_full_name()
-
-
 
     def get_available_slots(self, date):
         """Возвращает доступные временные слоты учителя на указанную дату"""
@@ -169,6 +167,24 @@ class Teacher(models.Model):
         return available_slots
 
     def get_teacher_earnings(self, start_date=None, end_date=None):
+        """ отладка """
+        print(f"\n🔍 get_teacher_earnings для {self.user.get_full_name()}")
+        print(f"   Период: {start_date} - {end_date}")
+
+        lessons = Lesson.objects.filter(
+            teacher=self,
+            status='completed',
+            date__gte=start_date,
+            date__lte=end_date
+        )
+
+        print(f"   Найдено уроков: {lessons.count()}")
+        for lesson in lessons:
+            print(f"   - {lesson.date}: {lesson.subject.name}")
+            for attendance in lesson.attendance.filter(status='attended'):
+                print(
+                    f" * {attendance.student.user.get_full_name()}: cost={attendance.cost}, teacher_payment={attendance.teacher_payment_share}")
+
         """Возвращает статистику по заработку учителя за период"""
         from django.db.models import Sum
         from .models import Payment
@@ -201,6 +217,81 @@ class Teacher(models.Model):
             'salaries_count': salaries.count(),
         }
 
+    def get_teacher_earnings(self, start_date, end_date):
+        """
+        Возвращает статистику выплат учителю за период
+        """
+        print(f"\n{'─' * 40}")
+        print(f"🔍 get_teacher_earnings для {self.user.get_full_name()}")
+        print(f"   Период: {start_date} - {end_date}")
+
+        from .models import Lesson
+
+        # Получаем все проведенные уроки учителя за период
+        lessons = Lesson.objects.filter(
+            teacher=self,
+            status='completed',
+            date__gte=start_date,
+            date__lte=end_date
+        ).prefetch_related('attendance__student__user')
+
+        print(f"   Найдено уроков: {lessons.count()}")
+
+        total_payments = 0  # Стоимость уроков
+        total_salaries = 0  # Выплаты учителю
+        total_attended = 0  # Счетчик attended
+        total_debt = 0  # Счетчик debt
+
+        if lessons.count() > 0:
+            print(f"   📋 Детализация уроков:")
+            for lesson in lessons:
+                print(f"      📅 {lesson.date} (ID: {lesson.id}): {lesson.subject.name}")
+                print(f"         Статус урока: {lesson.status}")
+
+                attendances = lesson.attendance.all()
+                print(f"         Всего записей: {attendances.count()}")
+
+                for attendance in attendances:
+                    # Считаем все, у кого есть teacher_payment_share
+                    if attendance.teacher_payment_share > 0:
+                        status_symbol = '✅' if attendance.status == 'attended' else '⚠️'
+                        print(f"         {status_symbol} {attendance.student.user.get_full_name()}:")
+                        print(
+                            f"            status={attendance.status}, cost={attendance.cost}, teacher_payment={attendance.teacher_payment_share}")
+
+                        if attendance.status == 'attended':
+                            total_attended += 1
+                        elif attendance.status == 'debt':
+                            total_debt += 1
+
+                        total_payments += float(attendance.cost)
+                        total_salaries += float(attendance.teacher_payment_share)
+        else:
+            print(f"   ❌ Нет проведенных уроков за период")
+
+        net_income = total_payments - total_salaries
+
+        result = {
+            'total_payments': total_payments,
+            'total_salaries': total_salaries,
+            'net_income': net_income,
+            'payments_count': lessons.count(),
+            'salaries_count': lessons.count(),
+            'stats': {
+                'attended': total_attended,
+                'debt': total_debt,
+                'total': total_attended + total_debt
+            }
+        }
+
+        print(f"\n   📊 СТАТИСТИКА ПО СТАТУСАМ:")
+        print(f"      ✅ Присутствовало: {total_attended}")
+        print(f"      ⚠️ Задолженность: {total_debt}")
+        print(f"      📊 Всего записей: {total_attended + total_debt}")
+        print(f"   ✅ РЕЗУЛЬТАТ: {result}")
+        print(f"{'─' * 40}\n")
+
+        return result
 
 
 class Student(models.Model):
@@ -221,24 +312,24 @@ class Student(models.Model):
     def get_balance(self):
         """Возвращает текущий баланс ученика из связанного пользователя"""
         return self.user.balance
-    
+
     @property
     def balance(self):
         """Текущий баланс ученика (property для доступа как student.balance)"""
         return self.user.balance
-    
+
     # ===== ДЕПОЗИТЫ =====
     @property
     def total_deposits(self):
         """Сумма всех депозитов ученика"""
         from django.db.models import Sum
         return self.deposits.aggregate(Sum('amount'))['amount__sum'] or 0
-    
+
     @property
     def deposits_count(self):
         """Количество депозитов"""
         return self.deposits.count()
-    
+
     # ===== СТАТИСТИКА ПО УРОКАМ =====
     @property
     def total_attended_cost(self):
@@ -247,7 +338,7 @@ class Student(models.Model):
         return self.lesson_attendance.filter(
             status='attended'
         ).aggregate(Sum('cost'))['cost__sum'] or 0
-    
+
     @property
     def total_debt_cost(self):
         """Сумма всех уроков в долг"""
@@ -255,43 +346,43 @@ class Student(models.Model):
         return self.lesson_attendance.filter(
             status='debt'
         ).aggregate(Sum('cost'))['cost__sum'] or 0
-    
+
     @property
     def total_lessons_cost(self):
         """Общая стоимость всех уроков (оплаченные + долги)"""
         return self.total_attended_cost + self.total_debt_cost
-    
+
     @property
     def attended_lessons_count(self):
         """Количество оплаченных уроков"""
         return self.lesson_attendance.filter(status='attended').count()
-    
+
     @property
     def debt_lessons_count(self):
         """Количество уроков в долг"""
         return self.lesson_attendance.filter(status='debt').count()
-    
+
     @property
     def total_lessons_count(self):
         """Общее количество уроков"""
         return self.lesson_attendance.count()
-    
+
     # ===== СТАТИСТИКА ПО ДАТАМ =====
     def get_lessons_by_period(self, start_date=None, end_date=None):
         """Возвращает уроки за период"""
         queryset = self.lesson_attendance.all()
-        
+
         if start_date:
             queryset = queryset.filter(lesson__date__gte=start_date)
         if end_date:
             queryset = queryset.filter(lesson__date__lte=end_date)
-        
+
         return queryset
-    
+
     def get_stats_by_period(self, start_date=None, end_date=None):
         """Статистика за период"""
         lessons = self.get_lessons_by_period(start_date, end_date)
-        
+
         from django.db.models import Sum
         return {
             'total': lessons.count(),
@@ -301,35 +392,35 @@ class Student(models.Model):
             'debt_cost': lessons.filter(status='debt').aggregate(Sum('cost'))['cost__sum'] or 0,
             'total_cost': lessons.aggregate(Sum('cost'))['cost__sum'] or 0,
         }
-    
+
     # ===== УЧИТЕЛЯ И ЗАМЕТКИ =====
     def get_teachers_list(self):
         """Список учителей ученика"""
         return ", ".join([t.user.get_full_name() for t in self.teachers.all()])
-    
+
     def get_teacher_notes(self):
         """Возвращает заметки учителей об этом ученике"""
         return self.teacher_notes.all()
-    
+
     # ===== ПОЛНОЕ ИМЯ =====
     def get_full_name(self):
         """Возвращает полное имя ученика"""
         return self.user.get_full_name()
-    
+
     # ===== ИНФОРМАЦИЯ ДЛЯ АДМИНКИ =====
     @property
     def last_lesson_date(self):
         """Дата последнего урока"""
         last = self.lesson_attendance.order_by('-lesson__date').first()
         return last.lesson.date if last else None
-    
+
     @property
     def last_lesson_subject(self):
         """Предмет последнего урока"""
         last = self.lesson_attendance.order_by('-lesson__date').first()
         return last.lesson.subject.name if last else None
-    
-    
+
+
 class LessonFormat(models.Model):
     name = models.CharField('Название', max_length=100)
     description = models.TextField('Описание', blank=True)
@@ -357,8 +448,6 @@ class LessonFormat(models.Model):
     def get_teacher_notes(self):
         """Возвращает заметки учителей об этом ученике"""
         return self.notes.all()
-
-
 
 
 class Schedule(models.Model):
@@ -635,39 +724,38 @@ class Lesson(models.Model):
         self.status = 'completed'
         self.save()
 
-        # Обрабатываем каждого ученика
+        # ✅ НЕ МЕНЯЕМ СТАТУСЫ - они уже установлены в view!
+        # Просто обрабатываем платежи и выплаты
+
         total_teacher_payment = 0
         attended_count = 0
 
-        for attendance in self.attendance.all():
-            if attended_students and attendance.id in attended_students:
-                attendance.status = 'attended'
-                attended_count += 1
+        for attendance in self.attendance.filter(status='attended'):  # Берем уже отмеченных
+            attended_count += 1
+            total_teacher_payment += attendance.teacher_payment_share
 
-                # Пытаемся списать с ученика
-                if attendance.student.user.balance >= attendance.cost:
-                    attendance.student.user.balance -= attendance.cost
-                    attendance.student.user.save()
+            # Проверяем баланс ученика
+            if attendance.student.user.balance >= attendance.cost:
+                attendance.student.user.balance -= attendance.cost
+                attendance.student.user.save()
 
-                    # Создаем запись о платеже
-                    Payment.objects.create(
-                        user=attendance.student.user,
-                        amount=attendance.cost,
-                        payment_type='expense',
-                        description=f'Оплата занятия {self.date} ({self.subject.name})',
-                        lesson=self
-                    )
-                else:
-                    # Не хватает денег - ставим debt, но учитель всё равно получает
-                    attendance.status = 'debt'
-                    # Запись о платеже НЕ создаём, но учителю начисляем
-
-                # УЧИТЕЛЬ ПОЛУЧАЕТ ВСЕГДА за присутствующего ученика
-                total_teacher_payment += attendance.teacher_payment_share
+                Payment.objects.create(
+                    user=attendance.student.user,
+                    amount=attendance.cost,
+                    payment_type='expense',
+                    description=f'Оплата занятия {self.date} ({self.subject.name})',
+                    lesson=self
+                )
             else:
-                attendance.status = 'absent'
-
-            attendance.save()
+                # Не хватает денег - создаем уведомление
+                from .models import Notification
+                Notification.objects.create(
+                    user=attendance.student.user,
+                    title='⚠️ Недостаточно средств',
+                    message=f'На вашем балансе недостаточно средств для оплаты урока {self.date}. Пополните баланс.',
+                    notification_type='system'
+                )
+                # Статус оставляем 'attended' - ученик был, но должен деньги
 
         # Начисляем выплату учителю (за всех присутствующих)
         self.teacher.wallet_balance += total_teacher_payment
@@ -750,14 +838,15 @@ class Lesson(models.Model):
             )
 
         return new_lesson
-    
+
     def get_finance_stats(self):
         """Возвращает финансовую статистику урока (для совместимости с helper-классами)"""
         from django.db.models import Sum
-        
+
         stats = {
             'total_cost': self.attendance.aggregate(Sum('cost'))['cost__sum'] or 0,
-            'teacher_payment': self.attendance.aggregate(Sum('teacher_payment_share'))['teacher_payment_share__sum'] or 0,
+            'teacher_payment': self.attendance.aggregate(Sum('teacher_payment_share'))[
+                                   'teacher_payment_share__sum'] or 0,
             'students_total': self.attendance.count(),
             'students_attended': self.attendance.filter(status='attended').count(),
             'students_debt': self.attendance.filter(status='debt').count(),
@@ -872,7 +961,7 @@ class Payment(models.Model):
         ('income', 'Пополнение'),
         ('expense', 'Списание'),
         ('teacher_payment', 'Начисление учителю'),  # ← Убрал второе значение
-        ('teacher_salary', 'Зарплата учителя'),     # ← Добавил отдельную строку
+        ('teacher_salary', 'Зарплата учителя'),  # ← Добавил отдельную строку
     )
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payments', verbose_name='Пользователь')
