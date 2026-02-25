@@ -11,3 +11,12 @@
     {{ block.super }}
 </div>
 {% endblock %}
+
+{% block object-tools-items %}
+{{ block.super }}
+<li>
+    <a href="{% url 'import_users' %}" class="addlink" style="background: #17a2b8;">
+        <i class="fa fa-upload"></i> Импорт пользователей
+    </a>
+</li>
+{% endblock %}

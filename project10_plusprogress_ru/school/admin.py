@@ -12,6 +12,7 @@ from django.utils import timezone
 from datetime import datetime
 from django.db.models import Prefetch, Sum, Count
 from django.db import transaction
+from .views import import_users_view
 
 from .models import (
     User, Subject, Teacher, Student, Lesson, LessonFormat,
@@ -64,8 +65,8 @@ class ScheduleTemplateStudentInline(admin.TabularInline):
 # ==================== CUSTOM USER ADMIN ====================
 
 class CustomUserAdmin(UserAdmin):
-    list_display = ('username', 'get_full_name', 'email', 'phone', 'role',
-                    'is_email_verified_badge', 'is_staff')  # Убрали balance_colored
+    list_display = ('id', 'username', 'get_full_name', 'email', 'phone', 'role',
+                    'is_email_verified_badge', 'is_staff')  
     list_filter = ('role', 'is_email_verified', 'is_staff', 'is_superuser', 'groups')
     search_fields = ('username', 'first_name', 'last_name', 'email', 'phone')
     readonly_fields = ('email_verification_sent',)
@@ -75,7 +76,7 @@ class CustomUserAdmin(UserAdmin):
         ('Личная информация', {
             'fields': ('first_name', 'last_name', 'patronymic', 'email', 'phone', 'photo')
         }),
-        ('Роль', {  # Убрали "и баланс"
+        ('Роль', {
             'fields': ('role',),
             'classes': ('wide',),
         }),
@@ -99,17 +100,27 @@ class CustomUserAdmin(UserAdmin):
         }),
     )
 
-    actions = ['mark_as_verified', 'mark_as_unverified', 'export_users_excel']
+    actions = ['mark_as_verified', 'mark_as_unverified', 'export_users_excel', 'import_users_excel']
+    
+    def get_urls(self):
+        from django.urls import path
+        urls = super().get_urls()
+        custom_urls = [
+            path('import/', self.admin_site.admin_view(import_users_view), name='import_users'),
+        ]
+        return custom_urls + urls
+    
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['show_import_button'] = True
+        return super().changelist_view(request, extra_context)
 
     def get_full_name(self, obj):
         full_name = obj.get_full_name()
         if obj.patronymic:
             return f"{full_name} {obj.patronymic}"
         return full_name or obj.username
-
     get_full_name.short_description = 'ФИО'
-
-    # УДАЛЕН метод balance_colored
 
     def is_email_verified_badge(self, obj):
         if obj.is_email_verified:
@@ -120,19 +131,16 @@ class CustomUserAdmin(UserAdmin):
             return format_html(
                 '<span style="background: #dc3545; color: white; padding: 3px 8px; border-radius: 3px;">❌ Не подтвержден</span>'
             )
-
     is_email_verified_badge.short_description = 'Email подтвержден'
 
     def mark_as_verified(self, request, queryset):
         updated = queryset.update(is_email_verified=True)
         self.message_user(request, f'✅ {updated} пользователей отмечены как подтвержденные')
-
     mark_as_verified.short_description = "✅ Отметить как подтвержденные email"
 
     def mark_as_unverified(self, request, queryset):
         updated = queryset.update(is_email_verified=False)
         self.message_user(request, f'⚠️ {updated} пользователей отмечены как неподтвержденные')
-
     mark_as_unverified.short_description = "❌ Отметить как неподтвержденные email"
 
     def export_users_excel(self, request, queryset):
@@ -146,7 +154,7 @@ class CustomUserAdmin(UserAdmin):
         ws = wb.active
         ws.title = "Пользователи"
 
-        headers = ['ID', 'Логин', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон', 'Роль']  # Убрали 'Баланс'
+        headers = ['ID', 'Логин', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон', 'Роль']
 
         header_font = Font(bold=True, color="FFFFFF")
         header_fill = PatternFill(start_color="417690", end_color="417690", fill_type="solid")
@@ -166,9 +174,8 @@ class CustomUserAdmin(UserAdmin):
             ws.cell(row=row, column=6, value=user.email)
             ws.cell(row=row, column=7, value=user.phone)
             ws.cell(row=row, column=8, value=user.get_role_display())
-            # Убрали колонку с балансом
 
-        column_widths = [8, 15, 15, 15, 15, 25, 15, 12]  # Убрали последнюю колонку
+        column_widths = [8, 15, 15, 15, 15, 25, 15, 12]
         for i, width in enumerate(column_widths, 1):
             ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
 
@@ -180,8 +187,11 @@ class CustomUserAdmin(UserAdmin):
 
         wb.save(response)
         return response
-
     export_users_excel.short_description = "📥 Экспорт выбранных пользователей в Excel"
+
+
+    
+
 
 
 # ==================== SUBJECT ADMIN ====================
@@ -206,7 +216,7 @@ class SubjectAdmin(admin.ModelAdmin):
 
 class TeacherAdmin(admin.ModelAdmin):
     list_display = ('id', 'user_link', 'display_subjects', 'experience',
-                    'students_count', 'rating_display', 'earnings_for_period')
+                    'students_count', 'rating_display')
     list_filter = ('subjects',)
     search_fields = ('user__first_name', 'user__last_name', 'user__email')
     filter_horizontal = ('subjects',)
@@ -262,43 +272,7 @@ class TeacherAdmin(admin.ModelAdmin):
         self.request = request
         return super().get_queryset(request)
 
-    # ⚡⚡⚡ МЕТОД ДЛЯ ОТОБРАЖЕНИЯ ЗАРАБОТКА (ПРЯМОЙ РАСЧЕТ) ⚡⚡⚡
-    def earnings_for_period(self, obj):
-        """Отображение статистики за период (прямой расчет)"""
-        request = getattr(self, 'request', None)
-        print(f"\n🔍 earnings_for_period для {obj.user.get_full_name()}")
-        print(f"   request есть: {request is not None}")
 
-        if request:
-            start_date = request.GET.get('start_date')
-            end_date = request.GET.get('end_date')
-            print(f"   start_date: {start_date}, end_date: {end_date}")
-
-            if start_date and end_date:
-                try:
-                    from datetime import datetime
-                    start = datetime.strptime(start_date, '%Y-%m-%d').date()
-                    end = datetime.strptime(end_date, '%Y-%m-%d').date()
-                    print(f"   start: {start}, end: {end}")
-
-                    earnings = obj.get_teacher_earnings(start, end)
-                    print(f"   earnings: {earnings}")
-
-                    return format_html(
-                        '<span style="color: #28a745;">💰 {} ₽</span><br>'
-                        '<small style="color: #6c757d;">Выплаты: {} ₽</small>',
-                        earnings['net_income'],
-                        earnings['total_salaries']
-                    )
-                except Exception as e:
-                    print(f"   ❌ Ошибка расчета: {e}")
-            else:
-                print(f"   ❌ Нет дат в запросе")
-        else:
-            print(f"   ❌ Нет request")
-        return '-'
-
-    earnings_for_period.short_description = 'Заработок за период'
 
     # ⚡⚡⚡ МЕТОД ДЛЯ ОБРАБОТКИ СПИСКА (ТОЛЬКО ДЛЯ ТАБЛИЦЫ СТАТИСТИКИ) ⚡⚡⚡
     def changelist_view(self, request, extra_context=None):

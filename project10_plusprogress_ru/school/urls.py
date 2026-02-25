@@ -93,4 +93,8 @@ urlpatterns = [
     path('admin/school/student/download-template/', views.download_student_template, name='download-student-template'),
     path('admin/school/teacher/import/', views.import_teachers, name='import-teachers'),
     path('admin/school/teacher/download-template/', views.download_teacher_template, name='download-teacher-template'),
+    
+        # URL для скачивания шаблона импорта пользователей
+    path('admin/user/download-template/', views.download_user_template, name='download_user_template'),
+    path('admin/user/import/', views.import_users_view, name='import_users'),
 ]
