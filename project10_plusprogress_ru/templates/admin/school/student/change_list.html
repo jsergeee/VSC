@@ -1,11 +1,68 @@
 {% extends "admin/change_list.html" %}
+{% load i18n static %}
 
+<!-- Полностью переопределяем блок object-tools-items, чтобы убрать стандартные кнопки -->
 {% block object-tools-items %}
-    {{ block.super }}
-    <li>
-        <a href="{% url 'import-students' %}" class="button" style="background: #28a745;">
-            ⬆️ Импорт учеников
-        </a>
-    </li>
+<!-- Ничего не выводим - стандартные кнопки скрыты -->
 {% endblock %}
 
+{% block content %}
+<div id="content-main">
+    <!-- Наше кастомное меню действий -->
+    <div style="margin-bottom: 10px; text-align: right;">
+        <div style="display: inline-block; position: relative;">
+            <button onclick="toggleActions()" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">
+                ⚡ Действия с учениками <span id="actionsIcon">▼</span>
+            </button>
+
+            <div id="actionsMenu" style="display: none; position: absolute; right: 0; top: 100%; background: white; border: 1px solid #ddd; border-radius: 4px; margin-top: 5px; z-index: 1000; min-width: 200px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <ul style="list-style: none; margin: 0; padding: 0;">
+                    <li style="border-bottom: 1px solid #eee;">
+                        <a href="{% url 'admin:school_student_add' %}" style="display: block; padding: 10px 15px; text-decoration: none; color: #333;">
+                            ➕ Добавить ученика
+                        </a>
+                    </li>
+                    <li style="border-bottom: 1px solid #eee;">
+                        <a href="{% url 'import-students' %}" style="display: block; padding: 10px 15px; text-decoration: none; color: #333;">
+                            📥 Импорт учеников из Excel
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'import_users' %}" style="display: block; padding: 10px 15px; text-decoration: none; color: #333;">
+                            👥 Импорт пользователей
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    {{ block.super }}
+</div>
+
+<script>
+    function toggleActions() {
+        var menu = document.getElementById('actionsMenu');
+        var icon = document.getElementById('actionsIcon');
+
+        if (menu.style.display === 'none') {
+            menu.style.display = 'block';
+            icon.innerHTML = '▲';
+        } else {
+            menu.style.display = 'none';
+            icon.innerHTML = '▼';
+        }
+    }
+
+    // Закрываем меню при клике вне его
+    document.addEventListener('click', function (event) {
+        var menu = document.getElementById('actionsMenu');
+        var button = event.target.closest('button');
+
+        if (!button || !button.innerText.includes('⚡ Действия')) {
+            menu.style.display = 'none';
+            document.getElementById('actionsIcon').innerHTML = '▼';
+        }
+    });
+</script>
+{% endblock %}

@@ -44,6 +44,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'school.middleware.StudentProfileMiddleware',
     'school.middleware.EmailVerificationMiddleware',
+    'school.middleware.OverdueLessonsMiddleware',
 ]
 
 ROOT_URLCONF = 'plusprogress.urls'
