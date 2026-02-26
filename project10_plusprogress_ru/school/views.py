@@ -1836,6 +1836,321 @@ def export_calendar_pdf(request):
     return response
 
 
+@login_required
+def teacher_export_calendar_pdf(request):
+    """Экспорт календаря учителя в PDF с выбором месяца"""
+    user = request.user
+
+    if user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+
+    teacher = user.teacher_profile
+
+    # Получаем месяц и год из GET-параметров
+    month = request.GET.get('month')
+    year = request.GET.get('year')
+
+    # Если не указаны, берем текущий месяц
+    today = timezone.now().date()
+    if not month or not year:
+        month = today.month
+        year = today.year
+    else:
+        month = int(month)
+        year = int(year)
+
+    # Определяем первый и последний день месяца
+    start_date = date(year, month, 1)
+    if month == 12:
+        end_date = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_date = date(year, month + 1, 1) - timedelta(days=1)
+
+    # Получаем все уроки учителя за месяц
+    lessons = Lesson.objects.filter(
+        teacher=teacher,
+        date__gte=start_date,
+        date__lte=end_date
+    ).select_related('subject').prefetch_related('attendance__student__user').order_by('date', 'start_time')
+
+    # Получаем групповые уроки
+    group_lessons = GroupLesson.objects.filter(
+        teacher=teacher,
+        date__gte=start_date,
+        date__lte=end_date
+    ).select_related('subject').prefetch_related('enrollments__student__user')
+
+    # Группируем по датам
+    lessons_by_date = {}
+
+    # Обычные уроки
+    for lesson in lessons:
+        date_str = lesson.date.strftime('%Y-%m-%d')
+        if date_str not in lessons_by_date:
+            lessons_by_date[date_str] = []
+
+        # Формируем список учеников
+        students_list = [a.student.user.get_full_name() for a in lesson.attendance.all()]
+
+        time_str = lesson.start_time.strftime('%H:%M')
+
+        lessons_by_date[date_str].append({
+            'time': time_str,
+            'subject': lesson.subject.name,
+            'students': students_list,
+            'students_count': len(students_list),
+            'full': f"{time_str} {lesson.subject.name} ({len(students_list)} уч.)",
+            'type': 'individual'
+        })
+
+    # Групповые уроки
+    for lesson in group_lessons:
+        date_str = lesson.date.strftime('%Y-%m-%d')
+        if date_str not in lessons_by_date:
+            lessons_by_date[date_str] = []
+
+        students_list = [e.student.user.get_full_name() for e in lesson.enrollments.all()]
+        time_str = lesson.start_time.strftime('%H:%M')
+
+        lessons_by_date[date_str].append({
+            'time': time_str,
+            'subject': lesson.subject.name,
+            'students': students_list,
+            'students_count': len(students_list),
+            'full': f"👥 {time_str} {lesson.subject.name} ({len(students_list)} уч.)",
+            'type': 'group'
+        })
+
+    # Создаем сетку календаря
+    calendar_days = []
+    current = start_date
+    week = []
+
+    # Добавляем пустые ячейки для первого дня
+    first_weekday = start_date.weekday()
+    for _ in range(first_weekday):
+        week.append({'day': '', 'lessons': [], 'is_current_month': False})
+
+    # Заполняем все дни
+    while current <= end_date:
+        if len(week) == 7:
+            calendar_days.append(week)
+            week = []
+
+        date_str = current.strftime('%Y-%m-%d')
+        week.append({
+            'day': current.day,
+            'lessons': lessons_by_date.get(date_str, []),
+            'is_current_month': True,
+            'date': current
+        })
+        current += timedelta(days=1)
+
+    # Добавляем пустые ячейки в конец
+    while len(week) < 7:
+        week.append({'day': '', 'lessons': [], 'is_current_month': False})
+    if week:
+        calendar_days.append(week)
+
+    # Список месяцев для выпадающего списка
+    months = [
+        {'value': 1, 'name': 'Январь'},
+        {'value': 2, 'name': 'Февраль'},
+        {'value': 3, 'name': 'Март'},
+        {'value': 4, 'name': 'Апрель'},
+        {'value': 5, 'name': 'Май'},
+        {'value': 6, 'name': 'Июнь'},
+        {'value': 7, 'name': 'Июль'},
+        {'value': 8, 'name': 'Август'},
+        {'value': 9, 'name': 'Сентябрь'},
+        {'value': 10, 'name': 'Октябрь'},
+        {'value': 11, 'name': 'Ноябрь'},
+        {'value': 12, 'name': 'Декабрь'},
+    ]
+
+    # Список годов (текущий год и +/- 2 года)
+    current_year = timezone.now().year
+    years = [current_year - 2, current_year - 1, current_year, current_year + 1, current_year + 2]
+
+    context = {
+        'user': user,
+        'teacher': teacher,
+        'calendar_days': calendar_days,
+        'month_name': months[month - 1]['name'],
+        'month': month,
+        'year': year,
+        'months': months,
+        'years': years,
+        'export_date': timezone.now().strftime('%d.%m.%Y %H:%M'),
+        'lessons_count': sum(len(v) for v in lessons_by_date.values()),
+    }
+
+    # Рендерим PDF
+    html_string = render_to_string('school/teacher/calendar_month_pdf.html', context)
+
+    response = HttpResponse(content_type='application/pdf')
+    filename = f"teacher_calendar_{year}_{month:02d}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(response)
+    return response
+
+
+@staff_member_required
+def admin_export_calendar_pdf(request):
+    """Экспорт календаря админки в PDF с выбором месяца"""
+
+    # Получаем месяц и год из GET-параметров
+    month = request.GET.get('month')
+    year = request.GET.get('year')
+
+    today = timezone.now().date()
+
+    # Если не указаны, берем текущий месяц
+    if not month or not year:
+        month = today.month
+        year = today.year
+    else:
+        month = int(month)
+        year = int(year)
+
+    # Определяем первый и последний день месяца
+    start_date = date(year, month, 1)
+    if month == 12:
+        end_date = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_date = date(year, month + 1, 1) - timedelta(days=1)
+
+    # Получаем все уроки за месяц
+    lessons = Lesson.objects.filter(
+        date__gte=start_date,
+        date__lte=end_date
+    ).select_related(
+        'teacher__user', 'subject'
+    ).prefetch_related(
+        'attendance__student__user'
+    ).order_by('date', 'start_time')
+
+    # Групповые уроки
+    group_lessons = GroupLesson.objects.filter(
+        date__gte=start_date,
+        date__lte=end_date
+    ).select_related(
+        'teacher__user', 'subject'
+    ).prefetch_related(
+        'enrollments__student__user'
+    )
+
+    # Группируем по датам
+    lessons_by_date = {}
+
+    # Обычные уроки
+    for lesson in lessons:
+        date_str = lesson.date.strftime('%Y-%m-%d')
+        if date_str not in lessons_by_date:
+            lessons_by_date[date_str] = []
+
+        # Список учеников
+        students_list = [a.student.user.get_full_name() for a in lesson.attendance.all()]
+        time_str = lesson.start_time.strftime('%H:%M')
+
+        lessons_by_date[date_str].append({
+            'time': time_str,
+            'subject': lesson.subject.name,
+            'teacher': lesson.teacher.user.last_name,
+            'students_count': len(students_list),
+            'full': f"{time_str} {lesson.subject.name} - {lesson.teacher.user.last_name} ({len(students_list)} уч.)",
+            'type': 'individual'
+        })
+
+    # Групповые уроки
+    for lesson in group_lessons:
+        date_str = lesson.date.strftime('%Y-%m-%d')
+        if date_str not in lessons_by_date:
+            lessons_by_date[date_str] = []
+
+        students_list = [e.student.user.get_full_name() for e in lesson.enrollments.all()]
+        time_str = lesson.start_time.strftime('%H:%M')
+
+        lessons_by_date[date_str].append({
+            'time': time_str,
+            'subject': lesson.subject.name,
+            'teacher': lesson.teacher.user.last_name,
+            'students_count': len(students_list),
+            'full': f"👥 {time_str} {lesson.subject.name} - Группа ({len(students_list)} уч.)",
+            'type': 'group'
+        })
+
+    # Создаем сетку календаря
+    calendar_days = []
+    current = start_date
+    week = []
+
+    first_weekday = start_date.weekday()
+    for _ in range(first_weekday):
+        week.append({'day': '', 'lessons': [], 'is_current_month': False})
+
+    while current <= end_date:
+        if len(week) == 7:
+            calendar_days.append(week)
+            week = []
+
+        date_str = current.strftime('%Y-%m-%d')
+        week.append({
+            'day': current.day,
+            'lessons': lessons_by_date.get(date_str, []),
+            'is_current_month': True,
+            'date': current
+        })
+        current += timedelta(days=1)
+
+    while len(week) < 7:
+        week.append({'day': '', 'lessons': [], 'is_current_month': False})
+    if week:
+        calendar_days.append(week)
+
+    # Список месяцев
+    months = [
+        {'value': 1, 'name': 'Январь'},
+        {'value': 2, 'name': 'Февраль'},
+        {'value': 3, 'name': 'Март'},
+        {'value': 4, 'name': 'Апрель'},
+        {'value': 5, 'name': 'Май'},
+        {'value': 6, 'name': 'Июнь'},
+        {'value': 7, 'name': 'Июль'},
+        {'value': 8, 'name': 'Август'},
+        {'value': 9, 'name': 'Сентябрь'},
+        {'value': 10, 'name': 'Октябрь'},
+        {'value': 11, 'name': 'Ноябрь'},
+        {'value': 12, 'name': 'Декабрь'},
+    ]
+
+    # Годы
+    current_year = timezone.now().year
+    years = [current_year - 2, current_year - 1, current_year, current_year + 1, current_year + 2]
+
+    context = {
+        'calendar_days': calendar_days,
+        'month_name': months[month - 1]['name'],
+        'month': month,
+        'year': year,
+        'months': months,
+        'years': years,
+        'now': today,
+        'export_date': timezone.now().strftime('%d.%m.%Y %H:%M'),
+        'lessons_count': sum(len(v) for v in lessons_by_date.values()),
+    }
+
+    html_string = render_to_string('admin/school/lesson/calendar_pdf.html', context)
+
+    response = HttpResponse(content_type='application/pdf')
+    filename = f"admin_calendar_{year}_{month:02d}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(response)
+    return response
+
 # ============================================
 # ЧАСТЬ 5: ФУНКЦИИ ИМПОРТА
 # ============================================

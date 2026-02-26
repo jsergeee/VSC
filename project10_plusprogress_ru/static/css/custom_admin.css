@@ -403,7 +403,7 @@ div.breadcrumbs a {
 input, textarea, select {
     border: 1px solid var(--border-color) !important;
     border-radius: 5px !important;
-    padding: 8px !important;
+    padding: 0px !important;
 }
 
 input:focus, textarea:focus, select:focus {

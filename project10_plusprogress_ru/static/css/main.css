@@ -229,7 +229,7 @@ img {
 .form-control {
   display: block;
   width: 100%;
-  padding: var(--space-xs) var(--space-sm);
+  padding: 0px;
   font-size: var(--font-size-base);
   line-height: 1.5;
   color: var(--text-primary);

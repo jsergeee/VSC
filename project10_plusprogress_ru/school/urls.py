@@ -94,7 +94,8 @@ urlpatterns = [
     path('admin/school/teacher/import/', views.import_teachers, name='import-teachers'),
     path('admin/school/teacher/download-template/', views.download_teacher_template, name='download-teacher-template'),
     path('calendar/export/pdf/', views.export_calendar_pdf, name='export_calendar_pdf'),
-    
+    path('teacher/calendar/export/pdf/', views.teacher_export_calendar_pdf, name='teacher_export_calendar_pdf'),
+    path('admin/calendar/export/pdf/', views.admin_export_calendar_pdf, name='admin_export_calendar_pdf'),
     
         # URL для скачивания шаблона импорта пользователей
     path('admin/user/download-template/', views.download_user_template, name='download_user_template'),

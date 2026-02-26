@@ -1373,6 +1373,7 @@ img {
 
 .d-flex {
   display: flex !important;
+  justify-content: flex-end !important;
 }
 
 .d-inline-block {
