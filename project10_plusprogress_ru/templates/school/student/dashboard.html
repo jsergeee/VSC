@@ -157,6 +157,19 @@
         </li>
     </ul>
 
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>Расписание</h4>
+        <div class="d-flex gap-2">
+            <form method="get" action="{% url 'export_calendar_pdf' %}" class="d-flex gap-2" target="_blank">
+                <input type="date" name="start_date" class="form-control form-control-sm" value="{{ now|date:'Y-m-01' }}">
+                <input type="date" name="end_date" class="form-control form-control-sm" value="{{ now|date:'Y-m-t' }}">
+                <button type="submit" class="btn btn-success btn-sm">
+                    📄 Экспорт
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Содержимое вкладок -->
     <div class="tab-content">
         <!-- Вкладка Расписание -->
@@ -505,60 +518,66 @@
         </div>
     </div>
 </div>
-
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/ru.js'></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var calendarEl = document.getElementById('calendar');
-    if (calendarEl) {
-        var calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'timeGridWeek',
-            locale: 'ru',
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek,timeGridDay'
-            },
-            buttonText: {
-                today: 'Сегодня',
-                month: 'Месяц',
-                week: 'Неделя',
-                day: 'День'
-            },
-            slotMinTime: '08:00:00',
-            slotMaxTime: '22:00:00',
-            allDaySlot: false,
-            slotDuration: '00:30:00',
+    if (!calendarEl) return;
 
-            events: {{ calendar_events|safe }},
-
-            eventClick: function(info) {
-                if (info.event.url) {
-                    window.location.href = info.event.url;
-                    info.jsEvent.preventDefault();
-                }
-            },
-
-            eventDidMount: function(info) {
-                var title = info.event.title;
-                info.el.setAttribute('title', title);
-            }
-        });
-
-        calendar.render();
-        console.log('📅 Календарь загружен, событий:', {{ calendar_events|length }});
-    }
-});
-
-
-document.addEventListener('DOMContentLoaded', function() {
-    var balanceElement = document.querySelector('.balance-amount');
-    var balance = parseFloat('{{ user.balance }}');
+    // Функция обновления ссылки с защитой от undefined
+    function updateExportLink(view) {
+        var btn = document.getElementById('exportPdfBtn');
+        if (!btn || !view || !view.currentStart) return;  // ← ЗАЩИТА!
         
-    if (balance < 0) {
-            balanceElement.style.color = '#dc3545';
+        var date = view.currentStart.toISOString().split('T')[0];
+        btn.href = "{% url 'export_calendar_pdf' %}?view=" + view.type + "&date=" + date;
+        console.log('📅 Ссылка обновлена:', btn.href);
     }
+
+    // Календарь
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        locale: 'ru',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        buttonText: {
+            today: 'Сегодня',
+            month: 'Месяц',
+            week: 'Неделя',
+            day: 'День'
+        },
+        events: {{ calendar_events|safe }},
+        
+        // Обновляем ссылку после полной загрузки
+        datesSet: function(info) {
+            // НЕБОЛЬШАЯ ЗАДЕРЖКА, чтобы календарь точно прогрузился
+            setTimeout(function() {
+                updateExportLink(info.view);
+            }, 100);
+        }
+    });
+
+    calendar.render();
+    
+    // Баланс
+    var balanceEl = document.querySelector('.balance-amount');
+    if (balanceEl) {
+        var balance = parseFloat('{{ user.balance }}');
+        if (balance < 0) {
+            balanceEl.style.color = '#dc3545';
+        }
+    }
+    
+    // Обновляем ссылку сразу после загрузки
+    setTimeout(function() {
+        if (calendar && calendar.view) {
+            updateExportLink(calendar.view);
+        }
+    }, 200);
 });
 </script>
 {% endblock %}

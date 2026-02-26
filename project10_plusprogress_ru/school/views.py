@@ -32,6 +32,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from weasyprint import HTML
 import logging
 import traceback
+from django.utils import timezone
 
 # Импорты моделей
 from .models import (
@@ -738,6 +739,7 @@ def student_dashboard(request):
         
         # Календарь
         'calendar_events': calendar_events,
+        'now': timezone.now(),
     }
 
     # Отладка
@@ -1727,6 +1729,110 @@ def download_import_template(request):
         ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
 
     wb.save(response)
+    return response
+
+@login_required
+def export_calendar_pdf(request):
+    """Экспорт календаря в PDF с фильтром по дате"""
+    user = request.user
+    
+    # Получаем даты из GET-параметров
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    view_type = request.GET.get('view', 'month')  # month, week, day
+    
+    # Если даты не указаны, берем текущий месяц
+    if not start_date_str or not end_date_str:
+        today = timezone.now().date()
+        start_date = today.replace(day=1)
+        if today.month == 12:
+            end_date = today.replace(year=today.year+1, month=1, day=1) - timedelta(days=1)
+        else:
+            end_date = today.replace(month=today.month+1, day=1) - timedelta(days=1)
+    else:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    
+    # Получаем уроки за период
+    if user.role == 'student':
+        student = user.student_profile
+        lessons = Lesson.objects.filter(
+            attendance__student=student,
+            date__gte=start_date,
+            date__lte=end_date
+        ).select_related('teacher__user', 'subject').order_by('date', 'start_time')
+    else:
+        lessons = Lesson.objects.none()
+    
+    # Группируем по датам
+    lessons_by_date = {}
+    for lesson in lessons:
+        date_str = lesson.date.strftime('%Y-%m-%d')
+        if date_str not in lessons_by_date:
+            lessons_by_date[date_str] = []
+        
+        # Формат: "10:00 Английский - Ива"
+        time_str = lesson.start_time.strftime('%H:%M')
+        teacher_short = lesson.teacher.user.last_name
+        
+        lessons_by_date[date_str].append({
+            'time': time_str,
+            'subject': lesson.subject.name,
+            'teacher': teacher_short,
+            'full': f"{time_str} {lesson.subject.name} - {teacher_short}"
+        })
+    
+    # Создаем сетку календаря
+    calendar_days = []
+    current = start_date
+    week = []
+    
+    # Добавляем пустые ячейки для первого дня
+    first_weekday = start_date.weekday()
+    for _ in range(first_weekday):
+        week.append({'day': '', 'lessons': [], 'is_current_month': False})
+    
+    # Заполняем все дни
+    while current <= end_date:
+        if len(week) == 7:
+            calendar_days.append(week)
+            week = []
+        
+        date_str = current.strftime('%Y-%m-%d')
+        week.append({
+            'day': current.day,
+            'lessons': lessons_by_date.get(date_str, []),
+            'is_current_month': True,
+            'date': current
+        })
+        current += timedelta(days=1)
+    
+    # Добавляем пустые ячейки в конец
+    while len(week) < 7:
+        week.append({'day': '', 'lessons': [], 'is_current_month': False})
+    if week:
+        calendar_days.append(week)
+    
+    context = {
+        'user': user,
+        'calendar_days': calendar_days,
+        'start_date': start_date.strftime('%d.%m.%Y'),
+        'end_date': end_date.strftime('%d.%m.%Y'),
+        'month_name': ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
+                      'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'][start_date.month-1],
+        'year': start_date.year,
+        'export_date': timezone.now().strftime('%d.%m.%Y %H:%M'),
+        'lessons_count': sum(len(v) for v in lessons_by_date.values()),
+    }
+    
+    # Рендерим PDF
+    html_string = render_to_string('school/student/calendar_month_pdf.html', context)
+    
+    response = HttpResponse(content_type='application/pdf')
+    filename = f"calendar_{start_date.strftime('%Y%m')}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf(response)
     return response
 
 

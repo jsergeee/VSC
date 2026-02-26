@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Календарь {{ month_name }} {{ year }}</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 0.5cm;  /* Уменьшил поля */
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            font-size: 18px;  /* Уменьшил с 24px до 18px */
+            margin-bottom: 3px;
+            font-weight: normal;  /* Убрал жирность */
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 8px;  /* Уменьшил отступ */
+            font-size: 11px;  /* Уменьшил размер */
+        }
+        .calendar {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .calendar th {
+            background: #667eea;
+            color: white;
+            padding: 5px;  /* Уменьшил с 10px до 5px */
+            text-align: center;
+            font-weight: normal;
+            font-size: 11px;  /* Уменьшил */
+        }
+        .calendar td {
+            border: 1px solid #ddd;
+            vertical-align: top;
+            height: 70px;  /* Уменьшил с 80px до 70px */
+            padding: 3px;  /* Уменьшил с 5px до 3px */
+        }
+        .day-number {
+            font-weight: bold;
+            margin-bottom: 2px;  /* Уменьшил с 5px до 2px */
+            color: #333;
+            font-size: 11px;  /* Добавил размер */
+        }
+        .other-month .day-number {
+            color: #ccc;
+        }
+        .lesson-item {
+            font-size: 10px;  /* Уменьшил с 9px до 8px */
+            padding: 1px 2px;  /* Уменьшил */
+            margin-bottom: 1px;  /* Уменьшил */
+            background: #f0f8ff;
+            border-radius: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .footer {
+            margin-top: 10px;  /* Уменьшил с 20px до 10px */
+            text-align: center;
+            color: #666;
+            font-size: 8px;  /* Уменьшил с 10px до 8px */
+        }
+        .stats {
+            text-align: center;
+            margin-bottom: 8px;  /* Уменьшил с 15px до 8px */
+            font-size: 10px;  /* Уменьшил с 12px до 10px */
+        }
+        .today {
+            background: #e8f4fd;
+            border: 2px solid #667eea;
+        }
+        .weekdays {
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Расписание занятий</h1>
+    <div class="subtitle">
+        {{ user.get_full_name }} • {{ month_name|capfirst }} {{ year }}
+    </div>
+    
+    <div class="stats">
+        Занятий: <strong>{{ lessons_count }}</strong>  
+    </div>
+    
+    <table class="calendar">
+        <thead>
+            <tr>
+                <th>Пн</th>
+                <th>Вт</th>
+                <th>Ср</th>
+                <th>Чт</th>
+                <th>Пт</th>
+                <th>Сб</th>
+                <th>Вс</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for week in calendar_days %}
+            <tr>
+                {% for day in week %}
+                <td class="{% if not day.is_current_month %}other-month{% endif %}">
+                    <div class="day-number">{{ day.day }}</div>
+                    {% for lesson in day.lessons %}
+                    <div class="lesson-item" title="{{ lesson.full_time }}">
+                        {{ lesson.time }} {{ lesson.subject }} - {{ lesson.teacher }}
+                    </div>
+                    {% endfor %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="footer">
+        Школа "Плюс Прогресс" • {{ export_date }}
+    </div>
+</body>
+</html>

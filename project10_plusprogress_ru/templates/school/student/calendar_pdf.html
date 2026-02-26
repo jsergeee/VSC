@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Календарь {{ month_name }} {{ year }}</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 1.5cm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        .calendar {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .calendar th {
+            background: #667eea;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            font-weight: normal;
+        }
+        .calendar td {
+            border: 1px solid #ddd;
+            vertical-align: top;
+            height: 80px;
+            padding: 5px;
+        }
+        .day-number {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        .other-month .day-number {
+            color: #ccc;
+        }
+        .lesson-item {
+            font-size: 9px;
+            padding: 2px 4px;
+            margin-bottom: 2px;
+            background: #f0f8ff;
+            border-radius: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 10px;
+        }
+        .stats {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 12px;
+        }
+        .today {
+            background: #e8f4fd;
+            border: 2px solid #667eea;
+        }
+        .weekdays {
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Расписание занятий</h1>
+    <div class="subtitle">
+        {{ user.get_full_name }} • {{ month_name|capfirst }} {{ year }}
+    </div>
+    
+    <div class="stats">
+        Всего занятий: <strong>{{ lessons_count }}</strong>
+    </div>
+    
+    <table class="calendar">
+        <thead>
+            <tr>
+                <th>Пн</th>
+                <th>Вт</th>
+                <th>Ср</th>
+                <th>Чт</th>
+                <th>Пт</th>
+                <th>Сб</th>
+                <th>Вс</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for week in calendar_days %}
+            <tr>
+                {% for day in week %}
+                <td class="{% if not day.is_current_month %}other-month{% endif %}">
+                    <div class="day-number">{{ day.day }}</div>
+                    {% for lesson in day.lessons %}
+                    <div class="lesson-item" title="{{ lesson.full_time }}">
+                        {{ lesson.time }} {{ lesson.subject }} - {{ lesson.teacher }}
+                    </div>
+                    {% endfor %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="footer">
+        Школа "Плюс Прогресс" • Распечатано {{ export_date }}
+    </div>
+</body>
+</html>
