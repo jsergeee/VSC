@@ -1,366 +1,409 @@
-{% extends 'base.html' %}
-{% load static %}
-{% block title %}Личный кабинет учителя{% endblock %}
-{% block extra_css %}
-<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet'/>
+{% extends 'base.html' %} {% load static %} {% block title %}Личный кабинет
+учителя{% endblock %} {% block extra_css %}
+<link
+  href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css"
+  rel="stylesheet"
+/>
 <style>
-    /* Стили для календаря */
-    .calendar-header {
-        display: flex;
-        justify-content: flex-end;
-        align-items: center;
-        margin-bottom: 20px;
-        padding: 15px;
-        background: white;
-        border-radius: 15px;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-    }
+  /* Стили для календаря */
+  .calendar-header {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+  }
 
-    .fc-toolbar-title {
-        font-size: 1.5rem !important;
-        font-weight: 600 !important;
-        color: #495057 !important;
-    }
+  .fc-toolbar-title {
+    font-size: 1.5rem !important;
+    font-weight: 600 !important;
+    color: #495057 !important;
+  }
 
-    .fc-button {
-        background: #f8f9fa !important;
-        border: 2px solid #e9ecef !important;
-        color: #495057 !important;
-        font-weight: 600 !important;
-        padding: 8px 15px !important;
-        border-radius: 10px !important;
-        transition: all 0.3s ease !important;
-    }
+  .fc-button {
+    background: #f8f9fa !important;
+    border: 2px solid #e9ecef !important;
+    color: #495057 !important;
+    font-weight: 600 !important;
+    padding: 8px 15px !important;
+    border-radius: 10px !important;
+    transition: all 0.3s ease !important;
+  }
 
-    .fc-button:hover {
-        background: #667eea !important;
-        border-color: #667eea !important;
-        color: white !important;
-    }
+  .fc-button:hover {
+    background: #667eea !important;
+    border-color: #667eea !important;
+    color: white !important;
+  }
 
-    .fc-button-active {
-        background: #667eea !important;
-        border-color: #667eea !important;
-        color: white !important;
-    }
+  .fc-button-active {
+    background: #667eea !important;
+    border-color: #667eea !important;
+    color: white !important;
+  }
 
-    .btn-create {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 50px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-    }
+  .btn-create {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 50px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  }
 
-    .btn-create:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        color: white;
-    }
+  .btn-create:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    color: white;
+  }
 
-    .btn-create i {
-        margin-right: 8px;
-        font-size: 1.1rem;
-    }
+  .btn-create i {
+    margin-right: 8px;
+    font-size: 1.1rem;
+  }
 
-    .quick-stats {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
-        margin: 30px 0;
-    }
+  .quick-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin: 30px 0;
+  }
 
-    .stat-card {
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
-        text-align: center;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-        transition: all 0.3s ease;
-    }
+  .stat-card {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+  }
 
-    .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    }
+  .stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  }
 
-    .stat-number {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: #667eea;
-        line-height: 1.2;
-        margin-bottom: 5px;
-    }
+  .stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #667eea;
+    line-height: 1.2;
+    margin-bottom: 5px;
+  }
 
-    .stat-label {
-        color: #6c757d;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
+  .stat-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
 
-    .nav-tabs-custom {
-        border-bottom: 2px solid #e9ecef;
-        margin-bottom: 25px;
-        padding: 0 15px;
-    }
+  .nav-tabs-custom {
+    border-bottom: 2px solid #e9ecef;
+    margin-bottom: 25px;
+    padding: 0 15px;
+  }
 
-    .nav-tabs-custom .nav-item {
-        margin-bottom: -2px;
-    }
+  .nav-tabs-custom .nav-item {
+    margin-bottom: -2px;
+  }
 
-    .nav-tabs-custom .nav-link {
-        border: none;
-        color: #6c757d;
-        font-weight: 600;
-        padding: 15px 25px;
-        border-radius: 0;
-        border-bottom: 2px solid transparent;
-        transition: all 0.3s ease;
-    }
+  .nav-tabs-custom .nav-link {
+    border: none;
+    color: #6c757d;
+    font-weight: 600;
+    padding: 15px 25px;
+    border-radius: 0;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+  }
 
-    .nav-tabs-custom .nav-link i {
-        margin-right: 8px;
-        font-size: 1.1rem;
-    }
+  .nav-tabs-custom .nav-link i {
+    margin-right: 8px;
+    font-size: 1.1rem;
+  }
 
-    .nav-tabs-custom .nav-link:hover {
-        color: #667eea;
-    }
+  .nav-tabs-custom .nav-link:hover {
+    color: #667eea;
+  }
 
-    .nav-tabs-custom .nav-link.active {
-        color: #667eea;
-        background: transparent;
-        border-bottom: 2px solid #667eea;
-    }
+  .nav-tabs-custom .nav-link.active {
+    color: #667eea;
+    background: transparent;
+    border-bottom: 2px solid #667eea;
+  }
 
-    .tab-content {
-        background: white;
-        border-radius: 15px;
-        padding: 25px;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-        min-height: 400px;
-    }
+  .tab-content {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    min-height: 400px;
+  }
 </style>
-{% endblock %}
-{% block content %}
+{% endblock %} {% block content %}
 <div class="container mt-4">
-    <!-- Приветствие -->
-    <div class="row mb-4">
+  <!-- Приветствие -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <h2>Здравствуйте, {{ user.first_name }}!</h2>
+    </div>
+  </div>
+  <!-- Быстрая статистика -->
+  <div class="quick-stats">
+    <div class="stat-card">
+      <div class="stat-number">{{ students.count }}</div>
+      <div class="stat-label">Учеников</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">{{ upcoming_lessons|length }}</div>
+      <div class="stat-label">Ближайших занятий</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">{{ today_lessons|length }}</div>
+      <div class="stat-label">Занятий сегодня</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">{{ materials|length }}</div>
+      <div class="stat-label">Моих материалов</div>
+    </div>
+  </div>
+  <!-- Навигационные вкладки -->
+  <ul class="nav nav-tabs-custom" id="myTab" role="tablist">
+    <li class="nav-item">
+      <a
+        class="nav-link active"
+        id="schedule-tab"
+        data-toggle="tab"
+        href="#schedule"
+        role="tab"
+      >
+        <i class="fa fa-calendar"></i> Расписание
+      </a>
+    </li>
+    <li class="nav-item">
+      <a
+        class="nav-link"
+        id="students-tab"
+        data-toggle="tab"
+        href="#students"
+        role="tab"
+      >
+        <i class="fa fa-users"></i> Мои ученики
+      </a>
+    </li>
+    <li class="nav-item">
+      <a
+        class="nav-link"
+        id="homeworks-tab"
+        data-toggle="tab"
+        href="#homeworks"
+        role="tab"
+      >
+        <i class="fa fa-book"></i> Домашние задания
+      </a>
+    </li>
+    <li class="nav-item">
+      <a
+        class="nav-link"
+        id="payments-tab"
+        data-toggle="tab"
+        href="#payments"
+        role="tab"
+      >
+        <i class="fa fa-money"></i> Выплаты
+      </a>
+    </li>
+    <li class="nav-item">
+      <a
+        class="nav-link"
+        id="materials-tab"
+        data-toggle="tab"
+        href="#materials"
+        role="tab"
+      >
+        <i class="fa fa-file"></i> Методические материалы
+      </a>
+    </li>
+    <li class="nav-item">
+      <a
+        class="nav-link"
+        id="history-tab"
+        data-toggle="tab"
+        href="#history"
+        role="tab"
+      >
+        <i class="fa fa-history"></i> История занятий
+      </a>
+    </li>
+  </ul>
+  <!-- Содержимое вкладок -->
+  <div class="tab-content">
+    <!-- Вкладка Расписание (календарь) -->
+    <div class="tab-pane fade show active" id="schedule" role="tabpanel">
+      <div class="calendar-header">
+        <a href="{% url 'teacher_create_schedule' %}" class="btn-create">
+          <i class="fa fa-plus-circle"></i> Создать урок / расписание
+        </a>
+      </div>
+      <div class="row">
         <div class="col-12">
-            <h2>Здравствуйте, {{ user.first_name }}!</h2>
+          <div id="calendar"></div>
         </div>
+      </div>
     </div>
-    <!-- Быстрая статистика -->
-    <div class="quick-stats">
-        <div class="stat-card">
-            <div class="stat-number">{{ students.count }}</div>
-            <div class="stat-label">Учеников</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">{{ upcoming_lessons|length }}</div>
-            <div class="stat-label">Ближайших занятий</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">{{ today_lessons|length }}</div>
-            <div class="stat-label">Занятий сегодня</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">{{ materials|length }}</div>
-            <div class="stat-label">Моих материалов</div>
-        </div>
-    </div>
-    <!-- Навигационные вкладки -->
-    <ul class="nav nav-tabs-custom" id="myTab" role="tablist">
-        <li class="nav-item">
-            <a class="nav-link active" id="schedule-tab" data-toggle="tab" href="#schedule" role="tab">
-                <i class="fa fa-calendar"></i> Расписание
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="students-tab" data-toggle="tab" href="#students" role="tab">
-                <i class="fa fa-users"></i> Мои ученики
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="homeworks-tab" data-toggle="tab" href="#homeworks" role="tab">
-                <i class="fa fa-book"></i> Домашние задания
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="payments-tab" data-toggle="tab" href="#payments" role="tab">
-                <i class="fa fa-money"></i> Выплаты
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="materials-tab" data-toggle="tab" href="#materials" role="tab">
-                <i class="fa fa-file"></i> Методические материалы
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="history-tab" data-toggle="tab" href="#history" role="tab">
-                <i class="fa fa-history"></i> История занятий
-            </a>
-        </li>
-    </ul>
-    <!-- Содержимое вкладок -->
-    <div class="tab-content">
-        <!-- Вкладка Расписание (календарь) -->
-        <div class="tab-pane fade show active" id="schedule" role="tabpanel">
-            <div class="calendar-header">
-                <a href="{% url 'teacher_create_schedule' %}" class="btn-create">
-                    <i class="fa fa-plus-circle"></i> Создать урок / расписание
-                </a>
-            </div>
-            <div class="row">
-                <div class="col-12">
-                    <div id="calendar"></div>
+    <!-- Вкладка История занятий -->
+    <div class="tab-pane fade" id="history" role="tabpanel">
+      <div class="row">
+        <div class="col-12">
+          <h4 class="section-title mb-4">Проведенные занятия</h4>
+          {% if past_lessons %} {% for lesson in past_lessons %}
+          <a
+            href="{% url 'teacher_lesson_detail' lesson.id %}"
+            style="text-decoration: none; color: inherit"
+          >
+            <div
+              class="lesson-item completed p-3 mb-3 border rounded hover-shadow"
+              style="transition: all 0.3s; display: block; background: white"
+            >
+              <div class="row align-items-center">
+                <div class="col-md-2">
+                  <strong>{{ lesson.date|date:"d.m.Y" }}</strong><br />
+                  <small class="text-muted"
+                    >{{ lesson.start_time|time:"H:i" }} - {{
+                    lesson.end_time|time:"H:i" }}</small
+                  >
                 </div>
+                <div class="col-md-3">
+                  <strong>{{ lesson.subject.name }}</strong><br />
+                  <small class="text-muted">
+                    {% for attendance in lesson.attendance.all %} {{
+                    attendance.student.user.get_full_name }}{% if not
+                    forloop.last %}, {% endif %} {% endfor %}
+                  </small>
+                </div>
+                <div class="col-md-2">
+                  <span class="badge badge-success px-3 py-2">Проведено</span>
+                </div>
+                <div class="col-md-3 text-right">
+                  {% if lesson.report %}
+                  <span class="badge badge-info px-3 py-2 mr-2">
+                    <i class="fa fa-file-text"></i> Отчет
+                  </span>
+                  {% endif %} {% if lesson.feedback %}
+                  <span class="badge badge-warning px-3 py-2">
+                    <i class="fa fa-star"></i> Оценка: {{ lesson.feedback.rating
+                    }}/5
+                  </span>
+                  {% else %}
+                  <span class="badge badge-secondary px-3 py-2">
+                    <i class="fa fa-star"></i> Нет оценки
+                  </span>
+                  {% endif %}
+                </div>
+                <div class="col-md-2 text-right">
+                  <small class="text-primary">Подробнее →</small>
+                </div>
+              </div>
+              {% if lesson.feedback and lesson.feedback.comment %}
+              <div class="row mt-2">
+                <div class="col-12">
+                  <div class="bg-light p-2 rounded">
+                    <i class="fa fa-quote-left text-muted mr-2"></i>
+                    {{ lesson.feedback.comment|truncatechars:100 }}
+                  </div>
+                </div>
+              </div>
+              {% endif %}
             </div>
+          </a>
+          {% endfor %} {% else %}
+          <div class="empty-state text-center py-5">
+            <i class="fa fa-history fa-4x text-muted mb-3"></i>
+            <h5>Нет проведенных занятий</h5>
+            <p class="text-muted">История появится после первых занятий</p>
+          </div>
+          {% endif %}
         </div>
-<!-- Вкладка История занятий -->
-<div class="tab-pane fade" id="history" role="tabpanel">
-    <div class="row">
-        <div class="col-12">
-            <h4 class="section-title mb-4">Проведенные занятия</h4>
-            {% if past_lessons %}
-                {% for lesson in past_lessons %}
-                <a href="{% url 'teacher_lesson_detail' lesson.id %}" style="text-decoration: none; color: inherit;">
-                    <div class="lesson-item completed p-3 mb-3 border rounded hover-shadow" style="transition: all 0.3s; display: block; background: white;">
-                        <div class="row align-items-center">
-                            <div class="col-md-2">
-                                <strong>{{ lesson.date|date:"d.m.Y" }}</strong><br>
-                                <small class="text-muted">{{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}</small>
-                            </div>
-                            <div class="col-md-3">
-                                <strong>{{ lesson.subject.name }}</strong><br>
-                                <small class="text-muted">
-                                    {% for attendance in lesson.attendance.all %}
-                                        {{ attendance.student.user.get_full_name }}{% if not forloop.last %}, {% endif %}
-                                    {% endfor %}
-                                </small>
-                            </div>
-                            <div class="col-md-2">
-                                <span class="badge badge-success px-3 py-2">Проведено</span>
-                            </div>
-                            <div class="col-md-3 text-right">
-                                {% if lesson.report %}
-                                <span class="badge badge-info px-3 py-2 mr-2">
-                                    <i class="fa fa-file-text"></i> Отчет
-                                </span>
-                                {% endif %}
-                                {% if lesson.feedback %}
-                                <span class="badge badge-warning px-3 py-2">
-                                    <i class="fa fa-star"></i> Оценка: {{ lesson.feedback.rating }}/5
-                                </span>
-                                {% else %}
-                                <span class="badge badge-secondary px-3 py-2">
-                                    <i class="fa fa-star"></i> Нет оценки
-                                </span>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-2 text-right">
-                                <small class="text-primary">Подробнее →</small>
-                            </div>
-                        </div>
-                        {% if lesson.feedback and lesson.feedback.comment %}
-                        <div class="row mt-2">
-                            <div class="col-12">
-                                <div class="bg-light p-2 rounded">
-                                    <i class="fa fa-quote-left text-muted mr-2"></i>
-                                    {{ lesson.feedback.comment|truncatechars:100 }}
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </a>
-                {% endfor %}
-            {% else %}
-            <div class="empty-state text-center py-5">
-                <i class="fa fa-history fa-4x text-muted mb-3"></i>
-                <h5>Нет проведенных занятий</h5>
-                <p class="text-muted">История появится после первых занятий</p>
-            </div>
-            {% endif %}
-        </div>
+      </div>
     </div>
-</div>
     <!-- Остальные вкладки (заглушки) -->
     <div class="tab-pane fade" id="students">
-        <div class="text-center py-5">
-            <i class="fa fa-users fa-4x text-muted mb-3"></i>
-            <h4>Мои ученики</h4>
-            <p class="text-muted">Раздел в разработке</p>
-        </div>
+      <div class="text-center py-5">
+        <i class="fa fa-users fa-4x text-muted mb-3"></i>
+        <h4>Мои ученики</h4>
+        <p class="text-muted">Раздел в разработке</p>
+      </div>
     </div>
     <div class="tab-pane fade" id="homeworks">
-        <div class="text-center py-5">
-            <i class="fa fa-book fa-4x text-muted mb-3"></i>
-            <h4>Домашние задания</h4>
-            <p class="text-muted">Раздел в разработке</p>
-        </div>
+      <div class="text-center py-5">
+        <i class="fa fa-book fa-4x text-muted mb-3"></i>
+        <h4>Домашние задания</h4>
+        <p class="text-muted">Раздел в разработке</p>
+      </div>
     </div>
     <div class="tab-pane fade" id="payments">
-        <div class="text-center py-5">
-            <i class="fa fa-money fa-4x text-muted mb-3"></i>
-            <h4>Выплаты</h4>
-            <p class="text-muted">Раздел в разработке</p>
-        </div>
+      <div class="text-center py-5">
+        <i class="fa fa-money fa-4x text-muted mb-3"></i>
+        <h4>Выплаты</h4>
+        <p class="text-muted">Раздел в разработке</p>
+      </div>
     </div>
     <div class="tab-pane fade" id="materials">
-        <div class="text-center py-5">
-            <i class="fa fa-file fa-4x text-muted mb-3"></i>
-            <h4>Методические материалы</h4>
-            <p class="text-muted">Раздел в разработке</p>
-        </div>
+      <div class="text-center py-5">
+        <i class="fa fa-file fa-4x text-muted mb-3"></i>
+        <h4>Методические материалы</h4>
+        <p class="text-muted">Раздел в разработке</p>
+      </div>
     </div>
     <div class="tab-pane fade" id="history">
-        <div class="text-center py-5">
-            <i class="fa fa-history fa-4x text-muted mb-3"></i>
-            <h4>История занятий</h4>
-            <p class="text-muted">Раздел в разработке</p>
-        </div>
+      <div class="text-center py-5">
+        <i class="fa fa-history fa-4x text-muted mb-3"></i>
+        <h4>История занятий</h4>
+        <p class="text-muted">Раздел в разработке</p>
+      </div>
     </div>
-</div>
+  </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/ru.js'></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/ru.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        var calendarEl = document.getElementById('calendar');
-        if (calendarEl) {
-            var calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
-                locale: 'ru',
-                headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
-                },
-                buttonText: {
-                    today: 'Сегодня',
-                    month: 'Месяц',
-                    week: 'Неделя',
-                    day: 'День'
-                },
-                events: {{ calendar_events|safe }},
-                eventClick: function(info) {
-                    if (info.event.url) {
-                        window.location.href = info.event.url;
-                        info.jsEvent.preventDefault();
-                    }
-                }
-            });
-            calendar.render();
-        }
-    });
+  document.addEventListener('DOMContentLoaded', function () {
+      var calendarEl = document.getElementById('calendar');
+      if (calendarEl) {
+          var calendar = new FullCalendar.Calendar(calendarEl, {
+              initialView: 'dayGridMonth',
+              locale: 'ru',
+              headerToolbar: {
+                  left: 'prev,next today',
+                  center: 'title',
+                  right: 'dayGridMonth,timeGridWeek,timeGridDay'
+              },
+              buttonText: {
+                  today: 'Сегодня',
+                  month: 'Месяц',
+                  week: 'Неделя',
+                  day: 'День'
+              },
+              events: {{ calendar_events|safe }},
+              eventClick: function(info) {
+                  if (info.event.url) {
+                      window.location.href = info.event.url;
+                      info.jsEvent.preventDefault();
+                  }
+              }
+          });
+          calendar.render();
+      }
+  });
 </script>
 {% endblock %}

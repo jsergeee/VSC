@@ -3,6 +3,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from datetime import timedelta
 from .models import Lesson, Notification, User, LessonAttendance, Payment, LessonReport
+from django.db.models.signals import post_delete
 
 
 @receiver(post_save, sender=LessonAttendance)
@@ -134,3 +135,40 @@ def lesson_completed_notifications(sender, instance, created, **kwargs):
                     print(f"❌ Ошибка: {e}")
         else:
             print("⚠️ Нет присутствовавших - уведомления не созданы")
+            
+            
+  # добавьте в начало файла, если нет
+
+@receiver(post_delete, sender=Payment)
+def delete_payment_notifications(sender, instance, **kwargs):
+    """
+    Удаляет все уведомления, связанные с платежом, при его удалении
+    """
+    print(f"\n{'💰' * 30}")
+    print(f"💰 Сигнал: удаление платежа #{instance.id}")
+    print(f"   Пользователь: {instance.user.username}")
+    print(f"   Сумма: {instance.amount}")
+    print(f"   Тип: {instance.payment_type}")
+    
+    # Находим все уведомления, связанные с этим платежом
+    notifications = Notification.objects.filter(payment=instance)
+    
+    count = notifications.count()
+    if count > 0:
+        # Удаляем все связанные уведомления
+        notifications.delete()
+        print(f"   ✅ Удалено уведомлений: {count}")
+        
+        # Дополнительно: ищем уведомления по тексту (на всякий случай)
+        text_notifications = Notification.objects.filter(
+            user=instance.user,
+            message__icontains=f"{instance.amount} ₽"
+        )
+        text_count = text_notifications.count()
+        if text_count > 0:
+            text_notifications.delete()
+            print(f"   ✅ Дополнительно удалено по тексту: {text_count}")
+    else:
+        print(f"   ⚠️ Связанных уведомлений не найдено")
+    
+    print(f"{'💰' * 30}\n")

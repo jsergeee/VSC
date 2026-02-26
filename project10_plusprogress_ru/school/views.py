@@ -12,6 +12,7 @@ from django.template.loader import render_to_string
 from django.db import connection, transaction
 from decimal import Decimal
 from datetime import datetime, date, timedelta
+from django.db.models import Sum, Count, Q, Prefetch, Avg
 import json
 import csv
 import uuid
@@ -507,13 +508,16 @@ def dashboard(request):
 
 @login_required
 def student_dashboard(request):
-    """Личный кабинет ученика"""
+    """Личный кабинет ученика - ИСПРАВЛЕННАЯ ВЕРСИЯ (ОТРИЦАТЕЛЬНЫЙ БАЛАНС)"""
+    
+    # ===== ПРОВЕРКА ДОСТУПА =====
     if request.user.role != 'student':
         messages.error(request, 'Доступ запрещен')
         return redirect('dashboard')
 
     user = User.objects.get(pk=request.user.pk)
 
+    # ===== ПРОФИЛЬ УЧЕНИКА =====
     try:
         student = user.student_profile
     except:
@@ -522,10 +526,53 @@ def student_dashboard(request):
 
     student.refresh_from_db()
 
-    # ✅ Баланс
-    balance = float(user.balance)
+    # ===== ФИНАНСЫ: ПРАВИЛЬНЫЙ РАСЧЕТ БАЛАНСА =====
+    from django.db.models import Sum
+    from school.models import Payment, LessonAttendance
+    
+    # Пополнения (income)
+    total_deposits = Payment.objects.filter(
+        user=user,
+        payment_type='income'
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
+    
+    # Списания за проведенные занятия (expense)
+    total_expenses = Payment.objects.filter(
+        user=user,
+        payment_type='expense'
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
+    
+    # Стоимость проведенных уроков (attended) - если нет списаний, но уроки были
+    attended_cost = LessonAttendance.objects.filter(
+        student=student,
+        status='attended'
+    ).aggregate(Sum('cost'))['cost__sum'] or 0
+    
+    # ✅ ПРАВИЛЬНЫЙ БАЛАНС = Пополнения - Проведенные уроки (даже если нет списаний)
+    # Если списаний нет, но уроки были - считаем как долг
+    if total_expenses == 0 and attended_cost > 0:
+        correct_balance = float(total_deposits - attended_cost)
+        print(f"⚠️ ВНИМАНИЕ: Нет списаний, но есть проведенные уроки!")
+        print(f"   Считаем баланс как: {total_deposits} - {attended_cost} = {correct_balance}")
+    else:
+        correct_balance = float(total_deposits - total_expenses)
+    
+    # 📌 ВАЖНО: Временно подменяем баланс у объекта user
+    # Это не влияет на БД, но в шаблоне будет правильное значение
+    original_balance = user.balance
+    user.balance = correct_balance
+    
+    # Для отладки
+    print(f"\n{'💰' * 30}")
+    print(f"💰 Баланс ученика {user.username}:")
+    print(f"   Пополнения: {total_deposits}")
+    print(f"   Списания (expense): {total_expenses}")
+    print(f"   Проведено уроков на: {attended_cost}")
+    print(f"   Баланс в БД: {original_balance}")
+    print(f"   Правильный баланс: {correct_balance}")
+    print(f"{'💰' * 30}\n")
 
-    # Статистика по урокам
+    # ===== СТАТИСТИКА ПО УРОКАМ =====
     attended_lessons = LessonAttendance.objects.filter(
         student=student,
         status='attended'
@@ -546,15 +593,16 @@ def student_dashboard(request):
         status='debt'
     ).aggregate(Sum('cost'))['cost__sum'] or 0
 
+    # ===== УЧИТЕЛЯ И ПОПОЛНЕНИЯ =====
     teachers = student.teachers.all()
     recent_deposits = student.deposits.all()[:5]
 
-    # ✅ ДЛЯ КАЛЕНДАРЯ: ВСЕ уроки (без ограничений)
+    # ===== УРОКИ ДЛЯ КАЛЕНДАРЯ =====
     all_lessons = Lesson.objects.filter(
         attendance__student=student
     ).select_related('teacher__user', 'subject', 'format').distinct().order_by('date', 'start_time')
 
-    # ⚡⚡⚡ ИСПРАВЛЕНИЕ 1: Проверка просроченных уроков ⚡⚡⚡
+    # ===== ПРОВЕРКА ПРОСРОЧЕННЫХ УРОКОВ =====
     from datetime import datetime
     updated_count = 0
     for lesson in all_lessons:
@@ -568,53 +616,66 @@ def student_dashboard(request):
 
     if updated_count > 0:
         print(f"✅ Обновлено {updated_count} просроченных уроков")
-        # ⚡⚡⚡ ИСПРАВЛЕНИЕ 2: Обновляем queryset после изменений ⚡⚡⚡
+        # Обновляем queryset после изменений
         all_lessons = Lesson.objects.filter(
             attendance__student=student
         ).select_related('teacher__user', 'subject', 'format').distinct().order_by('date', 'start_time')
 
-    # ✅ ДЛЯ СПИСКА: ближайшие 10 уроков (только запланированные)
+    # ===== БЛИЖАЙШИЕ УРОКИ (ДЛЯ СПИСКА) =====
     upcoming_lessons_list = Lesson.objects.filter(
         attendance__student=student,
         date__gte=date.today(),
         status='scheduled'
     ).select_related('teacher__user', 'subject', 'format').distinct().order_by('date', 'start_time')[:10]
 
+    # ===== ПРОШЕДШИЕ УРОКИ =====
     past_lessons = Lesson.objects.filter(
         attendance__student=student,
         status='completed'
     ).select_related('teacher__user', 'subject').distinct().order_by('-date')[:10]
 
+    # ===== МЕТОДИЧЕСКИЕ МАТЕРИАЛЫ =====
     materials = Material.objects.filter(
         Q(students=student) | Q(is_public=True) | Q(teachers__in=teachers)
     ).distinct()[:20]
 
+    # ===== ДОМАШНИЕ ЗАДАНИЯ =====
     recent_homeworks = Homework.objects.filter(
         student=student,
         is_active=True
     ).exclude(
         submission__status='checked'
     ).select_related('teacher__user', 'subject').order_by('deadline')[:4]
+    
+    # ✅ СТАТИСТИКА ПО ДОМАШНИМ ЗАДАНИЯМ
+    all_homeworks = Homework.objects.filter(student=student)
+    homework_stats = {
+        'total': all_homeworks.count(),
+        'pending': sum(1 for h in all_homeworks if h.get_status() == 'pending'),
+        'submitted': sum(1 for h in all_homeworks if h.get_status() == 'submitted'),
+        'checked': sum(1 for h in all_homeworks if h.get_status() == 'checked'),
+        'overdue': sum(1 for h in all_homeworks if h.get_status() == 'overdue'),
+    }
 
-    # ✅ Групповые уроки ВСЕ (без фильтра по статусу)
+    # ===== ГРУППОВЫЕ УРОКИ =====
     group_lessons = GroupLesson.objects.filter(
         enrollments__student=student
     ).select_related('teacher__user', 'subject')
 
-    # Календарь - цвета в зависимости от статуса
+    # ===== КАЛЕНДАРЬ =====
     calendar_events = []
 
     # Цвета для разных статусов
     status_colors = {
-        'scheduled': '#007bff',  # синий
-        'completed': '#28a745',  # зеленый
-        'cancelled': '#dc3545',  # красный
-        'overdue': '#fd7e14',  # оранжевый
-        'rescheduled': '#ffc107',  # желтый
-        'no_show': '#6c757d',  # серый
+        'scheduled': '#007bff',   # синий
+        'completed': '#28a745',   # зеленый
+        'cancelled': '#dc3545',   # красный
+        'overdue': '#fd7e14',     # оранжевый
+        'rescheduled': '#ffc107', # желтый
+        'no_show': '#6c757d',     # серый
     }
 
-    # ✅ Добавляем ВСЕ обычные уроки
+    # Обычные уроки
     for lesson in all_lessons:
         color = status_colors.get(lesson.status, '#6c757d')
         calendar_events.append({
@@ -626,9 +687,8 @@ def student_dashboard(request):
             'borderColor': color,
             'textColor': 'white'
         })
-        print(f"✅ Добавлен урок: {lesson.date} - {lesson.subject.name} (статус: {lesson.status})")
 
-    # ✅ Добавляем ВСЕ групповые уроки
+    # Групповые уроки
     for lesson in group_lessons:
         color = status_colors.get(lesson.status, '#6c757d')
         calendar_events.append({
@@ -640,28 +700,52 @@ def student_dashboard(request):
             'borderColor': color,
             'textColor': 'white'
         })
-        print(f"✅ Добавлен групповой урок: {lesson.date} - {lesson.subject.name} (статус: {lesson.status})")
 
-    # ✅ Отладка
-    print(f"\n📊 ВСЕГО ОБЫЧНЫХ УРОКОВ: {all_lessons.count()}")
-    print(f"📊 ВСЕГО ГРУППОВЫХ УРОКОВ: {group_lessons.count()}")
-    print(f"📅 СОЗДАНО СОБЫТИЙ КАЛЕНДАРЯ: {len(calendar_events)}")
-
+    # ===== КОНТЕКСТ ДЛЯ ШАБЛОНА =====
     context = {
+        # Основное
         'student': student,
-        'balance': balance,
+        'user': user,  # ← Здесь user.balance уже подменен на правильное значение (может быть отрицательным)
+        
+        # Финансы
+        'balance': correct_balance,  # На всякий случай передаем отдельно
+        'total_deposits': float(total_deposits),
+        'total_expenses': float(total_expenses),
+        'attended_cost': float(attended_cost),  # Стоимость проведенных уроков
+        
+        # Статистика по урокам
         'attended_lessons': attended_lessons,
-        'attended_cost': float(attended_cost),
         'debt_lessons': debt_lessons,
         'debt_cost': float(debt_cost),
+        
+        # Пополнения
         'recent_deposits': recent_deposits,
-        'upcoming_lessons': upcoming_lessons_list,  # Для списка
+        
+        # Уроки
+        'upcoming_lessons': upcoming_lessons_list,
         'past_lessons': past_lessons,
+        
+        # Учителя
         'teachers': teachers,
+        
+        # Материалы
         'materials': materials,
+        
+        # ✅ ДОМАШНИЕ ЗАДАНИЯ (ДЛЯ ШАБЛОНА)
         'recent_homeworks': recent_homeworks,
-        'calendar_events': calendar_events,  # Для календаря
+        'homeworks': all_homeworks[:10],  # Для таблицы
+        'stats': homework_stats,  # Для статистики в дашборде
+        
+        # Календарь
+        'calendar_events': calendar_events,
     }
+
+    # Отладка
+    print(f"\n📊 КОНТЕКСТ ДЛЯ {user.username}:")
+    print(f"   Баланс в user: {user.balance}")
+    print(f"   Баланс отдельно: {correct_balance}")
+    print(f"   Проведено уроков на: {attended_cost}")
+    print(f"   Домашних заданий: {homework_stats['total']}")
 
     return render(request, 'school/student/dashboard.html', context)
 
@@ -2591,7 +2675,8 @@ def overdue_report(request):
 
 @staff_member_required
 def student_report(request, student_id):
-    """Отчет по ученику"""
+    """Отчет по ученику - ИСПРАВЛЕННАЯ ВЕРСИЯ"""
+    from django.db.models import Sum
     student = get_object_or_404(Student, id=student_id)
 
     date_from = request.GET.get('date_from')
@@ -2608,7 +2693,7 @@ def student_report(request, student_id):
     # Получаем ТОЛЬКО ПРОВЕДЕННЫЕ уроки (attended)
     attendances = LessonAttendance.objects.filter(
         student=student,
-        status='attended'  # ← Только проведенные уроки
+        status='attended'
     ).select_related(
         'lesson', 'lesson__subject'
     ).order_by('lesson__date')
@@ -2678,11 +2763,51 @@ def student_report(request, student_id):
     debt_lessons = debt_attendances.count()
     total_debt_cost = debt_attendances.aggregate(Sum('cost'))['cost__sum'] or 0
 
-    # ✅ ПОЛУЧАЕМ БАЛАНС УЧЕНИКА
-    student_balance = float(student.user.balance)
+    # ===== ПРАВИЛЬНЫЙ РАСЧЕТ БАЛАНСА =====
+    from django.db.models import Sum
+    from school.models import Payment
+    
+    # Пополнения счета (income)
+    total_deposits = Payment.objects.filter(
+        user=student.user,
+        payment_type='income'
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
+    
+    # Списания за проведенные уроки (expense)
+    total_expenses = Payment.objects.filter(
+        user=student.user,
+        payment_type='expense'
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
+    
+    # Стоимость проведенных уроков (attended)
+    attended_cost = total_attended_cost
+    
+    # ✅ ПРАВИЛЬНЫЙ БАЛАНС = Пополнения - Проведенные уроки
+    if total_expenses == 0 and attended_cost > 0:
+        correct_balance = float(total_deposits - attended_cost)
+        print(f"⚠️ ВНИМАНИЕ: Нет списаний, но есть проведенные уроки!")
+        print(f"   Считаем баланс как: {total_deposits} - {attended_cost} = {correct_balance}")
+    else:
+        correct_balance = float(total_deposits - total_expenses)
+    
+    # Сохраняем оригинальный баланс для отладки
+    original_balance = float(student.user.balance)
+    
+    # 📌 Подменяем баланс в объекте user
+    student.user.balance = correct_balance
+    
+    # Для отладки
+    print(f"\n{'💰' * 30}")
+    print(f"💰 РАСЧЕТ БАЛАНСА для {student.user.username}:")
+    print(f"   Пополнения (income): {total_deposits}")
+    print(f"   Списания (expense): {total_expenses}")
+    print(f"   Проведено уроков на: {attended_cost}")
+    print(f"   Баланс в БД: {original_balance}")
+    print(f"   Правильный баланс: {correct_balance}")
+    print(f"{'💰' * 30}\n")
 
     context = {
-        'student': student,
+        'student': student,  # ← Здесь student.user.balance уже подменен!
         'dates': dates,
         'subjects_data': subjects_data,
         'daily_totals': [float(daily_totals.get(date, 0)) for date in dates],
@@ -2690,17 +2815,19 @@ def student_report(request, student_id):
         'total_attended_cost': float(total_attended_cost),
         'debt_lessons': debt_lessons,
         'total_debt_cost': float(total_debt_cost),
-        'student_balance': student_balance,  # ✅ Добавлено
+        'student_balance': correct_balance,  # На всякий случай передаем отдельно
+        'total_deposits': float(total_deposits),
+        'total_expenses': float(total_expenses),
     }
 
-    # Для отладки
+    # Финальная отладка
     print(f"\n{'=' * 60}")
     print(f"ОТЧЕТ ПО УЧЕНИКУ: {student.user.get_full_name()}")
     print(f"Проведенных уроков: {total_lessons}")
     print(f"Сумма проведенных: {total_attended_cost}")
     print(f"Уроков в долг: {debt_lessons}")
     print(f"Сумма долга: {total_debt_cost}")
-    print(f"Баланс ученика: {student_balance}")  # ✅ Добавлено
+    print(f"Баланс ученика (новый): {correct_balance}")
     print(f"Предметы: {list(subjects)}")
     print(f"Даты: {[d.strftime('%d.%m.%Y') for d in dates]}")
     print(f"{'=' * 60}\n")

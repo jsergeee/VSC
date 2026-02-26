@@ -415,7 +415,7 @@ class TeacherAdmin(admin.ModelAdmin):
         """Перейти к расчету выплат"""
         if queryset.count() == 1:
             teacher = queryset.first()
-            return redirect(f'/admin/school/teacher/{teacher.id}/payments/')
+            return redirect(f'/admin/teacher-payments/?teacher_id={teacher.id}')
         else:
             self.message_user(request, 'Выберите одного учителя для расчета выплат', level='WARNING')
 
@@ -1094,7 +1094,8 @@ class PaymentAdmin(admin.ModelAdmin):
                 title='💰 Пополнение баланса',
                 message=f'Ваш баланс пополнен на {obj.amount} ₽',
                 notification_type='payment_received',
-                link='/student/dashboard/'
+                link='/student/dashboard/',
+                payment=obj,
             )
 
         elif obj.payment_type == 'expense':

@@ -1108,6 +1108,14 @@ class Notification(models.Model):
         blank=True,
         verbose_name='Истекает'
     )
+    payment = models.ForeignKey(
+        'Payment', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True,
+        related_name='notifications'
+    )
+    
 
     class Meta:
         ordering = ['-created_at']

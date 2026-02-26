@@ -5,6 +5,40 @@
 
 {% block extra_css %}
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<style>
+    /* === СТИЛИ ДЛЯ БАЛАНСА === */
+    .balance-positive {
+        color: white !important;  /* положительный - белый */
+    }
+    
+    .balance-negative {
+        color: #dc3545 !important;  /* отрицательный - красный */
+        font-weight: bold !important;
+    }
+    
+    .balance-amount {
+        font-size: 48px !important;
+        font-weight: bold !important;
+        line-height: 1.2 !important;
+    }
+    
+    /* Стили карточки - ОДНО определение */
+    .balance-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+    
+    .balance-label {
+        font-size: 14px;
+        opacity: 0.9;
+        margin-bottom: 5px;
+        color: white;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -17,14 +51,16 @@
         </div>
     </div>
 
-    <!-- Баланс -->
+    <!-- Баланс с цветовой индикацией -->
     <div class="row">
         <div class="col-12">
             <div class="balance-card">
                 <div class="row align-items-center">
                     <div class="col-md-6">
                         <div class="balance-label">Текущий баланс</div>
-                        <div class="balance-amount">{{ user.balance }} ₽</div>
+                        <div class="balance-amount {% if user.balance < 0 %}balance-negative{% else %}balance-positive{% endif %}">
+                        {{ user.balance }} ₽
+                        </div>
                     </div>
                 </div>
             </div>
@@ -495,7 +531,7 @@ document.addEventListener('DOMContentLoaded', function() {
             allDaySlot: false,
             slotDuration: '00:30:00',
 
-            events: {{ calendar_events|safe }},  // ⚡ КАК В АДМИНКЕ ⚡
+            events: {{ calendar_events|safe }},
 
             eventClick: function(info) {
                 if (info.event.url) {
@@ -512,6 +548,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
         calendar.render();
         console.log('📅 Календарь загружен, событий:', {{ calendar_events|length }});
+    }
+});
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    var balanceElement = document.querySelector('.balance-amount');
+    var balance = parseFloat('{{ user.balance }}');
+        
+    if (balance < 0) {
+            balanceElement.style.color = '#dc3545';
     }
 });
 </script>
