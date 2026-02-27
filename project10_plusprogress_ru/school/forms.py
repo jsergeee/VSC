@@ -846,3 +846,22 @@ class MaterialFilterForm(forms.Form):
         type_choices = [('', 'Все типы')]
         type_choices += Material.MATERIAL_TYPES
         self.fields['material_type'].choices = type_choices
+
+
+class TelegramSettingsForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['telegram_chat_id', 'telegram_notifications']
+        labels = {
+            'telegram_chat_id': 'Telegram Chat ID',
+            'telegram_notifications': 'Получать уведомления в Telegram'
+        }
+        widgets = {
+            'telegram_chat_id': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Введите ваш Telegram Chat ID'
+            }),
+            'telegram_notifications': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            })
+        }

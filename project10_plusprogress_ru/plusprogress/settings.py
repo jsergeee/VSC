@@ -126,3 +126,8 @@ EMAIL_USE_SSL = True
 EMAIL_HOST_USER = 'jserge@yandex.ru'
 EMAIL_HOST_PASSWORD = 'fbbwcoxjkjfkovum'
 DEFAULT_FROM_EMAIL = 'jserge@yandex.ru'
+
+
+# Telegram bot settings
+TELEGRAM_BOT_TOKEN = '8391902139:AAGHIcvya9Zk1ZlsDFBkn6WJEBxE5TyK02Y'  # вставьте сюда
+TELEGRAM_CHAT_ID = '1226934902'        # вставьте сюда

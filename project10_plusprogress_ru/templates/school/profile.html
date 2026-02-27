@@ -2,9 +2,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load crispy_forms_tags %}
-
 {% block title %}Мой профиль{% endblock %}
-
 {% block content %}
 <div class="container mt-5">
     <div class="row">
@@ -16,18 +14,20 @@
                 <div class="card-body">
                     <div class="text-center mb-4">
                         {% if user.photo %}
-                            <img src="{{ user.photo.url }}" class="rounded-circle" width="150" height="150" style="object-fit: cover;">
+                        <img src="{{ user.photo.url }}" class="rounded-circle" width="150" height="150" style="object-fit: cover;">
                         {% else %}
-                            <img src="{% static 'images/default-avatar.png' %}" class="rounded-circle" width="150" height="150">
+                        <img src="{% static 'images/default-avatar.png' %}" class="rounded-circle" width="150" height="150">
                         {% endif %}
                     </div>
-                    
                     <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
                         {{ form|crispy }}
                         <button type="submit" class="btn btn-primary btn-block">Сохранить изменения</button>
                     </form>
-                    
+                    <!-- Где-то в профиле, например после кнопки сохранения -->
+                    <a href="{% url 'telegram_settings' %}" class="btn btn-info mt-3">
+                        <i class="fa fa-telegram"></i> Настройки Telegram уведомлений
+                    </a>
                     <hr>
                     <div class="text-center">
                         <a href="{% url 'dashboard' %}" class="btn btn-secondary">Вернуться в кабинет</a>

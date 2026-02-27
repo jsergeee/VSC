@@ -148,7 +148,16 @@ class User(AbstractUser):
             return float(total_deposits - attended_cost)
 
         return float(total_deposits)
-
+    telegram_chat_id = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name='Telegram Chat ID'
+    )
+    telegram_notifications = models.BooleanField(
+        default=False,
+        verbose_name='Получать уведомления в Telegram'
+    )
 
 class EmailVerificationToken(models.Model):
     """Токен для подтверждения email"""

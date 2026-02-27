@@ -13,6 +13,7 @@ from datetime import datetime
 from django.db.models import Prefetch, Sum, Count
 from django.db import transaction
 from .views import import_users_view
+from .telegram import notify_payment
 from .models import (
     User, Subject, Teacher, Student, Lesson, LessonFormat,
     LessonReport, Payment, Schedule, TrialRequest,
@@ -1003,9 +1004,25 @@ class LessonAdmin(admin.ModelAdmin):
         }
         return render(request, 'admin/school/lesson/bulk_complete.html', context)
 
-    # ✅ ЕДИНСТВЕННЫЙ ПРАВИЛЬНЫЙ МЕТОД changelist_view
+    # ✅ МЕТОД СОХРАНЕНИЯ С TELEGRAM УВЕДОМЛЕНИЕМ
+    def save_model(self, request, obj, form, change):
+        """
+        Сохраняет урок и отправляет уведомление в Telegram при создании
+        """
+        is_new = obj.pk is None  # Проверяем, создается ли новый объект
+
+        super().save_model(request, obj, form, change)
+
+        # Отправляем уведомление только для новых уроков
+        if is_new:
+            try:
+                from school.telegram import notify_new_lesson
+                notify_new_lesson(obj)
+            except Exception as e:
+                print(f"❌ Ошибка отправки Telegram уведомления: {e}")
+
+    # ✅ МЕТОД ДЛЯ КАЛЕНДАРЯ
     def changelist_view(self, request, extra_context=None):
-        # Если запрошен календарь
         if request.GET.get('view') == 'calendar':
             lessons = self.get_queryset(request).select_related(
                 'teacher__user', 'subject'
@@ -1062,7 +1079,6 @@ class LessonAdmin(admin.ModelAdmin):
 
             return render(request, 'admin/school/lesson/change_list_calendar.html', extra_context)
 
-        # Для обычного списка
         return super().changelist_view(request, extra_context)
 
     def response_change(self, request, obj):
@@ -1128,7 +1144,6 @@ class LessonAdmin(admin.ModelAdmin):
             if lesson.attendance.exists():
                 lesson.status = 'completed'
                 lesson.save()
-                # 👇 Обновляем статус посещаемости
                 lesson.attendance.update(status='attended')
                 completed += 1
 
@@ -1153,6 +1168,7 @@ class LessonAdmin(admin.ModelAdmin):
         self.message_user(request, f'⚠️ {updated} записей отмечены как долг')
 
     mark_as_debt.short_description = "⚠️ Отметить как долг"
+
 
 # ==================== LESSON REPORT ADMIN ====================
 

@@ -4,6 +4,10 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import Lesson, Notification, User, LessonAttendance, Payment, LessonReport
 from django.db.models.signals import post_delete
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from .models import Lesson
+from .telegram import notify_new_lesson
 
 
 @receiver(post_save, sender=LessonAttendance)
@@ -172,3 +176,11 @@ def delete_payment_notifications(sender, instance, **kwargs):
         print(f"   ⚠️ Связанных уведомлений не найдено")
     
     print(f"{'💰' * 30}\n")
+
+    @receiver(post_save, sender=Lesson)
+    def lesson_created_notification(sender, instance, created, **kwargs):
+        """
+        Отправляет уведомление при создании нового урока
+        """
+        if created:
+            notify_new_lesson(instance)

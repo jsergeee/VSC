@@ -2,6 +2,8 @@
 from django.urls import path
 from . import views
 from .views import log_video_entry
+from .views import telegram_settings
+
 
 urlpatterns = [
     path('', views.home, name='home'),
@@ -14,6 +16,7 @@ urlpatterns = [
     # Email verification
     path('verify-email/<str:token>/', views.verify_email, name='verify_email'),
     path('resend-verification/', views.resend_verification, name='resend_verification'),
+    path('telegram-settings/', telegram_settings, name='telegram_settings'),
 
     # Student URLs
     path('student/dashboard/', views.student_dashboard, name='student_dashboard'),

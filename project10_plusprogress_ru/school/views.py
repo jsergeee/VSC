@@ -13,6 +13,7 @@ from django.db import connection, transaction
 from decimal import Decimal
 from datetime import datetime, date, timedelta
 from django.db.models import Sum, Count, Q, Prefetch, Avg
+from .telegram import notify_payment
 import json
 import csv
 import uuid
@@ -34,6 +35,9 @@ import logging
 import traceback
 from django.utils import timezone
 from .utils import log_user_action
+from .forms import TelegramSettingsForm
+from django.conf import settings
+
 
 # Импорты моделей
 from .models import (
@@ -1236,6 +1240,13 @@ def admin_complete_lesson(request, lesson_id):
                 print(f"✅ Создан новый отчет #{report.id}")
             else:
                 print(f"✅ Обновлен существующий отчет #{report.id}")
+
+        # ✅ ОТПРАВЛЯЕМ УВЕДОМЛЕНИЕ В TELEGRAM
+        try:
+            from school.telegram import notify_lesson_completed
+            notify_lesson_completed(lesson, report)
+        except Exception as e:
+            print(f"❌ Ошибка отправки Telegram уведомления: {e}")
 
         messages.success(request, f'✅ Урок успешно завершен! Отчет #{report.id} создан.')
         return redirect('admin:school_lesson_change', lesson_id)
@@ -4542,6 +4553,35 @@ def complete_lesson(request, lesson_id):
     return redirect('teacher_lesson_detail', lesson_id=lesson.id)
 
 
+
+
+
+@login_required
+def telegram_settings(request):
+    """Настройки Telegram уведомлений"""
+    if request.method == 'POST':
+        form = TelegramSettingsForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Настройки Telegram сохранены!')
+            return redirect('profile')
+    else:
+        form = TelegramSettingsForm(instance=request.user)
+
+    # Инструкция как получить Chat ID
+    bot_username = 'PlusProgressBot'  # имя вашего бота
+    instruction = f"""
+    1. Напишите боту @{bot_username} любое сообщение
+    2. Перейдите по ссылке: https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/getUpdates
+    3. Найдите в ответе ваш "id" (число) и скопируйте его
+    """
+
+    context = {
+        'form': form,
+        'instruction': instruction,
+        'bot_username': bot_username,
+    }
+    return render(request, 'school/telegram_settings.html', context)
 
 
 
