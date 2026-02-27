@@ -158,58 +158,52 @@
     {% if students_data %}
     <div style="margin-top: 20px; border-top: 2px solid #79aec8; padding-top: 20px;">
         <div class="stats-toggle" onclick="toggleStats()">📊 Статистика по ученикам за период ▼</div>
-        <div id="studentStats" style="display: block;">
+        <div id="studentStats" style="display: none;">
             <h2>Статистика за период {{ start_date|date:"d.m.Y" }} - {{ end_date|date:"d.m.Y" }}</h2>
 
-            <table class="student-stats-table">
-                <thead>
-                    <tr>
-                        <th>Ученик</th>
-                        <th>Всего уроков</th>
-                        <th>Общая сумма</th>
-                        <th>Текущий баланс</th>
-                        <th>Детали по предметам</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for data in students_data %}
-                    <tr>
-                        <td>
-                            <a href="{% url 'admin:school_student_change' data.student.id %}">
-                                {{ data.student.user.get_full_name }}
-                            </a>
-                        </td>
-                        <td>{{ data.lessons_count }}</td>
-                        <td>{{ data.total_cost|floatformat:"2" }} ₽</td>
-                        <td class="
-                            {% if data.balance < 0 %}balance-negative
-                            {% elif data.balance > 0 %}balance-positive
-                            {% else %}balance-zero{% endif %}">
-                            {{ data.balance|floatformat:"2" }} ₽
-                        </td>
-                        <td>
-                            {% for subj in data.subjects_stats %}
-                            <span class="subject-badge">
-                                {{ subj.lesson__subject__name }}: {{ subj.count }} ур. = {{ subj.total|floatformat:"0" }}₽
-                            </span>
-                            {% empty %}
-                            <span class="subject-badge">нет уроков</span>
-                            {% endfor %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-                <tfoot>
-                    <tr style="background-color: #f0f0f0; font-weight: bold;">
-                        <td>ИТОГО:</td>
-                        <td>{{ total_lessons|default:0 }}</td>
-                        <td>{{ total_cost|default:0|floatformat:"2" }} ₽</td>
-                        <td>{{ total_balance|default:0|floatformat:"2" }} ₽</td>
-                        <td></td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
+<table class="student-stats-table">
+    <thead>
+        <tr>
+            <th>Ученик</th>
+            <th>Уроков за период</th>
+            <th>Начисления за период</th>  <!-- Новый столбец -->
+            <th>Пополнений за период</th>  <!-- Новый столбец -->
+            <th>Всего пополнений</th>
+            <th>Текущий баланс</th>
+            <th>Детали по предметам</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for data in students_data %}
+        <tr>
+            <td>
+                <a href="{% url 'admin:school_student_change' data.student.id %}">
+                    {{ data.student.user.get_full_name }}
+                </a>
+            </td>
+            <td>{{ data.lessons_count }}</td>
+            <td>{{ data.total_cost|floatformat:"2" }} ₽</td>  <!-- Начисления за период -->
+            <td style="color: #28a745;">{{ data.total_deposits_period|floatformat:"2" }} ₽</td>  <!-- Пополнения за период -->
+            <td style="color: #17a2b8;">{{ data.total_deposits|floatformat:"2" }} ₽</td>  <!-- Все пополнения -->
+            <td class="
+                {% if data.balance < 0 %}balance-negative
+                {% elif data.balance > 0 %}balance-positive
+                {% else %}balance-zero{% endif %}">
+                {{ data.balance|floatformat:"2" }} ₽
+            </td>
+            <td>
+                {% for subj in data.subjects_stats %}
+                <span class="subject-badge">
+                    {{ subj.lesson__subject__name }}: {{ subj.count }} ур. = {{ subj.total|floatformat:"0" }}₽
+                </span>
+                {% empty %}
+                <span class="subject-badge">нет уроков</span>
+                {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
     </div>
     {% endif %}
 

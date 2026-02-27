@@ -323,8 +323,7 @@
                 <div class="col-md-2">
                   <strong>{{ lesson.date|date:"d.m.Y" }}</strong><br />
                   <small class="text-muted"
-                    >{{ lesson.start_time|time:"H:i" }} - {{
-                    lesson.end_time|time:"H:i" }}</small
+                    >{{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}</small
                   >
                 </div>
                 <div class="col-md-3">
@@ -441,6 +440,9 @@
                   allDaySlot: false,
                   slotDuration: '00:30:00',
               events: {{ calendar_events|safe }},
+                        // ⚡⚡⚡ ЭТО РЕШЕНИЕ ⚡⚡⚡
+              eventDisplay: 'block',  // или 'list-item'
+              displayEventTime: false,  // НЕ ПОКАЗЫВАТЬ ВРЕМЯ
               eventClick: function(info) {
                   if (info.event.url) {
                       window.location.href = info.event.url;

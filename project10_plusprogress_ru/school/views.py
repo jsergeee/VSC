@@ -803,6 +803,7 @@ def teacher_dashboard(request):
         calc = LessonFinanceCalculator(lesson)
         stats = calc.stats
 
+        # Определяем цвет
         if lesson.status == 'completed':
             bg_color = '#28a745'
         elif lesson.status == 'cancelled':
@@ -816,28 +817,70 @@ def teacher_dashboard(request):
         else:
             bg_color = '#6c757d'
 
-        if stats['students_total'] == 0:
-            title = "Нет учеников"
-        elif stats['students_total'] == 1:
-            student = lesson.attendance.first().student
-            title = student.user.get_full_name()
+    calendar_events = []
+
+    for lesson in all_lessons:
+        calc = LessonFinanceCalculator(lesson)
+        stats = calc.stats
+
+        # Определяем цвет
+        if lesson.status == 'completed':
+            bg_color = '#28a745'
+        elif lesson.status == 'cancelled':
+            bg_color = '#dc3545'
+        elif lesson.status == 'overdue':
+            bg_color = '#fd7e14'
+        elif lesson.date < today and lesson.status == 'scheduled':
+            bg_color = '#ffc107'
+        elif lesson.date == today:
+            bg_color = '#007bff'
         else:
-            title = f"{stats['students_total']} учеников"
+            bg_color = '#6c757d'
+
+        # Время начала
+        time_str = lesson.start_time.strftime('%H:%M')
+
+        # Получаем учеников
+        students = lesson.attendance.all()
+        total_count = students.count()
+
+        if total_count == 0:
+            title = ""
+        else:
+            # Собираем Имя + первую букву фамилии
+            # Собираем Имя + первую букву фамилии
+            names = []
+            for attendance in students:
+                student = attendance.student
+                # Имя берем из last_name, фамилию из first_name
+                name = student.user.last_name or ""  # Анна
+                surname = student.user.first_name or ""  # Соколова
+
+                if name and surname:
+                    names.append(f"{name} {surname[0]}.")  # "Анна С."
+                elif name:
+                    names.append(name)
+                elif surname:
+                    names.append(surname)
+                else:
+                    names.append("Ученик")
+
+            students_text = ", ".join(names)
+            title = f"{time_str} {students_text}"  # "16:00 Анна С., Денис Б."
 
         calendar_events.append({
-            'title': title,
+            'title': title,  # Теперь: "16:00 Денис Б., Ксения К., Матвей О."
             'start': f"{lesson.date}T{lesson.start_time}",
             'end': f"{lesson.date}T{lesson.end_time}",
             'url': f"/teacher/lesson/{lesson.id}/",
             'backgroundColor': bg_color,
             'borderColor': bg_color,
             'textColor': 'white',
-            'finance': {  # Добавляем финансы в событие
+            'finance': {
                 'total_cost': stats['total_cost'],
                 'teacher_payment': stats['teacher_payment']
             }
         })
-
     context = {
         'teacher': teacher,
         'finance': {

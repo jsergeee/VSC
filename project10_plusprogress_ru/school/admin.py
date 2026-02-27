@@ -422,6 +422,7 @@ class TeacherAdmin(admin.ModelAdmin):
     calculate_payments.short_description = "💰 Расчет выплат"
 
 
+
 def export_teachers_excel(self, request, queryset):
     """Экспорт выбранных учителей в Excel"""
     import openpyxl
@@ -545,23 +546,37 @@ class StudentAdmin(admin.ModelAdmin):
     def balance_display(self, obj):
         """Отображение баланса с цветом"""
         try:
-            # Пробуем получить баланс через свойство
+            # Используем правильный расчет баланса
             balance = float(obj.user.balance_calculated)
         except (AttributeError, TypeError, ValueError):
-            balance = 0
+            # Если что-то пошло не так
+            from django.db.models import Sum
+            from school.models import Payment, LessonAttendance
+
+            total_deposits = Payment.objects.filter(
+                user=obj.user,
+                payment_type='income'
+            ).aggregate(Sum('amount'))['amount__sum'] or 0
+
+            attended_cost = LessonAttendance.objects.filter(
+                student=obj,
+                status='attended'
+            ).aggregate(Sum('cost'))['cost__sum'] or 0
+
+            balance = float(total_deposits - attended_cost)
 
         # Форматируем число
-        balance_str = f"{balance:.2f}"
+        balance_str = f"{balance:.2f} ₽"
 
         if balance < 0:
-            return format_html('<span style="color: #dc3545; font-weight: bold;">{} ₽</span>', balance_str)
+            return format_html('<span style="color: #dc3545; font-weight: bold;">{}</span>', balance_str)
         elif balance > 0:
-            return format_html('<span style="color: #28a745; font-weight: bold;">{} ₽</span>', balance_str)
+            return format_html('<span style="color: #28a745; font-weight: bold;">{}</span>', balance_str)
         else:
-            return format_html('<span style="color: #6c757d;">{} ₽</span>', balance_str)
+            return format_html('<span style="color: #6c757d;">{}</span>', balance_str)
 
     balance_display.short_description = 'Баланс'
-    balance_display.admin_order_field = None  # Отключаем сортировку
+
 
     # ⚡⚡⚡ МЕТОД ДЛЯ ОБРАБОТКИ СПИСКА СО СТАТИСТИКОЙ ⚡⚡⚡
     def changelist_view(self, request, extra_context=None):
@@ -617,10 +632,20 @@ class StudentAdmin(admin.ModelAdmin):
                         lesson__date__gte=start,
                         lesson__date__lte=end
                     )
+                    total_deposits = Payment.objects.filter(
+                        user=student.user,
+                        payment_type='income'
+                    ).aggregate(Sum('amount'))['amount__sum'] or 0
 
                     lessons_count = attended_lessons.count()
                     student_total_cost = attended_lessons.aggregate(Sum('cost'))['cost__sum'] or 0
                     student_balance = student.user.get_balance()
+                    student_deposits_period = Payment.objects.filter(
+                        user=student.user,
+                        payment_type='income',
+                        created_at__date__gte=start,
+                        created_at__date__lte=end
+                    ).aggregate(Sum('amount'))['amount__sum'] or 0
 
                     # Группировка по предметам
                     subjects_stats = attended_lessons.values(
@@ -642,6 +667,8 @@ class StudentAdmin(admin.ModelAdmin):
                         'total_cost': student_total_cost,
                         'subjects_stats': subjects_stats,
                         'balance': student_balance,
+                        'total_deposits': total_deposits,
+                        'total_deposits_period': student_deposits_period,  # Пополнения за период
                     })
 
                     # Добавляем к итогам
@@ -666,6 +693,8 @@ class StudentAdmin(admin.ModelAdmin):
 
         print("=" * 80 + "\n")
         return super().changelist_view(request, extra_context)
+
+
 
     actions = ['export_students_excel', 'show_finance_report']
 
@@ -967,63 +996,120 @@ class LessonAdmin(admin.ModelAdmin):
         return render(request, 'admin/school/lesson/bulk_complete.html', context)
 
     def changelist_view(self, request, extra_context=None):
-        # Если запрошен календарь
-        if request.GET.get('view') == 'calendar':
-            lessons = self.get_queryset(request).select_related(
-                'teacher__user', 'subject'
-            ).prefetch_related(
-                Prefetch(
-                    'attendance',
-                    queryset=LessonAttendance.objects.select_related('student__user')
-                )
-            )
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
 
-            calendar_events = []
-            for lesson in lessons:
-                calculator = LessonFinanceCalculator(lesson)
-                stats = calculator.stats
+        # Сохраняем в сессию
+        if start_date and end_date:
+            request.session['student_filter_start'] = start_date
+            request.session['student_filter_end'] = end_date
+        else:
+            start_date = request.session.get('student_filter_start')
+            end_date = request.session.get('student_filter_end')
 
-                subject_short = lesson.subject.name[:4]
-                teacher_last = lesson.teacher.user.last_name
+        print("\n" + "=" * 80)
+        print("🔍 STUDENT ADMIN CHANGELIST VIEW")
+        print(f"📅 start_date: {start_date}")
+        print(f"📅 end_date: {end_date}")
+        print("=" * 80)
 
-                if stats['students_total'] == 0:
-                    students_text = "нет"
-                elif stats['students_total'] == 1:
-                    student = lesson.attendance.first().student
-                    students_text = student.user.first_name
-                else:
-                    students_text = f"{stats['students_total']} уч."
+        if start_date and end_date:
+            try:
+                from datetime import datetime
+                start = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end = datetime.strptime(end_date, '%Y-%m-%d').date()
 
-                title = f"{subject_short} {teacher_last} - {students_text}"
+                print(f"\n✅ Период преобразован: {start} - {end}")
 
-                status_colors = {
-                    'completed': '#28a745',
-                    'cancelled': '#dc3545',
-                    'overdue': '#fd7e14',
-                    'scheduled': '#007bff',
-                }
-                bg_color = status_colors.get(lesson.status, '#6c757d')
+                extra_context = extra_context or {}
+                students_data = []
 
-                calendar_events.append({
-                    'title': title,
-                    'start': f"{lesson.date}T{lesson.start_time}",
-                    'end': f"{lesson.date}T{lesson.end_time}",
-                    'url': f"/admin/school/lesson/{lesson.id}/change/",
-                    'backgroundColor': bg_color,
-                    'borderColor': bg_color,
-                    'textColor': 'white',
-                    'finance': {
-                        'total_cost': stats['total_cost'],
-                        'teacher_payment': stats['teacher_payment']
-                    }
-                })
+                # Для подсчета итогов
+                total_lessons = 0
+                total_cost = 0
+                total_balance = 0
+                total_deposits = 0  # ✅ Новая переменная для итога по пополнениям
 
-            extra_context = extra_context or {}
-            extra_context['calendar_events'] = calendar_events
-            extra_context['title'] = 'Календарь занятий'
+                # Получаем всех учеников
+                students = self.get_queryset(request)
+                print(f"\n👥 Всего учеников: {students.count()}")
 
-            return render(request, 'admin/school/lesson/change_list_calendar.html', extra_context)
+                for student in students:
+                    print(f"\n{'─' * 50}")
+                    print(f"👨‍🎓 Обработка ученика: {student.user.get_full_name()} (ID: {student.id})")
 
+                    # Получаем статистику по урокам за период
+                    from django.db.models import Sum, Count
+                    from school.models import LessonAttendance, Payment
+
+                    # Уроки за период со статусом 'attended'
+                    attended_lessons = LessonAttendance.objects.filter(
+                        student=student,
+                        status='attended',
+                        lesson__date__gte=start,
+                        lesson__date__lte=end
+                    )
+
+                    lessons_count = attended_lessons.count()
+                    student_total_cost = attended_lessons.aggregate(Sum('cost'))['cost__sum'] or 0
+                    student_balance = student.user.get_balance()
+
+                    # ✅ Сумма пополнений за период
+                    student_deposits = Payment.objects.filter(
+                        user=student.user,
+                        payment_type='income',
+                        created_at__date__gte=start,
+                        created_at__date__lte=end
+                    ).aggregate(Sum('amount'))['amount__sum'] or 0
+
+                    # Группировка по предметам
+                    subjects_stats = attended_lessons.values(
+                        'lesson__subject__name'
+                    ).annotate(
+                        count=Count('id'),
+                        total=Sum('cost')
+                    ).order_by('-total')
+
+                    print(f"📊 Статистика:")
+                    print(f"   уроков: {lessons_count}")
+                    print(f"   сумма: {student_total_cost}")
+                    print(f"   пополнений: {student_deposits}")  # ✅ Отладка
+                    for subj in subjects_stats:
+                        print(f"   - {subj['lesson__subject__name']}: {subj['count']} ур. = {subj['total']}₽")
+
+                    students_data.append({
+                        'student': student,
+                        'lessons_count': lessons_count,
+                        'total_cost': student_total_cost,
+                        'subjects_stats': subjects_stats,
+                        'balance': student_balance,
+                        'total_deposits': student_deposits,  # ✅ Добавляем пополнения
+                    })
+
+                    # Добавляем к итогам
+                    total_lessons += lessons_count
+                    total_cost += student_total_cost
+                    total_balance += student_balance
+                    total_deposits += student_deposits  # ✅ Суммируем пополнения
+
+                extra_context['students_data'] = students_data
+                extra_context['start_date'] = start_date
+                extra_context['end_date'] = end_date
+                extra_context['total_lessons'] = total_lessons
+                extra_context['total_cost'] = total_cost
+                extra_context['total_balance'] = total_balance
+                extra_context['total_deposits'] = total_deposits  # ✅ Передаем в шаблон
+
+                print(f"\n✅ students_data создан, размер: {len(students_data)}")
+                print(
+                    f"📊 ИТОГО: уроков={total_lessons}, сумма={total_cost}, пополнений={total_deposits}, баланс={total_balance}")
+
+            except Exception as e:
+                print(f"❌ ОШИБКА в changelist_view: {e}")
+                import traceback
+                traceback.print_exc()
+
+        print("=" * 80 + "\n")
         return super().changelist_view(request, extra_context)
 
     change_form_template = "admin/school/lesson/change_form.html"
@@ -1187,7 +1273,7 @@ class PaymentAdmin(admin.ModelAdmin):
         type_colors = {
             'income': ('#28a745', 'Пополнение'),
             'expense': ('#dc3545', 'Списание'),
-            'teacher_payment': ('#17a2b8', 'Начисление учителю'),
+            # 'teacher_payment': ('#17a2b8', 'Начисление учителю'),
             'teacher_salary': ('#ffc107', 'Зарплата учителя'),
         }
         color, text = type_colors.get(obj.payment_type, ('#6c757d', obj.payment_type))

@@ -72,7 +72,8 @@
                     <tr>
                         <th style="padding: 8px; border-bottom: 2px solid #dee2e6;">Учитель</th>
                         <th style="padding: 8px; border-bottom: 2px solid #dee2e6;">Оплачено учащимся</th>
-                        <th style="padding: 8px; border-bottom: 2px solid #dee2e6;">Начислено учителю </th>
+                        <th style="padding: 8px; border-bottom: 2px solid #dee2e6;">Начислено учителю</th>
+                        <th style="padding: 8px; border-bottom: 2px solid #dee2e6;">Выплачено</th>
                         <th style="padding: 8px; border-bottom: 2px solid #dee2e6;">Комиссия школы</th>
                     </tr>
                     </thead>
@@ -80,9 +81,21 @@
                     {% for teacher in teachers_data %}
                     <tr>
                         <td style="padding: 8px;">{{ teacher.teacher.user.get_full_name }}</td>
-                        <td style="padding: 8px; color: #28a745;">{{ teacher.earnings.total_payments|floatformat:2 }} ₽ </td>
-                        <td style="padding: 8px; color: #ffc107;">{{ teacher.earnings.total_salaries|floatformat:2 }} ₽ </td>
-                        <td style="padding: 8px; font-weight: bold; color: #17a2b8;">{{ teacher.earnings.net_income|floatformat:2 }} ₽ </td>
+                        <td style="padding: 8px; color: #28a745;">{{ teacher.earnings.total_payments|floatformat:2 }}
+                            ₽
+                        </td>
+                        <td style="padding: 8px; color: #ffc107;">{{ teacher.earnings.total_salaries|floatformat:2 }}
+                            ₽
+                        </td>
+                        <td style="padding: 8px; color: #17a2b8;">{{ teacher.earnings.paid_salary|default:0|floatformat:2 }} ₽
+                        </td>
+                        <td style="padding: 8px; font-weight: bold; color: #17a2b8;">
+                            {% if teacher.earnings.commission %}
+                            {{ teacher.earnings.commission|floatformat:2 }} ₽
+                            {% else %}
+                            0.00 ₽
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                     </tbody>
