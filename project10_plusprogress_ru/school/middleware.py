@@ -103,3 +103,46 @@ class OverdueLessonsMiddleware:
             self.last_check = now
 
         return self.get_response(request)
+
+
+
+
+# school/middleware.py - добавьте новый класс
+import threading
+from .models import UserActionLog
+
+class UserActionLogMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+        # Сохраняем информацию о входе/выходе в потоке
+        self._current_user = threading.local()
+
+    def __call__(self, request):
+        # Сохраняем информацию о запросе
+        if request.user.is_authenticated:
+            request.user_action_log = {
+                'user': request.user,
+                'ip': self.get_client_ip(request),
+                'user_agent': request.META.get('HTTP_USER_AGENT', ''),
+                'url': request.build_absolute_uri(),
+            }
+        else:
+            request.user_action_log = None
+
+        response = self.get_response(request)
+        return response
+
+    def get_client_ip(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
+
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        """Логирование входа/выхода"""
+        if request.path.endswith('/login/') and request.method == 'POST':
+            # Логирование входа будет в views.py после успешной аутентификации
+            pass
+        return None

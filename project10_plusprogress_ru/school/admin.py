@@ -13,7 +13,14 @@ from datetime import datetime
 from django.db.models import Prefetch, Sum, Count
 from django.db import transaction
 from .views import import_users_view
-
+from .models import (
+    User, Subject, Teacher, Student, Lesson, LessonFormat,
+    LessonReport, Payment, Schedule, TrialRequest,
+    Notification, LessonFeedback, TeacherRating,
+    Homework, HomeworkSubmission, GroupLesson, GroupEnrollment,
+    LessonAttendance, ScheduleTemplate, ScheduleTemplateStudent,
+    StudentSubjectPrice, UserActionLog  # 👈 ДОБАВЬТЕ ЭТОТ ИМПОРТ
+)
 from .models import (
     User, Subject, Teacher, Student, Lesson, LessonFormat,
     LessonReport, Payment, Schedule, TrialRequest,
@@ -1983,6 +1990,138 @@ class StudentSubjectPriceAdmin(admin.ModelAdmin):
     autocomplete_fields = ['student', 'subject']
 
 
+# =================ЛОГИРОВАНИЕ=============================
+
+@admin.register(UserActionLog)
+class UserActionLogAdmin(admin.ModelAdmin):
+    list_display = (
+    'id', 'created_at_colored', 'user_link', 'action_colored', 'description_short', 'ip_address', 'object_link')
+    list_filter = ('action_type', 'created_at', 'user')
+    search_fields = ('user__username', 'user__email', 'description', 'ip_address')
+    date_hierarchy = 'created_at'
+    readonly_fields = ('created_at', 'ip_address', 'user_agent', 'url', 'additional_data')
+    list_per_page = 50
+
+    fieldsets = (
+        ('Основное', {
+            'fields': ('user', 'action_type', 'description', 'created_at')
+        }),
+        ('Техническая информация', {
+            'fields': ('ip_address', 'user_agent', 'url'),
+            'classes': ('wide',),
+        }),
+        ('Связанные объекты', {
+            'fields': ('object_type', 'object_id'),
+            'classes': ('wide',),
+        }),
+        ('Дополнительные данные', {
+            'fields': ('additional_data',),
+            'classes': ('wide', 'collapse'),
+        }),
+    )
+
+    def created_at_colored(self, obj):
+        from django.utils import timezone
+        if (timezone.now() - obj.created_at).seconds < 3600:
+            color = '#28a745'  # зеленый - свежие
+        elif (timezone.now() - obj.created_at).days < 1:
+            color = '#ffc107'  # желтый - сегодня
+        else:
+            color = '#6c757d'  # серый - старые
+
+        return format_html(
+            '<span style="color: {};">{}</span>',
+            color, obj.created_at.strftime('%d.%m.%Y %H:%M')
+        )
+
+    created_at_colored.short_description = 'Дата'
+    created_at_colored.admin_order_field = 'created_at'
+
+    def user_link(self, obj):
+        url = f'/admin/school/user/{obj.user.id}/change/'
+        return format_html('<a href="{}">{}</a>', url, obj.user.get_full_name())
+
+    user_link.short_description = 'Пользователь'
+
+    def action_colored(self, obj):
+        colors = {
+            'login': '#28a745',
+            'logout': '#dc3545',
+            'calendar_export': '#17a2b8',
+            'lesson_view': '#007bff',
+            'video_room_enter': '#ffc107',
+        }
+        color = colors.get(obj.action_type, '#6c757d')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color, obj.get_action_type_display()
+        )
+
+    action_colored.short_description = 'Действие'
+
+    def description_short(self, obj):
+        return obj.description[:50] + '...' if len(obj.description) > 50 else obj.description
+
+    description_short.short_description = 'Описание'
+
+    def object_link(self, obj):
+        if obj.object_type == 'lesson' and obj.object_id:
+            url = f'/admin/school/lesson/{obj.object_id}/change/'
+            return format_html('<a href="{}">Урок #{}</a>', url, obj.object_id)
+        elif obj.object_type == 'homework' and obj.object_id:
+            url = f'/admin/school/homework/{obj.object_id}/change/'
+            return format_html('<a href="{}">ДЗ #{}</a>', url, obj.object_id)
+        return '-'
+
+    object_link.short_description = 'Объект'
+
+    actions = ['export_logs_excel']
+
+    def export_logs_excel(self, request, queryset):
+        import openpyxl
+        from openpyxl.styles import Font, Alignment, PatternFill
+        from django.http import HttpResponse
+        from datetime import datetime
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Логи действий"
+
+        headers = ['ID', 'Дата', 'Пользователь', 'Действие', 'Описание', 'IP', 'URL']
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="417690", end_color="417690", fill_type="solid")
+
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+
+        for row, log in enumerate(queryset, start=2):
+            ws.cell(row=row, column=1, value=log.id)
+            ws.cell(row=row, column=2, value=log.created_at.strftime('%d.%m.%Y %H:%M'))
+            ws.cell(row=row, column=3, value=log.user.get_full_name())
+            ws.cell(row=row, column=4, value=log.get_action_type_display())
+            ws.cell(row=row, column=5, value=log.description)
+            ws.cell(row=row, column=6, value=log.ip_address)
+            ws.cell(row=row, column=7, value=log.url)
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = f"logs_export_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        wb.save(response)
+        return response
+
+    export_logs_excel.short_description = "📥 Экспорт логов в Excel"
+
+
+
+
+
+
 # ==================== REGISTER ALL MODELS ====================
 
 admin.site.register(User, CustomUserAdmin)
@@ -1995,3 +2134,6 @@ admin.site.register(LessonFormat, LessonFormatAdmin)
 admin.site.site_header = 'Плюс Прогресс - Администрирование'
 admin.site.site_title = 'Плюс Прогресс'
 admin.site.index_title = 'Управление онлайн школой'
+
+
+

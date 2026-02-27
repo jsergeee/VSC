@@ -188,8 +188,6 @@ class Subject(models.Model):
         return self.name
 
 
-
-
 class Teacher(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='teacher_profile')
     subjects = models.ManyToManyField(Subject, verbose_name='Предметы')
@@ -912,6 +910,7 @@ class LessonReport(models.Model):
 
     def __str__(self):
         return f"Отчет: {self.lesson}"
+
 
 class Payment(models.Model):
     PAYMENT_TYPE_CHOICES = (
@@ -1912,3 +1911,88 @@ class TrialRequest(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.subject}"
+
+    # ЛОГИРОВАНИE
+
+
+class UserActionLog(models.Model):
+    """Логирование действий пользователей"""
+    ACTION_TYPES = (
+        ('login', '🔐 Вход в систему'),
+        ('logout', '🔒 Выход из системы'),
+        ('calendar_export', '📄 Экспорт календаря'),
+        ('lesson_view', '👁️ Просмотр урока'),
+        ('lesson_edit', '✏️ Редактирование урока'),
+        ('lesson_create', '➕ Создание урока'),
+        ('lesson_complete', '✅ Завершение урока'),
+        ('homework_view', '📚 Просмотр ДЗ'),
+        ('homework_submit', '📤 Сдача ДЗ'),
+        ('payment_view', '💰 Просмотр платежей'),
+        ('material_download', '⬇️ Скачивание материала'),
+        ('video_room_enter', '🎥 Вход в видео-комнату'),
+        ('profile_edit', '👤 Редактирование профиля'),
+        ('report_view', '📊 Просмотр отчета'),
+        ('other', '📌 Другое'),
+    )
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='action_logs',
+        verbose_name='Пользователь'
+    )
+    action_type = models.CharField(
+        max_length=30,
+        choices=ACTION_TYPES,
+        verbose_name='Тип действия'
+    )
+    description = models.CharField(
+        max_length=255,
+        verbose_name='Описание'
+    )
+    ip_address = models.GenericIPAddressField(
+        verbose_name='IP адрес',
+        null=True,
+        blank=True
+    )
+    user_agent = models.TextField(
+        verbose_name='User Agent',
+        blank=True
+    )
+    url = models.CharField(
+        max_length=500,
+        verbose_name='URL',
+        blank=True
+    )
+    object_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='ID объекта'
+    )
+    object_type = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name='Тип объекта'
+    )
+    additional_data = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='Дополнительные данные'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата и время'
+    )
+
+    class Meta:
+        verbose_name = 'Лог действия'
+        verbose_name_plural = 'Логи действий'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['action_type', '-created_at']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.created_at.strftime('%d.%m.%Y %H:%M')} - {self.user} - {self.get_action_type_display()}"

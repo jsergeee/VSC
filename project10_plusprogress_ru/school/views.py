@@ -33,6 +33,7 @@ from weasyprint import HTML
 import logging
 import traceback
 from django.utils import timezone
+from .utils import log_user_action
 
 # Импорты моделей
 from .models import (
@@ -473,6 +474,16 @@ def user_login(request):
 
                 login(request, user)
 
+                # ✅ ЛОГИРОВАНИЕ ВХОДА
+                from .utils import log_user_action
+                log_user_action(
+                    request,
+                    'login',
+                    f'Вход в систему (роль: {user.get_role_display()})',
+                    additional_data={'role': user.role}
+                )
+                # ✅ КОНЕЦ ЛОГИРОВАНИЯ
+
                 if user.role == 'student':
                     return redirect('student_dashboard')
                 elif user.role == 'teacher':
@@ -490,6 +501,7 @@ def user_login(request):
 @login_required
 def user_logout(request):
     """Выход из системы"""
+    log_user_action(request, 'logout', 'Выход из системы')
     logout(request)
     return redirect('home')
 
@@ -904,7 +916,18 @@ def teacher_dashboard(request):
 def teacher_lesson_detail(request, lesson_id):
     """Детальная страница урока для учителя - РЕФАКТОРИНГ"""
     lesson = get_object_or_404(Lesson, id=lesson_id)
-
+    log_user_action(
+        request,
+        'lesson_view',
+        f'Просмотр урока #{lesson.id} - {lesson.subject.name}',
+        object_id=lesson.id,
+        object_type='lesson',
+        additional_data={
+            'teacher': lesson.teacher.user.get_full_name(),
+            'students_count': lesson.students.count(),
+            'status': lesson.status
+        }
+    )
     if request.user.role != 'teacher' or lesson.teacher.user != request.user:
         messages.error(request, 'Доступ запрещен')
         return redirect('dashboard')
@@ -1874,6 +1897,16 @@ def export_calendar_pdf(request):
 @login_required
 def teacher_export_calendar_pdf(request):
     """Экспорт календаря учителя в PDF с выбором месяца"""
+    log_user_action(
+        request,
+        'calendar_export',
+        f'Экспорт календаря: {request.GET.get("month")}.{request.GET.get("year")}',
+        additional_data={
+            'month': request.GET.get('month'),
+            'year': request.GET.get('year'),
+            'view': request.GET.get('view', 'month')
+        }
+    )
     user = request.user
 
     if user.role != 'teacher':
@@ -3049,7 +3082,13 @@ def create_video_room(request, lesson_id):
     """Учитель создает видео-комнату для урока"""
     try:
         lesson = get_object_or_404(Lesson, id=lesson_id)
-
+        log_user_action(
+            request,
+            'video_room_enter',
+            f'Вход в видео-комнату урока #{lesson.id}',
+            object_id=lesson.id,
+            object_type='lesson'
+        )
         if request.user.role != 'teacher' or lesson.teacher.user != request.user:
             return JsonResponse({'error': 'Доступ запрещен'}, status=403)
 
@@ -4453,3 +4492,8 @@ def complete_lesson(request, lesson_id):
         messages.success(request, f'Урок завершен. Присутствовало: {len(attended_students)} учеников.')
 
     return redirect('teacher_lesson_detail', lesson_id=lesson.id)
+
+
+
+
+

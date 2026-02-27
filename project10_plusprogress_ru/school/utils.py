@@ -141,3 +141,34 @@ def send_verification_success_email(user):
     except Exception as e:
         logger.error(f"Ошибка отправки письма об успехе: {e}")
         return False
+
+
+# school/utils.py - добавьте функции логирования
+from .models import UserActionLog
+
+
+def log_user_action(request, action_type, description, object_id=None, object_type='', additional_data=None):
+    """
+    Логирование действия пользователя
+    """
+    if not request.user.is_authenticated:
+        return None
+
+    # Получаем IP
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+
+    return UserActionLog.objects.create(
+        user=request.user,
+        action_type=action_type,
+        description=description,
+        ip_address=ip,
+        user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+        url=request.build_absolute_uri(),
+        object_id=object_id,
+        object_type=object_type or '',  # 👈 Добавляем пустую строку по умолчанию
+        additional_data=additional_data or {}
+    )
