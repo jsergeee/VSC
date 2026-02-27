@@ -58,22 +58,25 @@ class User(AbstractUser):
             return full_name
         return self.username
 
-    def set_full_name(self, full_name):
-        """Разделяет полное имя на фамилию, имя и отчество"""
-        parts = full_name.strip().split()
-        if len(parts) >= 1:
-            self.last_name = parts[0]
-        if len(parts) >= 2:
-            self.first_name = parts[1]
-        if len(parts) >= 3:
-            self.patronymic = ' '.join(parts[2:])
+    def set_full_name(self, last_name='', first_name='', patronymic=''):
+        """Устанавливает фамилию, имя и отчество отдельно"""
+        if last_name:
+            self.last_name = last_name
+        if first_name:
+            self.first_name = first_name
+        if patronymic:
+            self.patronymic = patronymic
 
     def get_full_name(self):
-        """Возвращает полное имя с отчеством"""
-        full_name = super().get_full_name()
+        """Возвращает полное имя в порядке: Фамилия Имя Отчество"""
+        parts = []
+        if self.last_name:
+            parts.append(self.last_name)  # Фамилия
+        if self.first_name:
+            parts.append(self.first_name)  # Имя
         if self.patronymic:
-            return f"{full_name} {self.patronymic}".strip()
-        return full_name
+            parts.append(self.patronymic)  # Отчество
+        return " ".join(parts) if parts else self.username
 
     # ===== НОВЫЙ МЕТОД =====
     def get_balance(self):

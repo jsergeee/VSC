@@ -865,8 +865,8 @@ def teacher_dashboard(request):
             for attendance in students:
                 student = attendance.student
                 # Имя берем из last_name, фамилию из first_name
-                name = student.user.last_name or ""  # Анна
-                surname = student.user.first_name or ""  # Соколова
+                name = student.user.first_name or ""
+                surname = student.user.last_name or ""
 
                 if name and surname:
                     names.append(f"{name} {surname[0]}.")  # "Анна С."

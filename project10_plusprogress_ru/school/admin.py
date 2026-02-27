@@ -75,13 +75,13 @@ class CustomUserAdmin(UserAdmin):
     list_display = ('id', 'username', 'get_full_name', 'email', 'phone', 'role',
                     'is_email_verified_badge', 'is_staff')
     list_filter = ('role', 'is_email_verified', 'is_staff', 'is_superuser', 'groups')
-    search_fields = ('username', 'first_name', 'last_name', 'email', 'phone')
+    search_fields = ('username', 'last_name', 'first_name',  'email', 'phone')
     readonly_fields = ('email_verification_sent',)
 
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         ('Личная информация', {
-            'fields': ('first_name', 'last_name', 'patronymic', 'email', 'phone', 'photo')
+            'fields': ('last_name', 'first_name',  'patronymic', 'email', 'phone', 'photo')
         }),
         ('Роль', {
             'fields': ('role',),
@@ -123,10 +123,8 @@ class CustomUserAdmin(UserAdmin):
         return super().changelist_view(request, extra_context)
 
     def get_full_name(self, obj):
-        full_name = obj.get_full_name()
-        if obj.patronymic:
-            return f"{full_name} {obj.patronymic}"
-        return full_name or obj.username
+        """Возвращает полное имя пользователя (использует метод модели)"""
+        return obj.get_full_name() or obj.username
 
     get_full_name.short_description = 'ФИО'
 
@@ -788,8 +786,10 @@ class LessonFormatAdmin(admin.ModelAdmin):
 class LessonAdmin(admin.ModelAdmin):
     formfield_overrides = {
         models.TimeField: {'widget': forms.TimeInput(format='%H:%M', attrs={'type': 'time'})},
-        models.DateField: {'widget': forms.DateInput(attrs={'type': 'date', 'value': datetime.now().strftime('%Y-%m-%d')})},
+        models.DateField: {
+            'widget': forms.DateInput(attrs={'type': 'date', 'value': datetime.now().strftime('%Y-%m-%d')})},
     }
+
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
         if obj is None:  # Только для создания нового урока
@@ -798,6 +798,7 @@ class LessonAdmin(admin.ModelAdmin):
             form.base_fields['start_time'].initial = time(9, 0)  # 09:00
             form.base_fields['end_time'].initial = time(10, 0)  # 10:00
         return form
+
     list_display = ('id', 'colored_subject', 'teacher_link', 'students_count', 'students_preview',
                     'date', 'start_time', 'status_badge', 'finance_preview')
     list_filter = ('status', 'subject', 'date', 'teacher', 'is_group')
@@ -806,6 +807,7 @@ class LessonAdmin(admin.ModelAdmin):
     raw_id_fields = ('teacher',)
     inlines = [LessonAttendanceInline]
     readonly_fields = ('finance_stats', 'video_room')
+    change_form_template = "admin/school/lesson/change_form.html"
 
     fieldsets = (
         ('Основная информация', {
@@ -814,7 +816,7 @@ class LessonAdmin(admin.ModelAdmin):
         ('Время', {
             'fields': ('date', 'start_time', 'end_time', 'duration')
         }),
-        ('Финансы', {  # ← УБРАЛИ get_total_cost, оставили только нужные поля
+        ('Финансы', {
             'fields': ('price_type', 'base_cost', 'base_teacher_payment'),
             'classes': ('wide',),
             'description': 'Базовая стоимость урока. Индивидуальные цены можно настроить в таблице посещаемости ниже.'
@@ -850,7 +852,6 @@ class LessonAdmin(admin.ModelAdmin):
     colored_subject.short_description = 'Предмет'
 
     def students_count(self, obj):
-        """Количество учеников"""
         count = obj.students.count()
         if count == 0:
             return format_html('<span style="color: #dc3545;">❌ 0</span>')
@@ -862,12 +863,10 @@ class LessonAdmin(admin.ModelAdmin):
     students_count.short_description = 'Кол-во'
 
     def students_preview(self, obj):
-        """Отображает список учеников (Фамилия Имя)"""
         students = obj.students.all()
         if not students:
             return format_html('<span style="color: #dc3545;">❌ Нет учеников</span>')
 
-        # Формируем "Фамилия Имя"
         names = []
         for student in students:
             last_name = student.user.last_name or ''
@@ -901,7 +900,6 @@ class LessonAdmin(admin.ModelAdmin):
     status_badge.short_description = 'Статус'
 
     def finance_preview(self, obj):
-        """Предпросмотр финансов с использованием LessonFinanceCalculator"""
         calculator = LessonFinanceCalculator(obj)
         stats = calculator.stats
 
@@ -918,7 +916,6 @@ class LessonAdmin(admin.ModelAdmin):
     finance_preview.short_description = 'Финансы'
 
     def finance_stats(self, obj):
-        """Детальная финансовая статистика"""
         calculator = LessonFinanceCalculator(obj)
         stats = calculator.stats
 
@@ -988,17 +985,14 @@ class LessonAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
     def bulk_complete_view(self, request):
-        """Страница массового завершения уроков"""
         lesson_ids = request.GET.getlist('ids')
         lessons = Lesson.objects.filter(id__in=lesson_ids)
 
         if request.method == 'POST':
-            # Обработка массового завершения
             from django.contrib import messages
             completed = 0
             for lesson in lessons:
                 if lesson.status == 'scheduled':
-                    # Здесь логика завершения
                     completed += 1
             messages.success(request, f'✅ Завершено {completed} уроков')
             return redirect('admin:school_lesson_changelist')
@@ -1009,124 +1003,67 @@ class LessonAdmin(admin.ModelAdmin):
         }
         return render(request, 'admin/school/lesson/bulk_complete.html', context)
 
+    # ✅ ЕДИНСТВЕННЫЙ ПРАВИЛЬНЫЙ МЕТОД changelist_view
     def changelist_view(self, request, extra_context=None):
-        start_date = request.GET.get('start_date')
-        end_date = request.GET.get('end_date')
+        # Если запрошен календарь
+        if request.GET.get('view') == 'calendar':
+            lessons = self.get_queryset(request).select_related(
+                'teacher__user', 'subject'
+            ).prefetch_related(
+                Prefetch(
+                    'attendance',
+                    queryset=LessonAttendance.objects.select_related('student__user')
+                )
+            )
 
-        # Сохраняем в сессию
-        if start_date and end_date:
-            request.session['student_filter_start'] = start_date
-            request.session['student_filter_end'] = end_date
-        else:
-            start_date = request.session.get('student_filter_start')
-            end_date = request.session.get('student_filter_end')
+            calendar_events = []
+            for lesson in lessons:
+                calculator = LessonFinanceCalculator(lesson)
+                stats = calculator.stats
 
-        print("\n" + "=" * 80)
-        print("🔍 STUDENT ADMIN CHANGELIST VIEW")
-        print(f"📅 start_date: {start_date}")
-        print(f"📅 end_date: {end_date}")
-        print("=" * 80)
+                subject_short = lesson.subject.name[:4]
+                teacher_last = lesson.teacher.user.last_name
 
-        if start_date and end_date:
-            try:
-                from datetime import datetime
-                start = datetime.strptime(start_date, '%Y-%m-%d').date()
-                end = datetime.strptime(end_date, '%Y-%m-%d').date()
+                if stats['students_total'] == 0:
+                    students_text = "нет"
+                elif stats['students_total'] == 1:
+                    student = lesson.attendance.first().student
+                    students_text = student.user.first_name
+                else:
+                    students_text = f"{stats['students_total']} уч."
 
-                print(f"\n✅ Период преобразован: {start} - {end}")
+                title = f"{subject_short} {teacher_last} - {students_text}"
 
-                extra_context = extra_context or {}
-                students_data = []
+                status_colors = {
+                    'completed': '#28a745',
+                    'cancelled': '#dc3545',
+                    'overdue': '#fd7e14',
+                    'scheduled': '#007bff',
+                }
+                bg_color = status_colors.get(lesson.status, '#6c757d')
 
-                # Для подсчета итогов
-                total_lessons = 0
-                total_cost = 0
-                total_balance = 0
-                total_deposits = 0  # ✅ Новая переменная для итога по пополнениям
+                calendar_events.append({
+                    'title': title,
+                    'start': f"{lesson.date}T{lesson.start_time}",
+                    'end': f"{lesson.date}T{lesson.end_time}",
+                    'url': f"/admin/school/lesson/{lesson.id}/change/",
+                    'backgroundColor': bg_color,
+                    'borderColor': bg_color,
+                    'textColor': 'white',
+                    'finance': {
+                        'total_cost': stats['total_cost'],
+                        'teacher_payment': stats['teacher_payment']
+                    }
+                })
 
-                # Получаем всех учеников
-                students = self.get_queryset(request)
-                print(f"\n👥 Всего учеников: {students.count()}")
+            extra_context = extra_context or {}
+            extra_context['calendar_events'] = calendar_events
+            extra_context['title'] = 'Календарь занятий'
 
-                for student in students:
-                    print(f"\n{'─' * 50}")
-                    print(f"👨‍🎓 Обработка ученика: {student.user.get_full_name()} (ID: {student.id})")
+            return render(request, 'admin/school/lesson/change_list_calendar.html', extra_context)
 
-                    # Получаем статистику по урокам за период
-                    from django.db.models import Sum, Count
-                    from school.models import LessonAttendance, Payment
-
-                    # Уроки за период со статусом 'attended'
-                    attended_lessons = LessonAttendance.objects.filter(
-                        student=student,
-                        status='attended',
-                        lesson__date__gte=start,
-                        lesson__date__lte=end
-                    )
-
-                    lessons_count = attended_lessons.count()
-                    student_total_cost = attended_lessons.aggregate(Sum('cost'))['cost__sum'] or 0
-                    student_balance = student.user.get_balance()
-
-                    # ✅ Сумма пополнений за период
-                    student_deposits = Payment.objects.filter(
-                        user=student.user,
-                        payment_type='income',
-                        created_at__date__gte=start,
-                        created_at__date__lte=end
-                    ).aggregate(Sum('amount'))['amount__sum'] or 0
-
-                    # Группировка по предметам
-                    subjects_stats = attended_lessons.values(
-                        'lesson__subject__name'
-                    ).annotate(
-                        count=Count('id'),
-                        total=Sum('cost')
-                    ).order_by('-total')
-
-                    print(f"📊 Статистика:")
-                    print(f"   уроков: {lessons_count}")
-                    print(f"   сумма: {student_total_cost}")
-                    print(f"   пополнений: {student_deposits}")  # ✅ Отладка
-                    for subj in subjects_stats:
-                        print(f"   - {subj['lesson__subject__name']}: {subj['count']} ур. = {subj['total']}₽")
-
-                    students_data.append({
-                        'student': student,
-                        'lessons_count': lessons_count,
-                        'total_cost': student_total_cost,
-                        'subjects_stats': subjects_stats,
-                        'balance': student_balance,
-                        'total_deposits': student_deposits,  # ✅ Добавляем пополнения
-                    })
-
-                    # Добавляем к итогам
-                    total_lessons += lessons_count
-                    total_cost += student_total_cost
-                    total_balance += student_balance
-                    total_deposits += student_deposits  # ✅ Суммируем пополнения
-
-                extra_context['students_data'] = students_data
-                extra_context['start_date'] = start_date
-                extra_context['end_date'] = end_date
-                extra_context['total_lessons'] = total_lessons
-                extra_context['total_cost'] = total_cost
-                extra_context['total_balance'] = total_balance
-                extra_context['total_deposits'] = total_deposits  # ✅ Передаем в шаблон
-
-                print(f"\n✅ students_data создан, размер: {len(students_data)}")
-                print(
-                    f"📊 ИТОГО: уроков={total_lessons}, сумма={total_cost}, пополнений={total_deposits}, баланс={total_balance}")
-
-            except Exception as e:
-                print(f"❌ ОШИБКА в changelist_view: {e}")
-                import traceback
-                traceback.print_exc()
-
-        print("=" * 80 + "\n")
+        # Для обычного списка
         return super().changelist_view(request, extra_context)
-
-    change_form_template = "admin/school/lesson/change_form.html"
 
     def response_change(self, request, obj):
         if "_complete-lesson" in request.POST:
@@ -1134,7 +1071,6 @@ class LessonAdmin(admin.ModelAdmin):
         return super().response_change(request, obj)
 
     def export_lessons_finance(self, request, queryset):
-        """Экспорт финансовой информации по урокам"""
         import openpyxl
         from openpyxl.styles import Font, Alignment, PatternFill
         from django.http import HttpResponse
@@ -1185,7 +1121,6 @@ class LessonAdmin(admin.ModelAdmin):
     export_lessons_finance.short_description = "📊 Экспорт финансов уроков"
 
     def mark_as_completed(self, request, queryset):
-        """Отметить уроки как проведенные"""
         from django.contrib import messages
 
         completed = 0
@@ -1193,6 +1128,8 @@ class LessonAdmin(admin.ModelAdmin):
             if lesson.attendance.exists():
                 lesson.status = 'completed'
                 lesson.save()
+                # 👇 Обновляем статус посещаемости
+                lesson.attendance.update(status='attended')
                 completed += 1
 
         self.message_user(request, f'✅ {completed} уроков отмечены как проведенные')
@@ -1200,7 +1137,6 @@ class LessonAdmin(admin.ModelAdmin):
     mark_as_completed.short_description = "✅ Отметить как проведенные"
 
     def mark_as_paid(self, request, queryset):
-        """Отметить посещаемость как оплаченную"""
         updated = LessonAttendance.objects.filter(
             lesson__in=queryset,
             status='debt'
@@ -1210,7 +1146,6 @@ class LessonAdmin(admin.ModelAdmin):
     mark_as_paid.short_description = "💰 Отметить как оплаченные"
 
     def mark_as_debt(self, request, queryset):
-        """Отметить посещаемость как долг"""
         updated = LessonAttendance.objects.filter(
             lesson__in=queryset,
             status='attended'
@@ -1218,7 +1153,6 @@ class LessonAdmin(admin.ModelAdmin):
         self.message_user(request, f'⚠️ {updated} записей отмечены как долг')
 
     mark_as_debt.short_description = "⚠️ Отметить как долг"
-
 
 # ==================== LESSON REPORT ADMIN ====================
 

@@ -651,7 +651,7 @@ class CustomUserCreationForm(UserCreationForm):
     """
     class Meta(UserCreationForm.Meta):
         model = User
-        fields = ('username', 'first_name', 'last_name', 'patronymic',
+        fields = ('username', 'last_name', 'first_name', 'patronymic',
                  'email', 'phone', 'role', 'is_active', 'is_staff')
 
     def __init__(self, *args, **kwargs):
@@ -671,7 +671,7 @@ class CustomUserChangeForm(UserChangeForm):
     """
     class Meta(UserChangeForm.Meta):
         model = User
-        fields = ('username', 'first_name', 'last_name', 'patronymic',
+        fields = ('username', 'last_name', 'first_name', 'patronymic',
                  'email', 'phone', 'photo', 'role',
                  'is_active', 'is_staff', 'is_superuser', 'is_email_verified',
                  'groups', 'user_permissions')
