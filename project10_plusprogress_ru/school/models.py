@@ -11,6 +11,8 @@ from datetime import timedelta, date
 import uuid
 from datetime import timedelta
 from django.db.models import Sum
+from django.contrib.auth.models import AbstractUser
+from django.db import models
 
 
 class User(AbstractUser):
@@ -31,6 +33,21 @@ class User(AbstractUser):
     is_email_verified = models.BooleanField(default=False)
     email_verification_sent = models.DateTimeField(null=True, blank=True)
 
+    # ✅ НОВЫЕ ПОЛЯ ДЛЯ TELEGRAM
+    telegram_chat_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='Telegram Chat ID',
+        help_text='ID чата для отправки уведомлений (например: 1226934902)'
+    )
+    telegram_notifications = models.BooleanField(
+        default=False,
+        verbose_name='Получать уведомления в Telegram',
+        help_text='Отправлять уведомления о новых уроках, платежах и т.д.'
+    )
+
+    # Исправляем related_name для групп и разрешений (чтобы избежать конфликтов)
     groups = models.ManyToManyField(
         'auth.Group',
         verbose_name='groups',
@@ -78,7 +95,7 @@ class User(AbstractUser):
             parts.append(self.patronymic)  # Отчество
         return " ".join(parts) if parts else self.username
 
-    # ===== НОВЫЙ МЕТОД =====
+    # ===== МЕТОДЫ ДЛЯ РАСЧЕТА БАЛАНСА =====
     def get_balance(self):
         """
         Рассчитывает текущий баланс пользователя на лету:
@@ -107,57 +124,14 @@ class User(AbstractUser):
     # Для обратной совместимости
     @property
     def calculated_balance(self):
-        """
-        Рассчитывает текущий баланс пользователя на лету
-        """
-        from django.db.models import Sum
-        from school.models import Payment, LessonAttendance
-
-        total_deposits = Payment.objects.filter(
-            user=self,
-            payment_type='income'
-        ).aggregate(Sum('amount'))['amount__sum'] or 0
-
-        if self.role == 'student' and hasattr(self, 'student_profile'):
-            attended_cost = LessonAttendance.objects.filter(
-                student=self.student_profile,
-                status='attended'
-            ).aggregate(Sum('cost'))['cost__sum'] or 0
-
-            return float(total_deposits - attended_cost)
-
-        return float(total_deposits)
+        """Рассчитывает текущий баланс пользователя на лету"""
+        return self.get_balance()
 
     @property
     def balance_calculated(self):
         """Рассчитывает текущий баланс пользователя"""
-        from django.db.models import Sum
-        from school.models import Payment, LessonAttendance
+        return self.get_balance()
 
-        total_deposits = Payment.objects.filter(
-            user=self,
-            payment_type='income'
-        ).aggregate(Sum('amount'))['amount__sum'] or 0
-
-        if self.role == 'student' and hasattr(self, 'student_profile'):
-            attended_cost = LessonAttendance.objects.filter(
-                student=self.student_profile,
-                status='attended'
-            ).aggregate(Sum('cost'))['cost__sum'] or 0
-
-            return float(total_deposits - attended_cost)
-
-        return float(total_deposits)
-    telegram_chat_id = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True,
-        verbose_name='Telegram Chat ID'
-    )
-    telegram_notifications = models.BooleanField(
-        default=False,
-        verbose_name='Получать уведомления в Telegram'
-    )
 
 class EmailVerificationToken(models.Model):
     """Токен для подтверждения email"""

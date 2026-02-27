@@ -74,9 +74,9 @@ class ScheduleTemplateStudentInline(admin.TabularInline):
 
 class CustomUserAdmin(UserAdmin):
     list_display = ('id', 'username', 'get_full_name', 'email', 'phone', 'role',
-                    'is_email_verified_badge', 'is_staff')
-    list_filter = ('role', 'is_email_verified', 'is_staff', 'is_superuser', 'groups')
-    search_fields = ('username', 'last_name', 'first_name',  'email', 'phone')
+                    'is_email_verified_badge', 'is_staff', 'telegram_notifications')
+    list_filter = ('telegram_notifications', 'role', 'is_email_verified', 'is_staff', 'is_superuser', 'groups')
+    search_fields = ('username', 'last_name', 'first_name',  'email', 'phone', 'telegram_chat_id')
     readonly_fields = ('email_verification_sent',)
 
     fieldsets = (
@@ -97,6 +97,14 @@ class CustomUserAdmin(UserAdmin):
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
         ('Важные даты', {'fields': ('last_login', 'date_joined')}),
+        ('Telegram уведомления', {
+            'fields': (
+                'telegram_chat_id',
+                'telegram_notifications',
+            ),
+            'classes': ('wide',),
+            'description': 'Настройки уведомлений в Telegram'
+        }),
     )
 
     add_fieldsets = (
@@ -106,9 +114,27 @@ class CustomUserAdmin(UserAdmin):
                        'first_name', 'last_name', 'patronymic',
                        'email', 'phone', 'role'),
         }),
+        ('Telegram уведомления', {
+            'fields': (
+                'telegram_chat_id',
+                'telegram_notifications',
+            ),
+        }),
     )
 
-    actions = ['mark_as_verified', 'mark_as_unverified', 'export_users_excel', 'import_users_excel']
+    actions = ['mark_as_verified', 'mark_as_unverified', 'export_users_excel', 'import_users_excel', 'enable_telegram_notifications', 'disable_telegram_notifications']
+
+    def enable_telegram_notifications(self, request, queryset):
+        updated = queryset.update(telegram_notifications=True)
+        self.message_user(request, f'Уведомления включены для {updated} пользователей')
+
+    enable_telegram_notifications.short_description = "Включить Telegram уведомления"
+
+    def disable_telegram_notifications(self, request, queryset):
+        updated = queryset.update(telegram_notifications=False)
+        self.message_user(request, f'Уведомления отключены для {updated} пользователей')
+
+    disable_telegram_notifications.short_description = "Отключить Telegram уведомления"
 
     def get_urls(self):
         from django.urls import path
@@ -223,7 +249,7 @@ class SubjectAdmin(admin.ModelAdmin):
 
 class TeacherAdmin(admin.ModelAdmin):
     list_display = ('id', 'user_link', 'display_subjects', 'experience',
-                    'students_count', 'rating_display')
+                    'students_count', 'rating_display', 'get_telegram_status')
     list_filter = ('subjects',)
     search_fields = ('user__first_name', 'user__last_name', 'user__email')
     filter_horizontal = ('subjects',)
@@ -247,6 +273,12 @@ class TeacherAdmin(admin.ModelAdmin):
             'classes': ('wide',),
         }),
     )
+
+    def get_telegram_status(self, obj):
+        if obj.user.telegram_chat_id:
+            return f"✅ {obj.user.telegram_chat_id}"
+        return "❌ Не подключен"
+    get_telegram_status.short_description = "Telegram"
 
     def user_link(self, obj):
         url = f'/admin/school/user/{obj.user.id}/change/'
@@ -506,7 +538,7 @@ def calculate_payments(self, request, queryset):
 
 class StudentAdmin(admin.ModelAdmin):
     list_display = ('id', 'user_link', 'parent_name', 'parent_phone',
-                    'get_teachers_count', 'last_lesson', 'balance_display')
+                    'get_teachers_count', 'last_lesson', 'balance_display', 'get_telegram_status')
     search_fields = ('user__first_name', 'user__last_name', 'user__email', 'parent_name')
     filter_horizontal = ('teachers',)
     list_filter = ('teachers',)
@@ -528,6 +560,11 @@ class StudentAdmin(admin.ModelAdmin):
             'classes': ('wide',),
         }),
     )
+    def get_telegram_status(self, obj):
+        if obj.user.telegram_chat_id:
+            return f"✅ {obj.user.telegram_chat_id}"
+        return "❌ Не подключен"
+    get_telegram_status.short_description = "Telegram"
 
     def user_link(self, obj):
         url = f'/admin/school/user/{obj.user.id}/change/'

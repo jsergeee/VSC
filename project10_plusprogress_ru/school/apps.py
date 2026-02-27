@@ -7,4 +7,4 @@ class SchoolConfig(AppConfig):
     verbose_name = 'Онлайн школа'
 
     def ready(self):
-        import school.signals  # ← ЭТА СТРОКА ПОДКЛЮЧАЕТ СИГНАЛЫ
+        import school.signals
