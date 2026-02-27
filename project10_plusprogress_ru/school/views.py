@@ -914,8 +914,15 @@ def teacher_dashboard(request):
 
 @login_required
 def teacher_lesson_detail(request, lesson_id):
-    """Детальная страница урока для учителя - РЕФАКТОРИНГ"""
+    """Детальная страница урока для учителя"""
     lesson = get_object_or_404(Lesson, id=lesson_id)
+
+    # ✅ СНАЧАЛА проверяем права доступа
+    if request.user.role != 'teacher' or lesson.teacher.user != request.user:
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+
+    # ✅ ТОЛЬКО ПОСЛЕ ПРОВЕРКИ - логируем
     log_user_action(
         request,
         'lesson_view',
@@ -928,9 +935,6 @@ def teacher_lesson_detail(request, lesson_id):
             'status': lesson.status
         }
     )
-    if request.user.role != 'teacher' or lesson.teacher.user != request.user:
-        messages.error(request, 'Доступ запрещен')
-        return redirect('dashboard')
 
     # ИСПОЛЬЗУЕМ LessonFinanceCalculator
     calculator = LessonFinanceCalculator(lesson)
@@ -957,8 +961,8 @@ def teacher_lesson_detail(request, lesson_id):
 
     context = {
         'lesson': lesson,
-        'attendances': calculator.get_attendance_details(),  # Детализация с балансами
-        'finance': {  # УНИФИЦИРОВАННЫЕ финансы
+        'attendances': calculator.get_attendance_details(),
+        'finance': {
             'total_cost': stats['total_cost'],
             'teacher_payment': stats['teacher_payment'],
             'attended_cost': stats['attended_cost'],
@@ -976,31 +980,21 @@ def teacher_lesson_detail(request, lesson_id):
 
     return render(request, 'school/teacher/lesson_detail.html', context)
 
-
 @login_required
 def lesson_detail(request, lesson_id):
-    """Детальная страница урока для ученика - РЕФАКТОРИНГ"""
+    """Детальная страница урока для ученика"""
 
     lesson = get_object_or_404(Lesson, id=lesson_id)
 
-    # ✅ ПРОВЕРКА НА ПРОСРОЧКУ
+    # ПРОВЕРКА НА ПРОСРОЧКУ
     from datetime import datetime
     if lesson.status == 'scheduled':
         lesson_datetime = datetime.combine(lesson.date, lesson.start_time)
         now = datetime.now()
 
-        print(f"\n📅 ПРОВЕРКА УРОКА {lesson.id}:")
-        print(f"   Статус: {lesson.status}")
-        print(f"   Дата/время урока: {lesson_datetime}")
-        print(f"   Текущее время: {now}")
-        print(f"   Урок прошел? {lesson_datetime < now}")
-
         if lesson_datetime < now:
             lesson.status = 'overdue'
             lesson.save()
-            print(f"   ✅ СТАТУС ИЗМЕНЕН НА: {lesson.status}")
-        else:
-            print(f"   ❌ Урок еще не прошел")
 
     user = request.user
 
@@ -1011,12 +1005,38 @@ def lesson_detail(request, lesson_id):
             messages.error(request, 'Доступ запрещен')
             return redirect('dashboard')
 
-        # ✅ ПОЛУЧАЕМ ВСЕХ УЧАСТНИКОВ (для отображения)
+        # ЛОГИРОВАНИЕ ПРОСМОТРА УРОКА
+        log_user_action(
+            request,
+            'lesson_view',
+            f'Просмотр урока #{lesson.id} - {lesson.subject.name}',
+            object_id=lesson.id,
+            object_type='lesson',
+            additional_data={
+                'teacher': lesson.teacher.user.get_full_name(),
+                'subject': lesson.subject.name,
+                'role': 'student'
+            }
+        )
+
+        # ЛОГИРОВАНИЕ ВХОДА В ВИДЕО (если есть параметр)
+        if lesson.video_room and request.GET.get('enter_video') == '1':
+            log_user_action(
+                request,
+                'video_room_enter',
+                f'Вход в видео-комнату урока #{lesson.id} - {lesson.subject.name}',
+                object_id=lesson.id,
+                object_type='lesson',
+                additional_data={
+                    'teacher': lesson.teacher.user.get_full_name(),
+                    'subject': lesson.subject.name,
+                    'role': 'student'
+                }
+            )
+
+        # ПОЛУЧАЕМ ВСЕХ УЧАСТНИКОВ
         all_attendances = lesson.attendance.all().select_related('student__user')
 
-    elif user.role == 'teacher' and lesson.teacher.user != user:
-        messages.error(request, 'Доступ запрещен')
-        return redirect('dashboard')
     else:
         messages.error(request, 'Доступ запрещен')
         return redirect('dashboard')
@@ -1037,8 +1057,7 @@ def lesson_detail(request, lesson_id):
         report = lesson.report
 
     # Обработка оценки урока
-    if request.method == 'POST' and user.role == 'student' and lesson.status == 'completed' and not hasattr(lesson,
-                                                                                                            'feedback'):
+    if request.method == 'POST' and user.role == 'student' and lesson.status == 'completed' and not hasattr(lesson, 'feedback'):
         rating = request.POST.get('rating')
         comment = request.POST.get('comment', '')
         is_public = request.POST.get('is_public') == 'on'
@@ -1064,9 +1083,9 @@ def lesson_detail(request, lesson_id):
     context = {
         'lesson': lesson,
         'attendance': attendance,
-        'attendances': all_attendances,  # ✅ ВСЕ ученики для отображения в шаблоне
-        'attendance_details': calculator.get_attendance_details(),  # Детализация для финансов
-        'finance': {  # Финансовая информация для ученика
+        'attendances': all_attendances,
+        'attendance_details': calculator.get_attendance_details(),
+        'finance': {
             'student_cost': float(attendance.cost),
             'total_cost': calculator.stats['total_cost'],
             'students_total': calculator.stats['students_total']
@@ -1076,6 +1095,32 @@ def lesson_detail(request, lesson_id):
     }
 
     return render(request, 'school/student/lesson_detail.html', context)
+
+@login_required
+@require_POST
+def log_video_entry(request, lesson_id):
+    """Логирование входа в видео-комнату"""
+    try:
+        lesson = get_object_or_404(Lesson, id=lesson_id)
+
+        log_user_action(
+            request,
+            'video_room_enter',
+            f'Вход в видео-комнату урока #{lesson.id} - {lesson.subject.name}',
+            object_id=lesson.id,
+            object_type='lesson',
+            additional_data={
+                'teacher': lesson.teacher.user.get_full_name(),
+                'subject': lesson.subject.name,
+                'role': 'student',
+                'room': lesson.video_room
+            }
+        )
+
+        return JsonResponse({'status': 'ok'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
 
 @staff_member_required
 @require_POST
@@ -3082,6 +3127,15 @@ def create_video_room(request, lesson_id):
     """Учитель создает видео-комнату для урока"""
     try:
         lesson = get_object_or_404(Lesson, id=lesson_id)
+
+        # Проверка доступа
+        if request.user.role != 'teacher' or lesson.teacher.user != request.user:
+            return JsonResponse({'error': 'Доступ запрещен'}, status=403)
+
+        if lesson.status != 'scheduled':
+            return JsonResponse({'error': 'Урок уже проведен или отменен'}, status=400)
+
+        # ✅ ТОЛЬКО ЭТО НОВОЕ - логирование видео
         log_user_action(
             request,
             'video_room_enter',
@@ -3089,13 +3143,9 @@ def create_video_room(request, lesson_id):
             object_id=lesson.id,
             object_type='lesson'
         )
-        if request.user.role != 'teacher' or lesson.teacher.user != request.user:
-            return JsonResponse({'error': 'Доступ запрещен'}, status=403)
-
-        if lesson.status != 'scheduled':
-            return JsonResponse({'error': 'Урок уже проведен или отменен'}, status=400)
 
         if not lesson.video_room:
+            import uuid
             lesson.video_room = str(uuid.uuid4())[:8]
             lesson.save()
 
@@ -3106,8 +3156,6 @@ def create_video_room(request, lesson_id):
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
-
 # ============================================
 # ЧАСТЬ 7: ОТЧЕТЫ
 # ============================================

@@ -151,7 +151,14 @@ def log_user_action(request, action_type, description, object_id=None, object_ty
     """
     Логирование действия пользователя
     """
+    print(f"\n🔍 ПОПЫТКА ЛОГИРОВАНИЯ:")
+    print(f"   action_type: {action_type}")
+    print(f"   description: {description}")
+    print(f"   user: {request.user}")
+    print(f"   authenticated: {request.user.is_authenticated}")
+
     if not request.user.is_authenticated:
+        print("❌ Пользователь не аутентифицирован")
         return None
 
     # Получаем IP
@@ -161,14 +168,22 @@ def log_user_action(request, action_type, description, object_id=None, object_ty
     else:
         ip = request.META.get('REMOTE_ADDR')
 
-    return UserActionLog.objects.create(
-        user=request.user,
-        action_type=action_type,
-        description=description,
-        ip_address=ip,
-        user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
-        url=request.build_absolute_uri(),
-        object_id=object_id,
-        object_type=object_type or '',  # 👈 Добавляем пустую строку по умолчанию
-        additional_data=additional_data or {}
-    )
+    print(f"✅ Создаем запись в БД...")
+
+    try:
+        log = UserActionLog.objects.create(
+            user=request.user,
+            action_type=action_type,
+            description=description,
+            ip_address=ip,
+            user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+            url=request.build_absolute_uri(),
+            object_id=object_id,
+            object_type=object_type or '',
+            additional_data=additional_data or {}
+        )
+        print(f"✅ Лог создан! ID: {log.id}")
+        return log
+    except Exception as e:
+        print(f"❌ ОШИБКА при создании лога: {e}")
+        return None
