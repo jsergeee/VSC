@@ -1,5 +1,105 @@
 {% extends "admin/change_list.html" %}
-{% load i18n static %}
+{% load i18n static admin_list %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    /* Стили для статистики */
+    .student-stats-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        font-size: 14px;
+        background: white;
+        border: 1px solid #ddd;
+    }
+    .student-stats-table th {
+        background-color: #417690;
+        color: white;
+        font-weight: bold;
+        padding: 10px;
+        text-align: left;
+    }
+    .student-stats-table td {
+        padding: 8px 10px;
+        border-bottom: 1px solid #eee;
+    }
+    .student-stats-table tr:hover {
+        background-color: #f5f5f5;
+    }
+    .balance-negative {
+        color: #dc3545;
+        font-weight: bold;
+    }
+    .balance-positive {
+        color: #28a745;
+        font-weight: bold;
+    }
+    .balance-zero {
+        color: #6c757d;
+    }
+    .stats-toggle {
+        cursor: pointer;
+        color: #417690;
+        font-weight: bold;
+        margin: 15px 0 5px 0;
+        padding: 8px;
+        background-color: #f0f0f0;
+        border-radius: 4px;
+    }
+    .stats-toggle:hover {
+        background-color: #e0e0e0;
+    }
+    .subject-badge {
+        background-color: #e9ecef;
+        padding: 2px 6px;
+        border-radius: 3px;
+        margin-right: 5px;
+        font-size: 12px;
+        display: inline-block;
+        margin-bottom: 3px;
+    }
+    .period-filter {
+        margin: 20px 0;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+    }
+    .period-filter label {
+        margin-right: 10px;
+        font-weight: bold;
+    }
+    .period-filter input {
+        margin-right: 15px;
+        padding: 5px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+    }
+    .period-filter button {
+        background-color: #417690;
+        color: white;
+        border: none;
+        padding: 6px 15px;
+        border-radius: 3px;
+        cursor: pointer;
+    }
+    .period-filter button:hover {
+        background-color: #2c5a73;
+    }
+    .period-filter .reset {
+        background-color: #6c757d;
+        color: white;
+        padding: 6px 15px;
+        border-radius: 3px;
+        text-decoration: none;
+        margin-left: 10px;
+    }
+    .period-filter .reset:hover {
+        background-color: #5a6268;
+    }
+</style>
+{% endblock %}
 
 <!-- Полностью переопределяем блок object-tools-items, чтобы убрать стандартные кнопки -->
 {% block object-tools-items %}
@@ -37,28 +137,116 @@
         </div>
     </div>
 
-    {{ block.super }}
+    <!-- Фильтр по периоду (как у учителей) -->
+    <div class="period-filter">
+        <div class="stats-toggle" onclick="toggleFilter()">📅 Фильтр по периоду ▼</div>
+        <div id="periodFilterContent" style="display: block;">
+            <form method="get" id="period-filter-form">
+                <label for="start_date">Дата с:</label>
+                <input type="date" name="start_date" id="start_date" value="{{ start_date|default:'' }}">
+
+                <label for="end_date">Дата по:</label>
+                <input type="date" name="end_date" id="end_date" value="{{ end_date|default:'' }}">
+
+                <button type="submit">Применить</button>
+                <a href="." class="reset">Сброс</a>
+            </form>
+        </div>
+    </div>
+
+    <!-- Статистика по ученикам за период -->
+    {% if students_data %}
+    <div style="margin-top: 20px; border-top: 2px solid #79aec8; padding-top: 20px;">
+        <div class="stats-toggle" onclick="toggleStats()">📊 Статистика по ученикам за период ▼</div>
+        <div id="studentStats" style="display: block;">
+            <h2>Статистика за период {{ start_date|date:"d.m.Y" }} - {{ end_date|date:"d.m.Y" }}</h2>
+
+            <table class="student-stats-table">
+                <thead>
+                    <tr>
+                        <th>Ученик</th>
+                        <th>Всего уроков</th>
+                        <th>Общая сумма</th>
+                        <th>Текущий баланс</th>
+                        <th>Детали по предметам</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for data in students_data %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'admin:school_student_change' data.student.id %}">
+                                {{ data.student.user.get_full_name }}
+                            </a>
+                        </td>
+                        <td>{{ data.lessons_count }}</td>
+                        <td>{{ data.total_cost|floatformat:"2" }} ₽</td>
+                        <td class="
+                            {% if data.balance < 0 %}balance-negative
+                            {% elif data.balance > 0 %}balance-positive
+                            {% else %}balance-zero{% endif %}">
+                            {{ data.balance|floatformat:"2" }} ₽
+                        </td>
+                        <td>
+                            {% for subj in data.subjects_stats %}
+                            <span class="subject-badge">
+                                {{ subj.lesson__subject__name }}: {{ subj.count }} ур. = {{ subj.total|floatformat:"0" }}₽
+                            </span>
+                            {% empty %}
+                            <span class="subject-badge">нет уроков</span>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr style="background-color: #f0f0f0; font-weight: bold;">
+                        <td>ИТОГО:</td>
+                        <td>{{ total_lessons|default:0 }}</td>
+                        <td>{{ total_cost|default:0|floatformat:"2" }} ₽</td>
+                        <td>{{ total_balance|default:0|floatformat:"2" }} ₽</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Стандартный список учеников -->
+    <div style="margin-top: 30px;">
+        <h2>Список учеников</h2>
+        {% result_list cl %}
+        {% pagination cl %}
+    </div>
 </div>
 
 <script>
     function toggleActions() {
         var menu = document.getElementById('actionsMenu');
         var icon = document.getElementById('actionsIcon');
-
-        if (menu.style.display === 'none') {
-            menu.style.display = 'block';
-            icon.innerHTML = '▲';
-        } else {
-            menu.style.display = 'none';
-            icon.innerHTML = '▼';
-        }
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        icon.innerHTML = menu.style.display === 'block' ? '▲' : '▼';
     }
 
-    // Закрываем меню при клике вне его
+    function toggleFilter() {
+        var filter = document.getElementById('periodFilterContent');
+        var toggle = document.querySelector('.period-filter .stats-toggle');
+        filter.style.display = filter.style.display === 'none' ? 'block' : 'none';
+        toggle.innerHTML = filter.style.display === 'block' ? '📅 Фильтр по периоду ▼' : '📅 Фильтр по периоду ▶';
+    }
+
+    function toggleStats() {
+        var stats = document.getElementById('studentStats');
+        var toggle = document.querySelectorAll('.stats-toggle')[1];
+        stats.style.display = stats.style.display === 'none' ? 'block' : 'none';
+        toggle.innerHTML = stats.style.display === 'block' ? '📊 Статистика по ученикам за период ▼' : '📊 Статистика по ученикам за период ▶';
+    }
+
+    // Закрываем меню действий при клике вне его
     document.addEventListener('click', function (event) {
         var menu = document.getElementById('actionsMenu');
         var button = event.target.closest('button');
-
         if (!button || !button.innerText.includes('⚡ Действия')) {
             menu.style.display = 'none';
             document.getElementById('actionsIcon').innerHTML = '▼';

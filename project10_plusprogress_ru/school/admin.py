@@ -499,12 +499,15 @@ def calculate_payments(self, request, queryset):
 
 class StudentAdmin(admin.ModelAdmin):
     list_display = ('id', 'user_link', 'parent_name', 'parent_phone',
-                    'get_teachers_count', 'last_lesson')
+                    'get_teachers_count', 'last_lesson', 'balance_display')
     search_fields = ('user__first_name', 'user__last_name', 'user__email', 'parent_name')
     filter_horizontal = ('teachers',)
     list_filter = ('teachers',)
     raw_id_fields = ('user',)
     inlines = [StudentSubjectPriceInline]
+
+    # Шаблон для кастомного отображения
+    change_list_template = "admin/school/student/change_list.html"
 
     fieldsets = (
         (None, {
@@ -539,6 +542,131 @@ class StudentAdmin(admin.ModelAdmin):
 
     last_lesson.short_description = 'Последний урок'
 
+    def balance_display(self, obj):
+        """Отображение баланса с цветом"""
+        try:
+            # Пробуем получить баланс через свойство
+            balance = float(obj.user.balance_calculated)
+        except (AttributeError, TypeError, ValueError):
+            balance = 0
+
+        # Форматируем число
+        balance_str = f"{balance:.2f}"
+
+        if balance < 0:
+            return format_html('<span style="color: #dc3545; font-weight: bold;">{} ₽</span>', balance_str)
+        elif balance > 0:
+            return format_html('<span style="color: #28a745; font-weight: bold;">{} ₽</span>', balance_str)
+        else:
+            return format_html('<span style="color: #6c757d;">{} ₽</span>', balance_str)
+
+    balance_display.short_description = 'Баланс'
+    balance_display.admin_order_field = None  # Отключаем сортировку
+
+    # ⚡⚡⚡ МЕТОД ДЛЯ ОБРАБОТКИ СПИСКА СО СТАТИСТИКОЙ ⚡⚡⚡
+    def changelist_view(self, request, extra_context=None):
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+
+        # Сохраняем в сессию
+        if start_date and end_date:
+            request.session['student_filter_start'] = start_date
+            request.session['student_filter_end'] = end_date
+        else:
+            start_date = request.session.get('student_filter_start')
+            end_date = request.session.get('student_filter_end')
+
+        print("\n" + "=" * 80)
+        print("🔍 STUDENT ADMIN CHANGELIST VIEW")
+        print(f"📅 start_date: {start_date}")
+        print(f"📅 end_date: {end_date}")
+        print("=" * 80)
+
+        if start_date and end_date:
+            try:
+                from datetime import datetime
+                start = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+                print(f"\n✅ Период преобразован: {start} - {end}")
+
+                extra_context = extra_context or {}
+                students_data = []
+
+                # Для подсчета итогов
+                total_lessons = 0
+                total_cost = 0
+                total_balance = 0
+
+                # Получаем всех учеников
+                students = self.get_queryset(request)
+                print(f"\n👥 Всего учеников: {students.count()}")
+
+                for student in students:
+                    print(f"\n{'─' * 50}")
+                    print(f"👨‍🎓 Обработка ученика: {student.user.get_full_name()} (ID: {student.id})")
+
+                    # Получаем статистику по урокам за период
+                    from django.db.models import Sum, Count
+                    from school.models import LessonAttendance
+
+                    # Уроки за период со статусом 'attended'
+                    attended_lessons = LessonAttendance.objects.filter(
+                        student=student,
+                        status='attended',
+                        lesson__date__gte=start,
+                        lesson__date__lte=end
+                    )
+
+                    lessons_count = attended_lessons.count()
+                    student_total_cost = attended_lessons.aggregate(Sum('cost'))['cost__sum'] or 0
+                    student_balance = student.user.get_balance()
+
+                    # Группировка по предметам
+                    subjects_stats = attended_lessons.values(
+                        'lesson__subject__name'
+                    ).annotate(
+                        count=Count('id'),
+                        total=Sum('cost')
+                    ).order_by('-total')
+
+                    print(f"📊 Статистика:")
+                    print(f"   уроков: {lessons_count}")
+                    print(f"   сумма: {student_total_cost}")
+                    for subj in subjects_stats:
+                        print(f"   - {subj['lesson__subject__name']}: {subj['count']} ур. = {subj['total']}₽")
+
+                    students_data.append({
+                        'student': student,
+                        'lessons_count': lessons_count,
+                        'total_cost': student_total_cost,
+                        'subjects_stats': subjects_stats,
+                        'balance': student_balance,
+                    })
+
+                    # Добавляем к итогам
+                    total_lessons += lessons_count
+                    total_cost += student_total_cost
+                    total_balance += student_balance
+
+                extra_context['students_data'] = students_data
+                extra_context['start_date'] = start_date
+                extra_context['end_date'] = end_date
+                extra_context['total_lessons'] = total_lessons
+                extra_context['total_cost'] = total_cost
+                extra_context['total_balance'] = total_balance
+
+                print(f"\n✅ students_data создан, размер: {len(students_data)}")
+                print(f"📊 ИТОГО: уроков={total_lessons}, сумма={total_cost}, баланс={total_balance}")
+
+            except Exception as e:
+                print(f"❌ ОШИБКА в changelist_view: {e}")
+                import traceback
+                traceback.print_exc()
+
+        print("=" * 80 + "\n")
+        return super().changelist_view(request, extra_context)
+
     actions = ['export_students_excel', 'show_finance_report']
 
     def export_students_excel(self, request, queryset):
@@ -546,6 +674,7 @@ class StudentAdmin(admin.ModelAdmin):
         import openpyxl
         from openpyxl.styles import Font, Alignment, PatternFill
         from django.http import HttpResponse
+        from datetime import datetime
 
         wb = openpyxl.Workbook()
         ws = wb.active
@@ -576,7 +705,7 @@ class StudentAdmin(admin.ModelAdmin):
             ws.cell(row=row, column=6, value=student.user.phone)
             ws.cell(row=row, column=7, value=student.parent_name)
             ws.cell(row=row, column=8, value=student.parent_phone)
-            ws.cell(row=row, column=9, value=float(student.user.balance))
+            ws.cell(row=row, column=9, value=float(student.user.get_balance()))
             ws.cell(row=row, column=10, value=teachers)
 
         column_widths = [8, 15, 15, 15, 25, 15, 20, 15, 12, 30]

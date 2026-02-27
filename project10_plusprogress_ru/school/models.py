@@ -25,14 +25,12 @@ class User(AbstractUser):
     photo = models.ImageField('Фото', upload_to='users/', null=True, blank=True)
     patronymic = models.CharField('Отчество', max_length=50, blank=True)
 
-    # ✅ РАСКОММЕНТИРУЕМ поле баланса
+    # ✅ Баланс (пока оставляем, потом удалим)
     balance = models.DecimalField('Баланс', max_digits=10, decimal_places=2, default=0)
 
-    # ✅ Добавляем значение по умолчанию
     is_email_verified = models.BooleanField(default=False)
     email_verification_sent = models.DateTimeField(null=True, blank=True)
 
-    # ✅ ИСПРАВЛЕННЫЕ related_name для групп и разрешений
     groups = models.ManyToManyField(
         'auth.Group',
         verbose_name='groups',
@@ -76,6 +74,56 @@ class User(AbstractUser):
         if self.patronymic:
             return f"{full_name} {self.patronymic}".strip()
         return full_name
+
+    # ===== НОВЫЙ МЕТОД =====
+    def get_balance(self):
+        """
+        Рассчитывает текущий баланс пользователя на лету:
+        Баланс = Все пополнения - Стоимость всех проведенных уроков
+        """
+        from django.db.models import Sum
+        from school.models import Payment, LessonAttendance
+
+        # Сумма всех пополнений счета (income)
+        total_deposits = Payment.objects.filter(
+            user=self,
+            payment_type='income'
+        ).aggregate(Sum('amount'))['amount__sum'] or 0
+
+        # Если пользователь - ученик, вычитаем стоимость проведенных уроков
+        if self.role == 'student' and hasattr(self, 'student_profile'):
+            attended_cost = LessonAttendance.objects.filter(
+                student=self.student_profile,
+                status='attended'
+            ).aggregate(Sum('cost'))['cost__sum'] or 0
+
+            return float(total_deposits - attended_cost)
+
+        return float(total_deposits)
+
+    # Для обратной совместимости
+    @property
+    def calculated_balance(self):
+        """
+        Рассчитывает текущий баланс пользователя на лету
+        """
+        from django.db.models import Sum
+        from school.models import Payment, LessonAttendance
+
+        total_deposits = Payment.objects.filter(
+            user=self,
+            payment_type='income'
+        ).aggregate(Sum('amount'))['amount__sum'] or 0
+
+        if self.role == 'student' and hasattr(self, 'student_profile'):
+            attended_cost = LessonAttendance.objects.filter(
+                student=self.student_profile,
+                status='attended'
+            ).aggregate(Sum('cost'))['cost__sum'] or 0
+
+            return float(total_deposits - attended_cost)
+
+        return float(total_deposits)
 
 
 class EmailVerificationToken(models.Model):
@@ -1109,13 +1157,12 @@ class Notification(models.Model):
         verbose_name='Истекает'
     )
     payment = models.ForeignKey(
-        'Payment', 
-        on_delete=models.CASCADE, 
-        null=True, 
+        'Payment',
+        on_delete=models.CASCADE,
+        null=True,
         blank=True,
         related_name='notifications'
     )
-    
 
     class Meta:
         ordering = ['-created_at']
