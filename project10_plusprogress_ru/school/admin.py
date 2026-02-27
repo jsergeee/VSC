@@ -788,9 +788,16 @@ class LessonFormatAdmin(admin.ModelAdmin):
 class LessonAdmin(admin.ModelAdmin):
     formfield_overrides = {
         models.TimeField: {'widget': forms.TimeInput(format='%H:%M', attrs={'type': 'time'})},
-        models.DateField: {'widget': forms.DateInput(attrs={'type': 'date'})},
+        models.DateField: {'widget': forms.DateInput(attrs={'type': 'date', 'value': datetime.now().strftime('%Y-%m-%d')})},
     }
-
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if obj is None:  # Только для создания нового урока
+            from datetime import date, time
+            form.base_fields['date'].initial = date.today()
+            form.base_fields['start_time'].initial = time(9, 0)  # 09:00
+            form.base_fields['end_time'].initial = time(10, 0)  # 10:00
+        return form
     list_display = ('id', 'colored_subject', 'teacher_link', 'students_count', 'students_preview',
                     'date', 'start_time', 'status_badge', 'finance_preview')
     list_filter = ('status', 'subject', 'date', 'teacher', 'is_group')

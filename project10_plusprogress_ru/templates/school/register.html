@@ -1,4 +1,3 @@
-<!-- templates/school/register.html -->
 {% extends 'base.html' %}
 {% load static %}
 {% load crispy_forms_tags %}
@@ -9,17 +8,17 @@
 <div class="container mt-5">
     <div class="row">
         <div class="col-md-8 mx-auto">
-            <div class="card">
-                <div class="card-header {% if form.errors %}bg-warning{% endif %}">
-                    <h3 class="text-center">Регистрация</h3>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white py-3 {% if form.errors %}bg-warning{% endif %}">
+                    <h3 class="text-center mb-0">Регистрация</h3>
                     {% if form.errors %}
-                    <div class="alert alert-danger mt-2">
+                    <div class="alert alert-danger mt-2 mb-0">
                         <strong>⚠️ Исправьте ошибки ниже:</strong>
                     </div>
                     {% endif %}
                 </div>
-                <div class="card-body">
-                    <!-- Отображение общих ошибок формы (не связанных с конкретным полем) -->
+                <div class="card-body p-4">
+                    <!-- Отображение общих ошибок формы -->
                     {% if form.non_field_errors %}
                     <div class="alert alert-danger">
                         {% for error in form.non_field_errors %}
@@ -31,33 +30,69 @@
                     <form method="post" enctype="multipart/form-data" novalidate>
                         {% csrf_token %}
 
-                        <!-- Ручной вывод полей с ошибками для лучшего контроля -->
+                        <!-- Ручной вывод полей с Bootstrap 5 классами -->
                         {% for field in form %}
-                            <div class="form-group mb-3">
-                                {{ field|as_crispy_field }}
+                            <div class="mb-4">
+                                <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
+                                    {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
+                                </label>
 
-                                <!-- Дополнительное отображение ошибок под полем (crispy уже делает это, но дублирование не помешает) -->
+                                {% if field.name == 'photo' %}
+                                    <input type="{{ field.field.widget.input_type }}"
+                                           name="{{ field.name }}"
+                                           id="{{ field.id_for_label }}"
+                                           class="form-control"
+                                           {% if field.value %}value="{{ field.value }}"{% endif %}>
+                                {% elif field.name == 'role' %}
+                                    <select name="{{ field.name }}" id="{{ field.id_for_label }}" class="form-select">
+                                        {% for value, text in field.field.choices %}
+                                            <option value="{{ value }}" {% if field.value == value %}selected{% endif %}>{{ text }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% elif field.field.widget.input_type == 'checkbox' %}
+                                    <div class="form-check">
+                                        {{ field }}
+                                        <label class="form-check-label" for="{{ field.id_for_label }}">
+                                            {{ field.label }}
+                                        </label>
+                                    </div>
+                                {% else %}
+                                    <input type="{{ field.field.widget.input_type|default:'text' }}"
+                                           name="{{ field.name }}"
+                                           id="{{ field.id_for_label }}"
+                                           class="form-control"
+                                           placeholder="{{ field.field.widget.attrs.placeholder|default:'' }}"
+                                           {% if field.value %}value="{{ field.value }}"{% endif %}>
+                                {% endif %}
+
                                 {% if field.errors %}
                                     <div class="invalid-feedback d-block">
                                         {% for error in field.errors %}
-                                            <small class="text-danger">{{ error }}</small><br>
+                                            <small class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</small><br>
                                         {% endfor %}
                                     </div>
                                 {% endif %}
 
-                                <!-- Подсказка для поля -->
                                 {% if field.help_text %}
-                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                    <small class="form-text text-muted mt-1">
+                                        <i class="fas fa-info-circle me-1"></i>{{ field.help_text }}
+                                    </small>
                                 {% endif %}
                             </div>
                         {% endfor %}
 
-                        <button type="submit" class="btn btn-primary btn-block w-100">Зарегистрироваться</button>
+                        <button type="submit" class="btn btn-primary btn-lg w-100 py-3 fw-semibold">
+                            <i class="fas fa-user-plus me-2"></i>Зарегистрироваться
+                        </button>
                     </form>
 
-                    <hr>
-                    <p class="text-center">
-                        Уже есть аккаунт? <a href="{% url 'login' %}">Войти</a>
+                    <hr class="my-4">
+
+                    <p class="text-center mb-0">
+                        Уже есть аккаунт?
+                        <a href="{% url 'login' %}" class="text-primary fw-semibold text-decoration-none">
+                            Войти <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
                     </p>
                 </div>
             </div>
@@ -65,29 +100,79 @@
     </div>
 </div>
 
-<!-- Добавим JavaScript для дополнительной валидации на клиенте -->
-{% block extra_js %}
+<style>
+    .card {
+        border-radius: 15px;
+        overflow: hidden;
+    }
+
+    .card-header {
+        border-bottom: none;
+    }
+
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        padding: 10px 15px;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 50px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .invalid-feedback {
+        font-size: 0.875rem;
+    }
+
+    .form-text {
+        font-size: 0.85rem;
+    }
+
+    /* Стили для crispy форм на всякий случай */
+    .asteriskField {
+        color: #dc3545;
+        margin-left: 4px;
+    }
+
+    .alert {
+        border-radius: 10px;
+    }
+</style>
+
 <script>
-    // Функция для подсветки полей с ошибками после загрузки страницы
     document.addEventListener('DOMContentLoaded', function() {
-        // Найти все поля с ошибками и добавить класс
-        document.querySelectorAll('.has-error input, .has-error select, .has-error textarea').forEach(function(element) {
+        // Подсветка полей с ошибками
+        document.querySelectorAll('.is-invalid').forEach(function(element) {
             element.classList.add('border-danger');
         });
 
-        // Добавить обработчики для снятия подсветки при исправлении
-        document.querySelectorAll('input, select, textarea').forEach(function(element) {
+        // Убираем подсветку при вводе
+        document.querySelectorAll('.form-control, .form-select').forEach(function(element) {
             element.addEventListener('input', function() {
                 this.classList.remove('border-danger');
-                const errorDiv = this.closest('.form-group')?.querySelector('.invalid-feedback');
-                if (errorDiv) {
-                    errorDiv.style.display = 'none';
+                const feedback = this.closest('.mb-4')?.querySelector('.invalid-feedback');
+                if (feedback) {
+                    feedback.style.display = 'none';
                 }
             });
         });
     });
 
-    // Валидация паролей на клиенте
+    // Валидация паролей
     document.querySelector('form')?.addEventListener('submit', function(e) {
         const password1 = document.getElementById('id_password1');
         const password2 = document.getElementById('id_password2');
@@ -99,5 +184,4 @@
         }
     });
 </script>
-{% endblock %}
 {% endblock %}

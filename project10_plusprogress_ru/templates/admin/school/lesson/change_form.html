@@ -208,5 +208,25 @@
 
     // И еще раз через секунду (на случай, если DOM загрузился не полностью)
     setTimeout(ensureCompleteForm, 1000);
+// ✅ ФИКС ДЛЯ ДАТЫ
+document.addEventListener('DOMContentLoaded', function() {
+    var dateField = document.getElementById('id_date');
+    if (dateField) {
+        // Если это редактирование существующего урока
+        {% if original and original.date %}
+        var lessonDate = "{{ original.date|date:'Y-m-d' }}";
+        dateField.value = lessonDate;
+        console.log('📅 Дата урока установлена:', lessonDate);
+        {% endif %}
+
+        // Если это создание нового урока и поле пустое
+        if (!dateField.value) {
+            var today = new Date().toISOString().split('T')[0];
+            dateField.value = today;
+            console.log('📅 Установлена сегодняшняя дата:', today);
+        }
+    }
+});
+
 </script>
 {% endblock %}

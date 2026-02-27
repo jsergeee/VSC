@@ -48,20 +48,24 @@ class UserRegistrationForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name', 'patronymic',
-                 'email', 'phone', 'role', 'photo', 'password1', 'password2')
+        fields = ('username', 'first_name', 'last_name', 'patronymic',  # 👈 Фамилия, потом Имя
+                  'email', 'phone', 'role', 'photo', 'password1', 'password2')
         labels = {
-            'username': 'Имя пользователя',
-            'first_name': 'Имя',
-            'last_name': 'Фамилия',
+            'username': 'Логин',
+            'first_name': 'Фамилия',  # 👈 first_name = Фамилия
+            'last_name': 'Имя',  # 👈 last_name = Имя
             'patronymic': 'Отчество',
+            'email': 'Email',
+            'phone': 'Телефон',
             'photo': 'Фото',
         }
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите логин'}),
-            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите имя'}),
-            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите фамилию'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите имя'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите фамилию'}),
             'patronymic': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите отчество'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'example@mail.ru'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+7 (999) 123-45-67'}),
             'photo': forms.FileInput(attrs={'class': 'form-control'}),
             'password1': forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Пароль'}),
             'password2': forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Подтверждение пароля'}),
