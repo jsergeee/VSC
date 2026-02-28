@@ -1,6 +1,7 @@
 # school/admin.py
 
 from django.contrib import admin, messages
+from django.core.exceptions import ValidationError
 from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
 from django.contrib.auth.models import User as AuthUser
@@ -1041,13 +1042,18 @@ class LessonAdmin(admin.ModelAdmin):
         }
         return render(request, 'admin/school/lesson/bulk_complete.html', context)
 
-    # ✅ МЕТОД СОХРАНЕНИЯ С TELEGRAM УВЕДОМЛЕНИЕМ
+    # ✅ ЕДИНСТВЕННЫЙ МЕТОД СОХРАНЕНИЯ (с проверкой и Telegram)
     def save_model(self, request, obj, form, change):
-        """
-        Сохраняет урок и отправляет уведомление в Telegram при создании
-        """
-        is_new = obj.pk is None  # Проверяем, создается ли новый объект
+        """Сохраняет урок с проверкой на занятость учителя и отправляет уведомление"""
 
+        # Проверка на занятость учителя
+        try:
+            self._check_teacher_busy(obj)
+        except ValidationError as e:
+            form.add_error(None, e)
+            return
+
+        is_new = obj.pk is None
         super().save_model(request, obj, form, change)
 
         # Отправляем уведомление только для новых уроков
@@ -1057,6 +1063,29 @@ class LessonAdmin(admin.ModelAdmin):
                 notify_new_lesson(obj)
             except Exception as e:
                 print(f"❌ Ошибка отправки Telegram уведомления: {e}")
+
+    def _check_teacher_busy(self, lesson):
+        """Проверяет, свободен ли учитель в это время"""
+        from datetime import datetime
+
+        existing_lessons = Lesson.objects.filter(
+            teacher=lesson.teacher,
+            date=lesson.date,
+            status__in=['scheduled', 'completed']
+        ).exclude(pk=lesson.pk)
+
+        lesson_start = datetime.combine(lesson.date, lesson.start_time)
+        lesson_end = datetime.combine(lesson.date, lesson.end_time)
+
+        for existing in existing_lessons:
+            existing_start = datetime.combine(existing.date, existing.start_time)
+            existing_end = datetime.combine(existing.date, existing.end_time)
+
+            if lesson_start < existing_end and lesson_end > existing_start:
+                raise ValidationError(
+                    f'Учитель {lesson.teacher.user.get_full_name()} уже занят в это время! '
+                    f'Существующий урок: {existing.start_time} - {existing.end_time}'
+                )
 
     # ✅ МЕТОД ДЛЯ КАЛЕНДАРЯ
     def changelist_view(self, request, extra_context=None):
@@ -1205,7 +1234,6 @@ class LessonAdmin(admin.ModelAdmin):
         self.message_user(request, f'⚠️ {updated} записей отмечены как долг')
 
     mark_as_debt.short_description = "⚠️ Отметить как долг"
-
 
 # ==================== LESSON REPORT ADMIN ====================
 

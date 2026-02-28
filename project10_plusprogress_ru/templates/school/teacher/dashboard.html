@@ -418,40 +418,84 @@
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/ru.js"></script>
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-      var calendarEl = document.getElementById('calendar');
-      if (calendarEl) {
-          var calendar = new FullCalendar.Calendar(calendarEl, {
-              initialView: 'dayGridMonth',
-              locale: 'ru',
-              headerToolbar: {
-                  left: 'prev,next today',
-                  center: 'title',
-                  right: 'dayGridMonth,timeGridWeek,timeGridDay'
-              },
-              buttonText: {
-                  today: 'Сегодня',
-                  month: 'Месяц',
-                  week: 'Неделя',
-                  day: 'День'
-              },
-                  slotMinTime: '08:00:00',  // ← ЧАСЫ НАЧАЛА (8 утра)
-                  slotMaxTime: '22:00:00',  // ← ЧАСЫ ОКОНЧАНИЯ (10 вечера)
-                  allDaySlot: false,
-                  slotDuration: '00:30:00',
-              events: {{ calendar_events|safe }},
-                        // ⚡⚡⚡ ЭТО РЕШЕНИЕ ⚡⚡⚡
-              eventDisplay: 'block',  // или 'list-item'
-              displayEventTime: false,  // НЕ ПОКАЗЫВАТЬ ВРЕМЯ
-              eventClick: function(info) {
-                  if (info.event.url) {
-                      window.location.href = info.event.url;
-                      info.jsEvent.preventDefault();
-                  }
-              }
-          });
-          calendar.render();
-      }
-  });
+document.addEventListener('DOMContentLoaded', function () {
+    var calendarEl = document.getElementById('calendar');
+    if (calendarEl) {
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek', // Рекомендую timeGridWeek для проверки времени
+            locale: 'ru',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            buttonText: {
+                today: 'Сегодня',
+                month: 'Месяц',
+                week: 'Неделя',
+                day: 'День'
+            },
+            slotMinTime: '08:00:00',
+            slotMaxTime: '22:00:00',
+            allDaySlot: false,
+            slotDuration: '00:30:00',
+            events: {{ calendar_events|safe }},
+            eventDisplay: 'block',
+            displayEventTime: false,
+            eventClick: function(info) {
+                if (info.event.url) {
+                    window.location.href = info.event.url;
+                    info.jsEvent.preventDefault();
+                }
+            },
+            selectConstraint: {
+                start: '08:00',
+                end: '22:00',
+            },
+            selectAllow: function(selectInfo) {
+                // Отладка (можно удалить после проверки)
+                console.log('Проверка времени:', selectInfo.start, '-', selectInfo.end);
+
+                const events = calendar.getEvents();
+                const newEvent = {
+                    start: selectInfo.start,
+                    end: selectInfo.end
+                };
+
+                // Проверка перекрытия событий
+                const isOverlap = events.some(event => {
+                    return (
+                        newEvent.start < event.end &&
+                        newEvent.end > event.start
+                    );
+                });
+
+                if (isOverlap) {
+                    alert('Это время уже занято!');
+                    return false;
+                }
+
+                // Проверка минимальной длительности (30 минут)
+                const duration = (selectInfo.end - selectInfo.start) / 60000;
+                if (duration < 30) {
+                    alert('Минимальная длительность — 30 минут');
+                    return false;
+                }
+
+                return true;
+            },
+            // Добавляем визуальное выделение рабочего времени
+            businessHours: {
+                daysOfWeek: [1, 2, 3, 4, 5], // Пн-Пт
+                startTime: '08:00',
+                endTime: '22:00'
+            }
+        });
+
+        calendar.render();
+    }
+});
 </script>
+
+
 {% endblock %}

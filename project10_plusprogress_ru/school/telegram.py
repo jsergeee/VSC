@@ -235,3 +235,37 @@ def notify_homework_submitted(homework):
 ⏰ Сдано: {homework.submission.submitted_at.strftime('%d.%m.%Y %H:%M')}
 """
             send_telegram_message_to_user(teacher, teacher_text)
+
+
+def check_telegram_updates():
+    """Проверяет новые сообщения от пользователей"""
+    import requests
+    url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/getUpdates"
+
+    try:
+        response = requests.get(url)
+        data = response.json()
+
+        if data['ok'] and data['result']:
+            print("\n📱 НОВЫЕ СООБЩЕНИЯ В TELEGRAM:")
+            for update in data['result']:
+                if 'message' in update:
+                    msg = update['message']
+                    chat_id = msg['chat']['id']
+                    first_name = msg['from'].get('first_name', '')
+                    username = msg['from'].get('username', '')
+                    text = msg.get('text', '')
+
+                    print(f"   ID: {chat_id}")
+                    print(f"   Имя: {first_name}")
+                    print(f"   Username: @{username}")
+                    print(f"   Текст: {text}")
+                    print("-" * 40)
+
+                    # Здесь можно автоматически сохранять ID в базу
+                    # find_and_update_user_by_telegram(chat_id, username, first_name)
+        else:
+            print("📭 Новых сообщений нет")
+
+    except Exception as e:
+        print(f"❌ Ошибка: {e}")

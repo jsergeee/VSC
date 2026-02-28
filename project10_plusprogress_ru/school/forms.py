@@ -865,3 +865,5 @@ class TelegramSettingsForm(forms.ModelForm):
                 'class': 'form-check-input'
             })
         }
+
+

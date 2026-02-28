@@ -17,6 +17,7 @@ urlpatterns = [
     path('verify-email/<str:token>/', views.verify_email, name='verify_email'),
     path('resend-verification/', views.resend_verification, name='resend_verification'),
     path('telegram-settings/', telegram_settings, name='telegram_settings'),
+    path('telegram-webhook/', views.telegram_webhook, name='telegram_webhook'),
 
     # Student URLs
     path('student/dashboard/', views.student_dashboard, name='student_dashboard'),

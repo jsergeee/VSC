@@ -37,6 +37,10 @@ from django.utils import timezone
 from .utils import log_user_action
 from .forms import TelegramSettingsForm
 from django.conf import settings
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth import get_user_model
 
 
 # Импорты моделей
@@ -4152,6 +4156,35 @@ def teacher_edit_lesson(request, lesson_id):
     }
     return render(request, 'school/teacher/edit_lesson.html', context)
 
+def check_teacher_busy(teacher, date, start_time, end_time, exclude_lesson_id=None):
+    """
+    Проверяет, занят ли учитель в указанное время
+    Возвращает True если свободен, False если занят
+    """
+    from datetime import datetime
+
+    # Проверяем существующие уроки
+    existing_lessons = Lesson.objects.filter(
+        teacher=teacher,
+        date=date,
+        status__in=['scheduled', 'completed']
+    )
+
+    if exclude_lesson_id:
+        existing_lessons = existing_lessons.exclude(pk=exclude_lesson_id)
+
+    lesson_start = datetime.combine(date, start_time)
+    lesson_end = datetime.combine(date, end_time)
+
+    for lesson in existing_lessons:
+        existing_start = datetime.combine(lesson.date, lesson.start_time)
+        existing_end = datetime.combine(lesson.date, lesson.end_time)
+
+        if lesson_start < existing_end and lesson_end > existing_start:
+            return False, lesson  # Занят, возвращаем конфликтующий урок
+
+    return True, None  # Свободен
+
 
 @login_required
 def teacher_create_schedule(request):
@@ -4197,6 +4230,39 @@ def teacher_create_schedule(request):
             except ValueError:
                 messages.error(request, 'Неверный формат времени окончания')
                 return redirect('teacher_create_schedule')
+
+        # ✅ ПРОВЕРКА НА ЗАНЯТОСТЬ УЧИТЕЛЯ
+        if repeat_type == 'single':
+            date_str = request.POST.get('date')
+            if not date_str:
+                messages.error(request, 'Укажите дату занятия')
+                return redirect('teacher_create_schedule')
+
+            lesson_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+
+            # Проверяем, свободен ли учитель
+            is_free, conflict = check_teacher_busy(teacher, lesson_date, start_time, end_time)
+            if not is_free:
+                messages.error(
+                    request,
+                    f'❌ Учитель уже занят в это время!\n'
+                    f'Конфликт с уроком: {conflict.subject.name}\n'
+                    f'Время: {conflict.start_time} - {conflict.end_time}'
+                )
+                return redirect('teacher_create_schedule')
+        else:
+            # Для повторяющихся уроков проверяем первую дату (предварительно)
+            start_date_str = request.POST.get('start_date')
+            if start_date_str:
+                first_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                is_free, conflict = check_teacher_busy(teacher, first_date, start_time, end_time)
+                if not is_free:
+                    messages.warning(
+                        request,
+                        f'⚠️ Внимание! На дату {first_date.strftime("%d.%m.%Y")} '
+                        f'учитель уже занят ({conflict.subject.name} в {conflict.start_time}).\n'
+                        f'Остальные даты будут проверены при генерации.'
+                    )
 
         template = ScheduleTemplate(
             teacher=teacher,
@@ -4248,15 +4314,74 @@ def teacher_create_schedule(request):
         template.save()
         template.students.add(student)
 
+        # ✅ ГЕНЕРИРУЕМ УРОКИ
         lessons = template.generate_lessons()
 
+        # ✅ ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА после генерации
+        conflicts_after = []
+        for lesson in lessons:
+            is_free, conflict = check_teacher_busy(teacher, lesson.date, lesson.start_time, lesson.end_time, lesson.id)
+            if not is_free:
+                conflicts_after.append(lesson)
+                lesson.delete()  # Удаляем конфликтующий урок
+
+        if conflicts_after:
+            messages.warning(
+                request,
+                f'⚠️ Обнаружены пересечения! Удалено {len(conflicts_after)} уроков.\n'
+                f'Проверьте расписание учителя.'
+            )
+
+        # ✅ ОТПРАВЛЯЕМ УВЕДОМЛЕНИЯ ДЛЯ КАЖДОГО СОЗДАННОГО УРОКА
+        if lessons:
+            print(f"\n{'=' * 50}")
+            print(f"📅 Создано уроков: {len(lessons)}")
+
+            from school.telegram import notify_new_lesson
+            from .models import Notification
+
+            for lesson in lessons:
+                # Внутренние уведомления
+                print(f"\n✅ Обработка урока {lesson.id}")
+                print(f"   Ученик: {student.user.get_full_name()}")
+
+                # Уведомление ученику
+                Notification.objects.create(
+                    user=student.user,
+                    title='📚 Новый урок',
+                    message=f'Учитель {teacher.user.get_full_name()} назначил урок по {subject.name} на {lesson.date.strftime("%d.%m.%Y")} в {lesson.start_time.strftime("%H:%M")}',
+                    notification_type='lesson_reminder',
+                    link=f'/lesson/{lesson.id}/'
+                )
+                print(f"✅ Внутреннее уведомление ученику создано")
+
+                # Уведомление учителю
+                Notification.objects.create(
+                    user=request.user,
+                    title='✅ Урок создан',
+                    message=f'Урок по {subject.name} для {student.user.get_full_name()} создан на {lesson.date.strftime("%d.%m.%Y")} в {lesson.start_time.strftime("%H:%M")}',
+                    notification_type='system',
+                    link=f'/teacher/lesson/{lesson.id}/'
+                )
+                print(f"✅ Внутреннее уведомление учителю создано")
+
+                # Telegram уведомление
+                try:
+                    notify_new_lesson(lesson)
+                    print(f"✅ Telegram уведомление отправлено для урока {lesson.id}")
+                except Exception as e:
+                    print(f"❌ Ошибка отправки Telegram: {e}")
+
+            print(f"{'=' * 50}\n")
+
         if repeat_type == 'single':
-            messages.success(request, f'Урок создан на {template.start_date} в {start_time_str}')
+            messages.success(request, f'✅ Урок создан на {template.start_date} в {start_time_str}')
         else:
-            messages.success(request, f'Расписание создано! Сгенерировано {len(lessons)} уроков')
+            messages.success(request, f'✅ Расписание создано! Сгенерировано {len(lessons)} уроков')
 
         return redirect('teacher_dashboard')
 
+    # GET запрос - показываем форму
     students = teacher.student_set.all()
     subjects = teacher.subjects.all()
 
@@ -4268,7 +4393,35 @@ def teacher_create_schedule(request):
     }
     return render(request, 'school/teacher/schedule_template_form.html', context)
 
+# ✅ ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ (добавьте в начало файла или перед функцией)
+def check_teacher_busy(teacher, date, start_time, end_time, exclude_lesson_id=None):
+    """
+    Проверяет, занят ли учитель в указанное время
+    Возвращает (True, None) если свободен, (False, conflict_lesson) если занят
+    """
+    from datetime import datetime
 
+    existing_lessons = Lesson.objects.filter(
+        teacher=teacher,
+        date=date,
+        status__in=['scheduled', 'completed']
+    )
+
+    if exclude_lesson_id:
+        existing_lessons = existing_lessons.exclude(pk=exclude_lesson_id)
+
+    lesson_start = datetime.combine(date, start_time)
+    lesson_end = datetime.combine(date, end_time)
+
+    for lesson in existing_lessons:
+        existing_start = datetime.combine(lesson.date, lesson.start_time)
+        existing_end = datetime.combine(lesson.date, lesson.end_time)
+
+        # Проверка на пересечение интервалов
+        if lesson_start < existing_end and lesson_end > existing_start:
+            return False, lesson
+
+    return True, None
 @login_required
 def profile(request):
     """Профиль пользователя"""
@@ -4582,6 +4735,42 @@ def telegram_settings(request):
         'bot_username': bot_username,
     }
     return render(request, 'school/telegram_settings.html', context)
+
+
+
+
+
+User = get_user_model()
+
+
+@csrf_exempt
+def telegram_webhook(request):
+    """Обработчик входящих сообщений от Telegram"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+
+        # Получаем информацию о пользователе
+        if 'message' in data:
+            chat_id = data['message']['chat']['id']
+            username = data['message']['from'].get('username', '')
+            first_name = data['message']['from'].get('first_name', '')
+            last_name = data['message']['from'].get('last_name', '')
+
+            print(f"📱 Получено сообщение от пользователя с ID: {chat_id}")
+            print(f"   Имя: {first_name} {last_name}")
+            print(f"   Username: @{username}")
+
+            # Здесь можно сохранить ID в базу, если хотите
+            # Например, найти пользователя по username и обновить его telegram_chat_id
+
+            # Ответ бота (опционально)
+            return JsonResponse({
+                'method': 'sendMessage',
+                'chat_id': chat_id,
+                'text': f'Привет! Твой Telegram ID: {chat_id}'
+            })
+
+    return JsonResponse({'ok': True})
 
 
 
