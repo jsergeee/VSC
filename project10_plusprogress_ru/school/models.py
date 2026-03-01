@@ -805,6 +805,79 @@ class Lesson(models.Model):
 
         return new_lesson
 
+    class PaymentRequest(models.Model):
+        """Запрос на выплату от учителя"""
+        STATUS_CHOICES = (
+            ('pending', '⏳ Ожидает'),
+            ('approved', '✅ Одобрено'),
+            ('rejected', '❌ Отклонено'),
+            ('paid', '💰 Выплачено'),
+        )
+
+        teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='payment_requests',
+                                    verbose_name='Учитель')
+        amount = models.DecimalField('Сумма', max_digits=10, decimal_places=2)
+        payment_method = models.CharField('Способ выплаты', max_length=50)
+        payment_details = models.TextField('Платёжные реквизиты')
+        status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='pending')
+        comment = models.TextField('Комментарий', blank=True, help_text='Комментарий администратора')
+
+        # Связь с реальным платежом после выплаты
+        payment = models.ForeignKey('Payment', on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='payment_request', verbose_name='Платеж')
+
+        created_at = models.DateTimeField('Создано', auto_now_add=True)
+        updated_at = models.DateTimeField('Обновлено', auto_now=True)
+
+        class Meta:
+            verbose_name = 'Запрос выплаты'
+            verbose_name_plural = 'Запросы выплат'
+            ordering = ['-created_at']
+
+        def __str__(self):
+            return f"{self.teacher.user.get_full_name()} - {self.amount} ₽ ({self.get_status_display()})"
+
+        def approve(self, admin_user):
+            """Одобрить запрос (без выплаты)"""
+            self.status = 'approved'
+            self.save()
+
+            Notification.objects.create(
+                user=self.teacher.user,
+                title='✅ Запрос одобрен',
+                message=f'Ваш запрос на выплату {self.amount} ₽ одобрен. Ожидайте поступления средств.',
+                notification_type='payment_withdrawn',
+                link='/teacher/dashboard/#payments'
+            )
+
+        def reject(self, admin_user, reason=''):
+            """Отклонить запрос"""
+            self.status = 'rejected'
+            self.comment = reason
+            self.save()
+
+            Notification.objects.create(
+                user=self.teacher.user,
+                title='❌ Запрос отклонен',
+                message=f'Ваш запрос на выплату {self.amount} ₽ отклонен. Причина: {reason or "Не указана"}',
+                notification_type='payment_withdrawn',
+                link='/teacher/dashboard/#payments'
+            )
+
+        def mark_as_paid(self, admin_user, payment):
+            """Отметить как выплачено и привязать платеж"""
+            self.status = 'paid'
+            self.payment = payment
+            self.save()
+
+            Notification.objects.create(
+                user=self.teacher.user,
+                title='💰 Выплата произведена',
+                message=f'Выплата {self.amount} ₽ по вашему запросу произведена. Средства зачислены на указанные реквизиты.',
+                notification_type='payment_received',
+                link='/teacher/dashboard/#payments'
+            )
+
     def get_finance_stats(self):
         """Возвращает финансовую статистику урока (для совместимости с helper-классами)"""
         from django.db.models import Sum
@@ -1982,3 +2055,80 @@ class UserActionLog(models.Model):
 
     def __str__(self):
         return f"{self.created_at.strftime('%d.%m.%Y %H:%M')} - {self.user} - {self.get_action_type_display()}"
+
+
+class PaymentRequest(models.Model):
+    """Запрос на выплату от учителя"""
+    STATUS_CHOICES = (
+        ('pending', '⏳ Ожидает'),
+        ('approved', '✅ Одобрено'),
+        ('rejected', '❌ Отклонено'),
+        ('paid', '💰 Выплачено'),
+    )
+
+    teacher = models.ForeignKey('Teacher', on_delete=models.CASCADE, related_name='payment_requests',
+                                verbose_name='Учитель')
+    amount = models.DecimalField('Сумма', max_digits=10, decimal_places=2)
+    payment_method = models.CharField('Способ выплаты', max_length=50)
+    payment_details = models.TextField('Платёжные реквизиты')
+    status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='pending')
+    comment = models.TextField('Комментарий', blank=True, help_text='Комментарий администратора')
+
+    # Связь с реальным платежом после выплаты
+    payment = models.ForeignKey('Payment', on_delete=models.SET_NULL, null=True, blank=True,
+                                related_name='payment_request', verbose_name='Платеж')
+
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлено', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Запрос выплаты'
+        verbose_name_plural = 'Запросы выплат'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.teacher.user.get_full_name()} - {self.amount} ₽ ({self.get_status_display()})"
+
+    def approve(self, admin_user):
+        """Одобрить запрос (без выплаты)"""
+        self.status = 'approved'
+        self.save()
+
+        from .models import Notification
+        Notification.objects.create(
+            user=self.teacher.user,
+            title='✅ Запрос одобрен',
+            message=f'Ваш запрос на выплату {self.amount} ₽ одобрен. Ожидайте поступления средств.',
+            notification_type='payment_withdrawn',
+            link='/teacher/dashboard/#payments'
+        )
+
+    def reject(self, admin_user, reason=''):
+        """Отклонить запрос"""
+        self.status = 'rejected'
+        self.comment = reason
+        self.save()
+
+        from .models import Notification
+        Notification.objects.create(
+            user=self.teacher.user,
+            title='❌ Запрос отклонен',
+            message=f'Ваш запрос на выплату {self.amount} ₽ отклонен. Причина: {reason or "Не указана"}',
+            notification_type='payment_withdrawn',
+            link='/teacher/dashboard/#payments'
+        )
+
+    def mark_as_paid(self, admin_user, payment):
+        """Отметить как выплачено и привязать платеж"""
+        self.status = 'paid'
+        self.payment = payment
+        self.save()
+
+        from .models import Notification
+        Notification.objects.create(
+            user=self.teacher.user,
+            title='💰 Выплата произведена',
+            message=f'Выплата {self.amount} ₽ по вашему запросу произведена. Средства зачислены на указанные реквизиты.',
+            notification_type='payment_received',
+            link='/teacher/dashboard/#payments'
+        )

@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ student.user.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Информация об ученике</h5>
+                </div>
+                <div class="card-body">
+                    <h4>{{ student.user.get_full_name }}</h4>
+                    <p><i class="fa fa-envelope"></i> {{ student.user.email|default:"нет email" }}</p>
+                    <p><i class="fa fa-phone"></i> {{ student.user.phone|default:"нет телефона" }}</p>
+                    {% if student.parent_name %}
+                        <hr>
+                        <h6>Родитель:</h6>
+                        <p>{{ student.parent_name }}</p>
+                        <p><i class="fa fa-phone"></i> {{ student.parent_phone|default:"нет телефона" }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Последние уроки</h5>
+                </div>
+                <div class="card-body">
+                    {% if lessons %}
+                        {% for lesson in lessons %}
+                        <a href="{% url 'teacher_lesson_detail' lesson.id %}" class="text-decoration-none">
+                            <div class="border-bottom mb-2 pb-2">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>{{ lesson.date|date:"d.m.Y" }} {{ lesson.start_time|time:"H:i" }}</strong>
+                                        <br>
+                                        <small>{{ lesson.subject.name }}</small>
+                                    </div>
+                                    <span class="badge badge-{{ lesson.status }}">{{ lesson.get_status_display }}</span>
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">Нет проведенных уроков</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

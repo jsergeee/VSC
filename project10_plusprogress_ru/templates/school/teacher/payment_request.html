@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Запрос выплаты{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fa fa-money"></i> Запрос выплаты</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Информация о балансе -->
+                    <div class="alert alert-info">
+                        <div class="row">
+                            <div class="col-md-4 text-center">
+                                <strong>Заработано всего:</strong>
+                                <h3>{{ stats.total_earned|floatformat:0 }} ₽</h3>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <strong>Выплачено:</strong>
+                                <h3 class="text-success">{{ stats.paid|floatformat:0 }} ₽</h3>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <strong>Доступно:</strong>
+                                <h3 class="text-primary">{{ stats.available|floatformat:0 }} ₽</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post" action="{% url 'teacher_request_payment' %}">
+                        {% csrf_token %}
+
+                        <div class="form-group mb-3">
+                            <label for="amount">Сумма к выплате *</label>
+                            <input type="number" class="form-control" id="amount" name="amount"
+                                   min="100" max="{{ stats.available }}" step="100" required>
+                            <small class="text-muted">
+                                Минимальная сумма: 100 ₽. Доступно: {{ stats.available|floatformat:0 }} ₽
+                            </small>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="payment_method">Способ выплаты *</label>
+                            <select class="form-control" id="payment_method" name="payment_method" required>
+                                <option value="">-- Выберите способ --</option>
+                                <option value="bank_card">💳 Банковская карта</option>
+                                <option value="bank_account">🏦 Банковский счет</option>
+                                <option value="yoomoney">💰 ЮMoney</option>
+                                <option value="cash">💵 Наличными</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group mb-4">
+                            <label for="payment_details">Платёжные реквизиты *</label>
+                            <textarea class="form-control" id="payment_details" name="payment_details"
+                                      rows="3" placeholder="Номер карты / счета / кошелька" required></textarea>
+                            <small class="text-muted">Укажите реквизиты для получения выплаты</small>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <i class="fa fa-exclamation-triangle"></i>
+                            <strong>Важно:</strong> Заявка будет отправлена администратору на рассмотрение.
+                            Баланс не будет списан автоматически. Администратор проверит заявку и проведет выплату вручную.
+                        </div>
+
+                        <div class="form-group text-center">
+                            <button type="submit" class="btn btn-success btn-lg px-5">
+                                <i class="fa fa-check"></i> Отправить запрос
+                            </button>
+                            <a href="{% url 'teacher_dashboard' %}#payments" class="btn btn-secondary btn-lg px-5 ml-2">
+                                <i class="fa fa-times"></i> Отмена
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <!-- История запросов -->
+{% if recent_requests %}
+<div class="card mt-4">
+    <div class="card-header bg-warning text-white">
+        <h5 class="mb-0"><i class="fa fa-clock-o"></i> Последние запросы</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>№</th>
+                        <th>Дата</th>
+                        <th>Сумма</th>
+                        <th>Статус</th>
+                        <th>Комментарий</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in recent_requests %}
+                    <tr>
+                        <td>#{{ req.id }}</td>
+                        <td>{{ req.created_at|date:"d.m.Y H:i" }}</td>
+                        <td>{{ req.amount }} ₽</td>
+                        <td>
+                            {% if req.status == 'pending' %}
+                                <span class="badge badge-warning">⏳ Ожидает</span>
+                            {% elif req.status == 'approved' %}
+                                <span class="badge badge-info">✅ Одобрено</span>
+                            {% elif req.status == 'rejected' %}
+                                <span class="badge badge-danger">❌ Отклонено</span>
+                            {% elif req.status == 'paid' %}
+                                <span class="badge badge-success">💰 Выплачено</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ req.comment|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+            <!-- История реальных выплат (только проведенные) -->
+            {% if real_payments %}
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fa fa-history"></i> История выплат</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Дата</th>
+                                    <th>Сумма</th>
+                                    <th>Описание</th>
+                                    <th>Статус</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payment in real_payments %}
+                                <tr>
+                                    <td>{{ payment.created_at|date:"d.m.Y H:i" }}</td>
+                                    <td class="text-success">{{ payment.amount }} ₽</td>
+                                    <td>{{ payment.description|default:"Выплата" }}</td>
+                                    <td><span class="badge badge-success">✅ Проведено</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

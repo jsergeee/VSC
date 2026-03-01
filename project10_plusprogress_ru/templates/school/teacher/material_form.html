@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if material %}Редактирование{% else %}Добавление{% endif %} материала{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fa fa-file"></i>
+                        {% if material %}Редактирование материала{% else %}Добавление нового материала{% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <div class="form-group mb-3">
+                            <label for="title">Название материала *</label>
+                            <input type="text" class="form-control" id="title" name="title"
+                                   value="{{ material.title|default:'' }}" required>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="description">Описание</label>
+                            <textarea class="form-control" id="description" name="description" rows="3">{{ material.description|default:'' }}</textarea>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="material_type">Тип материала *</label>
+                            <select class="form-control" id="material_type" name="material_type" required>
+                                <option value="">-- Выберите тип --</option>
+                                <option value="file" {% if material.material_type == 'file' %}selected{% endif %}>📄 Файл</option>
+                                <option value="link" {% if material.material_type == 'link' %}selected{% endif %}>🔗 Ссылка</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group mb-3" id="file-upload" style="display: none;">
+                            <label for="file">Файл</label>
+                            <input type="file" class="form-control" id="file" name="file">
+                            {% if material.file %}
+                            <small class="text-muted">Текущий файл: <a href="{{ material.file.url }}" target="_blank">{{ material.file.name }}</a></small>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group mb-3" id="link-input" style="display: none;">
+                            <label for="link">Ссылка</label>
+                            <input type="url" class="form-control" id="link" name="link"
+                                   value="{{ material.link|default:'' }}" placeholder="https://...">
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="subjects">Предметы</label>
+                            <select multiple class="form-control" id="subjects" name="subjects" size="5">
+                                {% for subject in subjects %}
+                                <option value="{{ subject.id }}"
+                                    {% if material and subject in material.subjects.all %}selected{% endif %}>
+                                    {{ subject.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Удерживайте Ctrl для выбора нескольких предметов</small>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="students">Ученики (для кого этот материал)</label>
+                            <select multiple class="form-control" id="students" name="students" size="5">
+                                {% for student in students %}
+                                <option value="{{ student.id }}"
+                                    {% if material and student in material.students.all %}selected{% endif %}>
+                                    {{ student.user.get_full_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Выберите учеников, которые получат доступ к материалу</small>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="is_public" name="is_public"
+                                       {% if material.is_public %}checked{% endif %}>
+                                <label class="form-check-label" for="is_public">Публичный материал</label>
+                                <small class="d-block text-muted">Публичные материалы видны ВСЕМ ученикам</small>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fa fa-info-circle"></i>
+                            <strong>Примечание:</strong> Если материал публичный, он будет доступен всем ученикам.
+                            Если нет - выберите конкретных учеников из списка выше.
+                        </div>
+
+                        <div class="form-group text-center">
+                            <button type="submit" class="btn btn-success btn-lg px-5">
+                                <i class="fa fa-save"></i> Сохранить
+                            </button>
+                            <a href="{% url 'teacher_dashboard' %}#materials" class="btn btn-secondary btn-lg px-5 ml-2">
+                                <i class="fa fa-times"></i> Отмена
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const typeSelect = document.getElementById('material_type');
+        const fileUpload = document.getElementById('file-upload');
+        const linkInput = document.getElementById('link-input');
+
+        function toggleFields() {
+            const type = typeSelect.value;
+            if (type === 'file') {
+                fileUpload.style.display = 'block';
+                linkInput.style.display = 'none';
+                document.getElementById('link').required = false;
+                document.getElementById('file').required = true;
+            } else if (type === 'link') {
+                fileUpload.style.display = 'none';
+                linkInput.style.display = 'block';
+                document.getElementById('file').required = false;
+                document.getElementById('link').required = true;
+            } else {
+                fileUpload.style.display = 'none';
+                linkInput.style.display = 'none';
+                document.getElementById('file').required = false;
+                document.getElementById('link').required = false;
+            }
+        }
+
+        typeSelect.addEventListener('change', toggleFields);
+        toggleFields(); // Вызываем при загрузке
+
+        // Публичный/приватный чекбокс
+        const isPublicCheckbox = document.getElementById('is_public');
+        const studentsSelect = document.getElementById('students');
+
+        function toggleStudentsField() {
+            if (isPublicCheckbox.checked) {
+                studentsSelect.disabled = true;
+                studentsSelect.style.opacity = '0.5';
+            } else {
+                studentsSelect.disabled = false;
+                studentsSelect.style.opacity = '1';
+            }
+        }
+
+        isPublicCheckbox.addEventListener('change', toggleStudentsField);
+        toggleStudentsField();
+    });
+</script>
+{% endblock %}

@@ -5,6 +5,47 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
+# school/telegram.py - добавьте в начало файла
+
+class TelegramNotifier:
+    """Класс для отправки уведомлений в Telegram"""
+
+    def __init__(self):
+        self.bot_token = getattr(settings, 'TELEGRAM_BOT_TOKEN', None)
+        self.bot = None
+
+    def is_configured(self):
+        """Проверяет, настроен ли бот"""
+        return self.bot_token is not None
+
+    def send_message_sync(self, chat_id, message, parse_mode='HTML'):
+        """
+        Синхронная отправка сообщения
+        """
+        if not self.is_configured():
+            logger.warning("Telegram bot not configured")
+            return False
+
+        if not chat_id:
+            logger.warning(f"No chat_id provided")
+            return False
+
+        url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
+
+        payload = {
+            'chat_id': chat_id,
+            'text': message,
+            'parse_mode': parse_mode,
+        }
+
+        try:
+            response = requests.post(url, data=payload, timeout=5)
+            response.raise_for_status()
+            logger.info(f"Message sent to {chat_id}")
+            return True
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error sending message to {chat_id}: {e}")
+            return False
 def send_telegram_message(text, parse_mode='HTML'):
     """
     Отправляет сообщение в общий Telegram чат (админский)
@@ -269,3 +310,144 @@ def check_telegram_updates():
 
     except Exception as e:
         print(f"❌ Ошибка: {e}")
+
+
+def notify_new_homework(homework):
+    """
+    Отправляет уведомление о новом домашнем задании ученику
+    """
+    print(f"\n{'=' * 60}")
+    print(f"🔔 ФУНКЦИЯ notify_new_homework ВЫЗВАНА для ДЗ #{homework.id}")
+    print(f"   Задание: {homework.title}")
+    print(f"   Ученик: {homework.student.user.get_full_name()}")
+    print(f"   Дедлайн: {homework.deadline}")
+    print(f"{'=' * 60}")
+
+    notifier = TelegramNotifier()
+
+    if not notifier.is_configured():
+        print(f"❌ Telegram bot не настроен")
+        logger.warning("Telegram bot not configured")
+        return False
+
+    student = homework.student
+    teacher = homework.teacher
+
+    # Проверяем, включены ли уведомления у ученика
+    if not student.user.telegram_notifications or not student.user.telegram_chat_id:
+        print(f"⚠️ У ученика {student.user.username} не включены Telegram уведомления или нет chat_id")
+        return False
+
+    # Формируем сообщение
+    deadline_str = homework.deadline.strftime('%d.%m.%Y %H:%M')
+    message = (
+        f"📝 <b>Новое домашнее задание</b>\n\n"
+        f"<b>Предмет:</b> {homework.subject.name}\n"
+        f"<b>Учитель:</b> {teacher.user.get_full_name()}\n"
+        f"<b>Название:</b> {homework.title}\n"
+        f"<b>Описание:</b> {homework.description[:200]}{'...' if len(homework.description) > 200 else ''}\n"
+        f"<b>Срок сдачи:</b> {deadline_str}\n\n"
+        f"🔗 <a href='{settings.BASE_URL}/student/homework/{homework.id}/'>Перейти к заданию</a>"
+    )
+
+    # Отправляем сообщение
+    result = notifier.send_message_sync(student.user.telegram_chat_id, message)
+    print(f"   Результат отправки ученику: {'✅ УСПЕШНО' if result else '❌ ОШИБКА'}")
+
+    # Уведомление учителю (опционально)
+    if teacher.user.telegram_notifications and teacher.user.telegram_chat_id:
+        teacher_message = (
+            f"✅ <b>Домашнее задание создано</b>\n\n"
+            f"<b>Ученик:</b> {student.user.get_full_name()}\n"
+            f"<b>Предмет:</b> {homework.subject.name}\n"
+            f"<b>Название:</b> {homework.title}\n"
+            f"<b>Срок сдачи:</b> {deadline_str}"
+        )
+        notifier.send_message_sync(teacher.user.telegram_chat_id, teacher_message)
+
+    print(f"{'=' * 60}\n")
+    return result
+
+
+def notify_new_homework(homework):
+    """
+    Отправляет уведомление о новом домашнем задании ученику
+    """
+    print(f"\n{'=' * 60}")
+    print(f"🔔 ФУНКЦИЯ notify_new_homework ВЫЗВАНА для ДЗ #{homework.id}")
+    print(f"   Задание: {homework.title}")
+    print(f"   Ученик: {homework.student.user.get_full_name()}")
+    print(f"   Дедлайн: {homework.deadline}")
+    print(f"{'=' * 60}")
+
+    # Проверяем наличие BASE_URL
+    base_url = getattr(settings, 'BASE_URL', None)
+    if not base_url:
+        print(f"❌ BASE_URL не настроен в settings.py")
+        logger.warning("BASE_URL not configured")
+        return False
+
+    notifier = TelegramNotifier()
+
+    if not notifier.is_configured():
+        print(f"❌ Telegram bot не настроен")
+        logger.warning("Telegram bot not configured")
+        return False
+
+    student = homework.student
+    teacher = homework.teacher
+
+    # Проверяем, включены ли уведомления у ученика
+    if not student.user.telegram_notifications or not student.user.telegram_chat_id:
+        print(f"⚠️ У ученика {student.user.username} не включены Telegram уведомления или нет chat_id")
+        return False
+
+    # Форматируем дату
+    deadline_str = homework.deadline.strftime('%d.%m.%Y %H:%M')
+
+    # Формируем сообщение для ученика СО ССЫЛКОЙ
+    message = (
+        f"📝 <b>Новое домашнее задание</b>\n\n"
+        f"<b>Предмет:</b> {homework.subject.name}\n"
+        f"<b>Учитель:</b> {teacher.user.get_full_name()}\n"
+        f"<b>Название:</b> {homework.title}\n"
+        f"<b>Описание:</b> {homework.description[:200]}{'...' if len(homework.description) > 200 else ''}\n"
+        f"<b>Срок сдачи:</b> {deadline_str}\n\n"
+        f"🔗 <a href='{base_url}/student/homework/{homework.id}/'>Перейти к заданию</a>"
+    )
+
+    # Отправляем сообщение ученику
+    result = notifier.send_message_sync(student.user.telegram_chat_id, message)
+    print(f"   Результат отправки ученику: {'✅ УСПЕШНО' if result else '❌ ОШИБКА'}")
+
+    # Уведомление учителю (опционально)
+    if teacher.user.telegram_notifications and teacher.user.telegram_chat_id:
+        teacher_message = (
+            f"✅ <b>Домашнее задание создано</b>\n\n"
+            f"<b>Ученик:</b> {student.user.get_full_name()}\n"
+            f"<b>Предмет:</b> {homework.subject.name}\n"
+            f"<b>Название:</b> {homework.title}\n"
+            f"<b>Срок сдачи:</b> {deadline_str}"
+        )
+        notifier.send_message_sync(teacher.user.telegram_chat_id, teacher_message)
+
+    # ✅ ДОБАВЛЯЕМ ОТПРАВКУ В ОБЩИЙ АДМИНСКИЙ ЧАТ
+    try:
+        admin_message = (
+            f"📝 <b>Новое домашнее задание</b>\n\n"
+            f"👨‍🎓 <b>Ученик:</b> {student.user.get_full_name()}\n"
+            f"👨‍🏫 <b>Учитель:</b> {teacher.user.get_full_name()}\n"
+            f"📚 <b>Предмет:</b> {homework.subject.name}\n"
+            f"📝 <b>Задание:</b> {homework.title}\n"
+            f"⏰ <b>Срок:</b> {deadline_str}"
+        )
+
+        # Используем существующую функцию send_telegram_message для отправки в общий чат
+        from .telegram import send_telegram_message
+        send_telegram_message(admin_message)
+        print(f"   ✅ Уведомление отправлено в общий чат")
+    except Exception as e:
+        print(f"   ❌ Ошибка отправки в общий чат: {e}")
+
+    print(f"{'=' * 60}\n")
+    return result

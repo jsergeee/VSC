@@ -1,6 +1,7 @@
 # school/admin.py
 
 from django.contrib import admin, messages
+from .models import PaymentRequest
 from django.core.exceptions import ValidationError
 from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
@@ -29,7 +30,7 @@ from .models import (
     Notification, LessonFeedback, TeacherRating,
     Homework, HomeworkSubmission, GroupLesson, GroupEnrollment,
     LessonAttendance, ScheduleTemplate, ScheduleTemplateStudent,
-    StudentSubjectPrice
+    StudentSubjectPrice, PaymentRequest
 )
 from .views import schedule_calendar_data, admin_complete_lesson
 
@@ -2159,3 +2160,173 @@ admin.site.index_title = 'Управление онлайн школой'
 
 
 
+
+@admin.register(PaymentRequest)
+class PaymentRequestAdmin(admin.ModelAdmin):
+    list_display = (
+    'id', 'teacher_link', 'amount_colored', 'status_badge', 'payment_method', 'created_at', 'action_buttons')
+    list_filter = ('status', 'payment_method', 'created_at')
+    search_fields = ('teacher__user__last_name', 'teacher__user__email', 'payment_details')
+    readonly_fields = ('created_at', 'updated_at')
+    actions = ['approve_requests', 'reject_requests', 'mark_as_paid']
+
+    fieldsets = (
+        ('Информация о запросе', {
+            'fields': ('teacher', 'amount', 'payment_method', 'payment_details', 'status')
+        }),
+        ('Обработка', {
+            'fields': ('comment', 'payment'),
+            'classes': ('wide',),
+        }),
+        ('Даты', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',),
+        }),
+    )
+
+    def teacher_link(self, obj):
+        url = f'/admin/school/teacher/{obj.teacher.id}/change/'
+        return format_html('<a href="{}">{}</a>', url, obj.teacher.user.get_full_name())
+
+    teacher_link.short_description = 'Учитель'
+
+    def amount_colored(self, obj):
+        return format_html('<span style="color: #28a745; font-weight: bold;">{} ₽</span>', obj.amount)
+
+    amount_colored.short_description = 'Сумма'
+
+    def status_badge(self, obj):
+        colors = {
+            'pending': ('#ffc107', '⏳ Ожидает'),
+            'approved': ('#17a2b8', '✅ Одобрено'),
+            'rejected': ('#dc3545', '❌ Отклонено'),
+            'paid': ('#28a745', '💰 Выплачено'),
+        }
+        color, text = colors.get(obj.status, ('#6c757d', obj.status))
+        return format_html(
+            '<span style="background: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            color, text
+        )
+
+    status_badge.short_description = 'Статус'
+
+    def action_buttons(self, obj):
+        if obj.status == 'pending':
+            return format_html(
+                '<a class="button" href="{}" style="background: #28a745; color: white; padding: 5px 10px; border-radius: 3px; text-decoration: none; margin-right: 5px;">✓ Одобрить</a>'
+                '<a class="button" href="{}" style="background: #dc3545; color: white; padding: 5px 10px; border-radius: 3px; text-decoration: none;">✗ Отклонить</a>',
+                f'/admin/school/paymentrequest/{obj.id}/approve/',
+                f'/admin/school/paymentrequest/{obj.id}/reject/'
+            )
+        elif obj.status == 'approved':
+            return format_html(
+                '<a class="button" href="{}" style="background: #17a2b8; color: white; padding: 5px 10px; border-radius: 3px; text-decoration: none;">💰 Создать выплату</a>',
+                f'/admin/school/paymentrequest/{obj.id}/create-payment/'
+            )
+        return '-'
+
+    action_buttons.short_description = 'Действия'
+
+    def get_urls(self):
+        from django.urls import path
+        urls = super().get_urls()
+        custom_urls = [
+            path('<int:request_id>/approve/', self.admin_site.admin_view(self.approve_request),
+                 name='paymentrequest-approve'),
+            path('<int:request_id>/reject/', self.admin_site.admin_view(self.reject_request),
+                 name='paymentrequest-reject'),
+            path('<int:request_id>/create-payment/', self.admin_site.admin_view(self.create_payment),
+                 name='paymentrequest-create-payment'),
+        ]
+        return custom_urls + urls
+
+    def approve_request(self, request, request_id):
+        from django.shortcuts import get_object_or_404, redirect
+        from django.contrib import messages
+
+        payment_request = get_object_or_404(PaymentRequest, id=request_id)
+        payment_request.approve(request.user)
+        messages.success(request, f'Запрос #{request_id} одобрен')
+        return redirect('admin:school_paymentrequest_changelist')
+
+    def reject_request(self, request, request_id):
+        from django.shortcuts import get_object_or_404, redirect, render
+        from django.contrib import messages
+
+        payment_request = get_object_or_404(PaymentRequest, id=request_id)
+
+        if request.method == 'POST':
+            reason = request.POST.get('reason', '')
+            payment_request.reject(request.user, reason)
+            messages.success(request, f'Запрос #{request_id} отклонен')
+            return redirect('admin:school_paymentrequest_changelist')
+
+        context = {
+            'title': f'Отклонить запрос #{request_id}',
+            'payment_request': payment_request,
+        }
+        return render(request, 'admin/school/paymentrequest/reject_form.html', context)
+
+    def create_payment(self, request, request_id):
+        from django.shortcuts import get_object_or_404, redirect, render
+        from django.contrib import messages
+        from decimal import Decimal
+
+        payment_request = get_object_or_404(PaymentRequest, id=request_id)
+
+        if request.method == 'POST':
+            # Создаем платеж
+            payment = Payment.objects.create(
+                user=payment_request.teacher.user,
+                amount=payment_request.amount,
+                payment_type='teacher_payment',
+                description=f'Выплата по запросу #{payment_request.id} ({payment_request.payment_method})'
+            )
+
+            # Уменьшаем баланс учителя
+            teacher = payment_request.teacher
+            teacher.wallet_balance -= payment_request.amount
+            teacher.save()
+
+            # Отмечаем запрос как выполненный
+            payment_request.mark_as_paid(request.user, payment)
+
+            messages.success(request, f'✅ Выплата #{payment.id} создана, баланс учителя уменьшен')
+            return redirect('admin:school_paymentrequest_changelist')
+
+        context = {
+            'title': f'Создать выплату по запросу #{request_id}',
+            'payment_request': payment_request,
+            'teacher_balance': payment_request.teacher.wallet_balance,
+        }
+        return render(request, 'admin/school/paymentrequest/create_payment.html', context)
+
+    def approve_requests(self, request, queryset):
+        for req in queryset.filter(status='pending'):
+            req.approve(request.user)
+        self.message_user(request, f'✅ Одобрено {queryset.count()} запросов')
+
+    approve_requests.short_description = "✅ Одобрить выбранные запросы"
+
+    def reject_requests(self, request, queryset):
+        for req in queryset.filter(status='pending'):
+            req.reject(request.user, 'Отклонено администратором')
+        self.message_user(request, f'❌ Отклонено {queryset.count()} запросов')
+
+    reject_requests.short_description = "❌ Отклонить выбранные запросы"
+
+    def mark_as_paid(self, request, queryset):
+        count = 0
+        for req in queryset.filter(status='approved'):
+            # Создаем платеж
+            payment = Payment.objects.create(
+                user=req.teacher.user,
+                amount=req.amount,
+                payment_type='teacher_payment',
+                description=f'Выплата по запросу #{req.id}'
+            )
+            req.mark_as_paid(request.user, payment)
+            count += 1
+        self.message_user(request, f'💰 Создано {count} выплат')
+
+    mark_as_paid.short_description = "💰 Создать выплаты по одобренным запросам"

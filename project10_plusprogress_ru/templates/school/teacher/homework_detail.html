@@ -13,6 +13,22 @@
                     <h4 class="mb-0">{{ homework.title }}</h4>
                 </div>
                 <div class="card-body">
+                    <!-- ✅ Добавленный блок: информация о привязанном уроке -->
+                    {% if homework.lesson %}
+                    <div class="alert alert-info mb-3">
+                        <i class="fa fa-link"></i> <strong>Привязано к уроку:</strong>
+                        <a href="{% url 'teacher_lesson_detail' homework.lesson.id %}" class="alert-link">
+                            {{ homework.lesson.date|date:"d.m.Y" }}
+                            {{ homework.lesson.start_time|time:"H:i" }} -
+                            {{ homework.lesson.end_time|time:"H:i" }}
+                        </a>
+                        <br>
+                        <small class="text-muted">
+                            Тема: {{ homework.lesson.report.topic|default:"Не указана" }}
+                        </small>
+                    </div>
+                    {% endif %}
+
                     <p><strong>Ученик:</strong> {{ homework.student.user.get_full_name }}</p>
                     <p><strong>Предмет:</strong> {{ homework.subject.name }}</p>
                     <p><strong>Срок сдачи:</strong> {{ homework.deadline|date:"d.m.Y H:i" }}</p>

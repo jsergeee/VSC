@@ -75,6 +75,7 @@ urlpatterns = [
     path('teacher/schedule-template/<int:template_id>/delete/', views.teacher_schedule_template_delete,
          name='teacher_schedule_template_delete'),
     path('teacher/schedule/create/', views.teacher_create_schedule, name='teacher_create_schedule'),
+    path('teacher/payment/request/', views.teacher_request_payment, name='teacher_request_payment'),
 
     # Уведомления
     path('api/notifications/', views.get_notifications, name='api_notifications'),
@@ -88,11 +89,16 @@ urlpatterns = [
 
     # Домашние задания
     path('teacher/homeworks/', views.teacher_homeworks, name='teacher_homeworks'),
-    path('teacher/homework/create/<int:student_id>/', views.teacher_homework_create, name='teacher_homework_create'),
+    path('teacher/homework/create/', views.teacher_homework_create, name='teacher_homework_create'),
+    path('teacher/homework/create/<int:student_id>/', views.teacher_homework_create,
+         name='teacher_homework_create_for_student'),
     path('teacher/homework/<int:homework_id>/', views.teacher_homework_detail, name='teacher_homework_detail'),
+    path('api/student-completed-lessons/', views.api_student_completed_lessons, name='api_student_completed_lessons'),
 
+    # Для учеников
     path('student/homeworks/', views.student_homeworks, name='student_homeworks'),
     path('student/homework/<int:homework_id>/', views.student_homework_detail, name='student_homework_detail'),
+    path('student/<int:student_id>/report/', views.student_report, name='student_report'),
 
     # Импорты
     path('admin/school/student/import/', views.import_students, name='import-students'),
@@ -106,4 +112,14 @@ urlpatterns = [
         # URL для скачивания шаблона импорта пользователей
     path('admin/user/download-template/', views.download_user_template, name='download_user_template'),
     path('admin/user/import/', views.import_users_view, name='import_users'),
+    # Выплаты
+    path('teacher/payments/', views.teacher_payments, name='teacher_payments'),
+    path('teacher/payments/request/', views.teacher_request_payment, name='teacher_request_payment'),
+
+    # Материалы
+    path('teacher/materials/create/', views.teacher_material_create, name='teacher_material_create'),
+    path('teacher/materials/<int:material_id>/edit/', views.teacher_material_edit, name='teacher_material_edit'),
+    path('teacher/materials/<int:material_id>/delete/', views.teacher_material_delete, name='teacher_material_delete'),
+    path('material/<int:material_id>/', views.material_detail, name='material_detail'),
 ]
+

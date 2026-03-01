@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Учебные материалы{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4"><i class="fa fa-file"></i> Учебные материалы</h2>
+
+    <!-- Фильтры -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="form-inline">
+                <div class="form-group mr-2 mb-2">
+                    <label for="subject" class="mr-2">Предмет:</label>
+                    <select name="subject" id="subject" class="form-control form-control-sm">
+                        <option value="">Все предметы</option>
+                        {% for subject in subjects %}
+                        <option value="{{ subject.id }}" {% if request.GET.subject == subject.id|stringformat:"s" %}selected{% endif %}>
+                            {{ subject.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group mr-2 mb-2">
+                    <label for="type" class="mr-2">Тип:</label>
+                    <select name="type" id="type" class="form-control form-control-sm">
+                        <option value="">Все типы</option>
+                        <option value="file" {% if request.GET.type == 'file' %}selected{% endif %}>📄 Файлы</option>
+                        <option value="link" {% if request.GET.type == 'link' %}selected{% endif %}>🔗 Ссылки</option>
+                    </select>
+                </div>
+
+                <div class="form-group mr-2 mb-2">
+                    <label for="teacher" class="mr-2">Учитель:</label>
+                    <select name="teacher" id="teacher" class="form-control form-control-sm">
+                        <option value="">Все учителя</option>
+                        {% for teacher in teachers %}
+                        <option value="{{ teacher.id }}" {% if request.GET.teacher == teacher.id|stringformat:"s" %}selected{% endif %}>
+                            {{ teacher.user.get_full_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-sm mb-2">
+                    <i class="fa fa-search"></i> Применить
+                </button>
+                <a href="{% url 'student_materials' %}" class="btn btn-secondary btn-sm ml-2 mb-2">
+                    <i class="fa fa-times"></i> Сбросить
+                </a>
+            </form>
+        </div>
+    </div>
+
+    <!-- Список материалов -->
+    {% if materials %}
+        <div class="row">
+            {% for material in materials %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="material-icon mr-3">
+                                {% if material.material_type == 'file' %}
+                                    <i class="fa fa-file-pdf-o fa-3x text-danger"></i>
+                                {% else %}
+                                    <i class="fa fa-link fa-3x text-primary"></i>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h6 class="mb-1">{{ material.title }}</h6>
+                                <small class="text-muted">
+                                    {% for subject in material.subjects.all %}
+                                        {{ subject.name }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </small>
+                            </div>
+                        </div>
+
+                        <p class="small text-muted mb-3">
+                            {{ material.description|truncatechars:100 }}
+                        </p>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="fa fa-clock-o"></i> {{ material.created_at|date:"d.m.Y" }}
+                            </small>
+                            <small class="text-muted">
+                                <i class="fa fa-user"></i> {{ material.created_by.get_full_name|truncatechars:20 }}
+                            </small>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="{{ material.get_absolute_url }}" target="_blank" class="btn btn-outline-primary btn-block">
+                            <i class="fa fa-download"></i> Открыть
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state text-center py-5">
+            <i class="fa fa-file fa-4x text-muted mb-3"></i>
+            <h5>Нет доступных материалов</h5>
+            <p class="text-muted">Учителя еще не добавили материалы для вас</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

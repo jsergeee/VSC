@@ -41,6 +41,8 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
+import requests
+from django.conf import settings
 
 
 # Импорты моделей
@@ -50,7 +52,7 @@ from .models import (
     Material, Deposit, StudentNote, GroupLesson, GroupEnrollment,
     Notification, LessonFeedback, TeacherRating, Homework,
     HomeworkSubmission, ScheduleTemplate, ScheduleTemplateStudent,
-    StudentSubjectPrice, EmailVerificationToken
+    StudentSubjectPrice, EmailVerificationToken, PaymentRequest
 )
 
 from .forms import (
@@ -766,7 +768,7 @@ def student_dashboard(request):
 
 @login_required
 def teacher_dashboard(request):
-    """Личный кабинет учителя - РЕФАКТОРИНГ"""
+    """Личный кабинет учителя - с ДЗ"""
     if request.user.role != 'teacher':
         messages.error(request, 'Доступ запрещен')
         return redirect('dashboard')
@@ -816,29 +818,28 @@ def teacher_dashboard(request):
         payment_type='teacher_payment'
     ).order_by('-created_at')[:10]
 
-    # Календарь с ИСПОЛЬЗОВАНИЕМ LessonFinanceCalculator
+    # ✅ Добавляем ДЗ
+    recent_homeworks = Homework.objects.filter(
+        teacher=teacher
+    ).select_related(
+        'student__user', 'subject'
+    ).prefetch_related('submission').order_by('-created_at')[:10]
+
+    # Статистика по ДЗ
+    all_homeworks = Homework.objects.filter(teacher=teacher)
+    homework_stats = {
+        'total': all_homeworks.count(),
+        'pending': all_homeworks.filter(submission__isnull=True).count(),
+        'submitted': all_homeworks.filter(submission__status='submitted').count(),
+        'checked': all_homeworks.filter(submission__status='checked').count(),
+        'overdue': all_homeworks.filter(
+            deadline__lt=timezone.now(),
+            submission__isnull=True
+        ).count(),
+    }
+
+    # Календарь (существующий код)
     calendar_events = []
-
-    for lesson in all_lessons:
-        calc = LessonFinanceCalculator(lesson)
-        stats = calc.stats
-
-        # Определяем цвет
-        if lesson.status == 'completed':
-            bg_color = '#28a745'
-        elif lesson.status == 'cancelled':
-            bg_color = '#dc3545'
-        elif lesson.status == 'overdue':
-            bg_color = '#fd7e14'
-        elif lesson.date < today and lesson.status == 'scheduled':
-            bg_color = '#ffc107'
-        elif lesson.date == today:
-            bg_color = '#007bff'
-        else:
-            bg_color = '#6c757d'
-
-    calendar_events = []
-
     for lesson in all_lessons:
         calc = LessonFinanceCalculator(lesson)
         stats = calc.stats
@@ -861,23 +862,20 @@ def teacher_dashboard(request):
         time_str = lesson.start_time.strftime('%H:%M')
 
         # Получаем учеников
-        students = lesson.attendance.all()
-        total_count = students.count()
+        students_att = lesson.attendance.all()
+        total_count = students_att.count()
 
         if total_count == 0:
             title = ""
         else:
-            # Собираем Имя + первую букву фамилии
-            # Собираем Имя + первую букву фамилии
             names = []
-            for attendance in students:
+            for attendance in students_att:
                 student = attendance.student
-                # Имя берем из last_name, фамилию из first_name
                 name = student.user.first_name or ""
                 surname = student.user.last_name or ""
 
                 if name and surname:
-                    names.append(f"{name} {surname[0]}.")  # "Анна С."
+                    names.append(f"{name} {surname[0]}.")
                 elif name:
                     names.append(name)
                 elif surname:
@@ -886,10 +884,10 @@ def teacher_dashboard(request):
                     names.append("Ученик")
 
             students_text = ", ".join(names)
-            title = f"{time_str} {students_text}"  # "16:00 Анна С., Денис Б."
+            title = f"{time_str} {students_text}"
 
         calendar_events.append({
-            'title': title,  # Теперь: "16:00 Денис Б., Ксения К., Матвей О."
+            'title': title,
             'start': f"{lesson.date}T{lesson.start_time}",
             'end': f"{lesson.date}T{lesson.end_time}",
             'url': f"/teacher/lesson/{lesson.id}/",
@@ -901,6 +899,7 @@ def teacher_dashboard(request):
                 'teacher_payment': stats['teacher_payment']
             }
         })
+
     context = {
         'teacher': teacher,
         'finance': {
@@ -915,10 +914,76 @@ def teacher_dashboard(request):
         'materials': materials,
         'recent_payments': recent_payments,
         'calendar_events': calendar_events,
+        'recent_homeworks': recent_homeworks,
+        'homework_stats': homework_stats,
+        'all_homeworks': all_homeworks,
+
     }
 
     return render(request, 'school/teacher/dashboard.html', context)
 
+
+@login_required
+@require_GET
+def api_student_completed_lessons(request):
+    """API для получения завершенных уроков ученика по предмету"""
+    if request.user.role != 'teacher':
+        return JsonResponse({'error': 'Доступ запрещен'}, status=403)
+
+    student_id = request.GET.get('student_id')
+    subject_id = request.GET.get('subject_id')
+
+    if not student_id or not subject_id:
+        return JsonResponse({'error': 'Не указан student_id или subject_id'}, status=400)
+
+    teacher = request.user.teacher_profile
+
+    # Проверяем, что ученик принадлежит этому учителю
+    student = get_object_or_404(Student, id=student_id, teachers=teacher)
+
+    # Получаем завершенные уроки ученика по этому предмету
+    completed_lessons = Lesson.objects.filter(
+        teacher=teacher,
+        subject_id=subject_id,
+        attendance__student=student,
+        status='completed'
+    ).select_related('report').order_by('-date', '-start_time')
+
+    lessons_data = []
+    for lesson in completed_lessons:
+        topic = lesson.report.topic if hasattr(lesson, 'report') and lesson.report else ''
+        lessons_data.append({
+            'id': lesson.id,
+            'date': lesson.date.strftime('%d.%m.%Y'),
+            'start_time': lesson.start_time.strftime('%H:%M'),
+            'topic': topic,
+        })
+
+    return JsonResponse({'lessons': lessons_data})
+
+@login_required
+@require_POST
+def teacher_homework_delete(request, homework_id):
+    """Удаление домашнего задания"""
+    if request.user.role != 'teacher':
+        return JsonResponse({'error': 'Доступ запрещен'}, status=403)
+
+    teacher = request.user.teacher_profile
+    homework = get_object_or_404(Homework, id=homework_id, teacher=teacher)
+
+    title = homework.title
+    homework.delete()
+
+    # ✅ ЛОГИРОВАНИЕ удаления
+    log_user_action(
+        request,
+        'homework_delete',
+        f'Удалено домашнее задание #{homework_id} - {title}',
+        object_id=homework_id,
+        object_type='homework'
+    )
+
+    return JsonResponse({'success': True, 'message': 'Задание удалено'})
 
 @login_required
 def teacher_lesson_detail(request, lesson_id):
@@ -3677,54 +3742,161 @@ def teacher_homeworks(request):
 
 
 @login_required
-def teacher_homework_create(request, student_id):
-    """Создание домашнего задания для конкретного ученика"""
+# school/views.py - ЗАМЕНИТЕ существующую функцию
+
+@login_required
+def teacher_homework_create(request, student_id=None):
+    """Создание домашнего задания (из дашборда или для конкретного ученика)"""
     if request.user.role != 'teacher':
         messages.error(request, 'Доступ запрещен')
         return redirect('dashboard')
 
     teacher = request.user.teacher_profile
-    student = get_object_or_404(Student, id=student_id, teachers=teacher)
+
+    # Если передан student_id, проверяем что ученик принадлежит учителю
+    student = None
+    if student_id:
+        student = get_object_or_404(Student, id=student_id, teachers=teacher)
 
     if request.method == 'POST':
-        form = HomeworkForm(request.POST, request.FILES)
-        if form.is_valid():
-            homework = form.save(commit=False)
-            homework.teacher = teacher
-            homework.student = student
-            homework.subject = teacher.subjects.first()
-            homework.save()
+        # Получаем данные из формы
+        student_id = request.POST.get('student')
+        subject_id = request.POST.get('subject')
+        lesson_id = request.POST.get('lesson')  # может быть пустым
+        title = request.POST.get('title')
+        description = request.POST.get('description')
+        deadline = request.POST.get('deadline')
+        attachments = request.FILES.get('attachments')
 
+        # Валидация
+        if not all([student_id, subject_id, title, description, deadline]):
+            messages.error(request, 'Заполните все обязательные поля')
+            return redirect('teacher_homework_create')
+
+        try:
+            student = get_object_or_404(Student, id=student_id, teachers=teacher)
+            subject = get_object_or_404(Subject, id=subject_id)
+
+            # Преобразуем строку даты в datetime
+            deadline_dt = datetime.fromisoformat(deadline)
+            if timezone.is_naive(deadline_dt):
+                deadline_dt = timezone.make_aware(deadline_dt)
+
+            if deadline_dt < timezone.now():
+                messages.error(request, 'Срок сдачи не может быть в прошлом')
+                return redirect('teacher_homework_create')
+
+            # Создаем ДЗ
+            homework_data = {
+                'teacher': teacher,
+                'student': student,
+                'subject': subject,
+                'title': title,
+                'description': description,
+                'deadline': deadline_dt,
+                'attachments': attachments,
+            }
+
+            # Если выбран урок, добавляем его
+            if lesson_id:
+                lesson = get_object_or_404(Lesson, id=lesson_id, teacher=teacher)
+                homework_data['lesson'] = lesson
+
+            homework = Homework.objects.create(**homework_data)
+
+            # ✅ ЛОГИРОВАНИЕ создания ДЗ
+            additional_data = {
+                'student': student.user.get_full_name(),
+                'subject': subject.name,
+                'title': title,
+                'deadline': deadline
+            }
+            if lesson_id:
+                additional_data['lesson_id'] = lesson_id
+
+            log_user_action(
+                request,
+                'homework_create',
+                f'Создано домашнее задание #{homework.id} - {title} для {student.user.get_full_name()}',
+                object_id=homework.id,
+                object_type='homework',
+                additional_data=additional_data
+            )
+
+            # ✅ ВНУТРЕННЕЕ УВЕДОМЛЕНИЕ ученику
             Notification.objects.create(
                 user=student.user,
                 title='📝 Новое домашнее задание',
-                message=f"{teacher.user.get_full_name()} выдал задание: {homework.title}",
+                message=f'Учитель {teacher.user.get_full_name()} выдал задание: {title} по предмету {subject.name}. Срок сдачи: {deadline_dt.strftime("%d.%m.%Y %H:%M")}',
                 notification_type='homework_assigned',
-                link='/student/homeworks/'
+                link=f'/student/homework/{homework.id}/'
             )
 
-            messages.success(request, f'Задание "{homework.title}" создано')
-            return redirect('teacher_homeworks')
-    else:
-        form = HomeworkForm()
+            # ✅ ВНУТРЕННЕЕ УВЕДОМЛЕНИЕ учителю (подтверждение)
+            Notification.objects.create(
+                user=request.user,
+                title='✅ Домашнее задание создано',
+                message=f'Задание "{title}" для {student.user.get_full_name()} успешно создано',
+                notification_type='system',
+                link=f'/teacher/homework/{homework.id}/'
+            )
+
+            # ✅ УВЕДОМЛЕНИЕ В TELEGRAM
+            try:
+                from school.telegram import notify_new_homework
+                notify_new_homework(homework)
+            except Exception as e:
+                print(f"❌ Ошибка отправки Telegram: {e}")
+
+            messages.success(request, f'✅ Домашнее задание "{title}" успешно создано')
+            return redirect('teacher_homework_detail', homework_id=homework.id)
+
+        except Exception as e:
+            print(f"❌ Ошибка при создании ДЗ: {e}")
+            import traceback
+            traceback.print_exc()
+            messages.error(request, f'Ошибка при создании задания: {str(e)}')
+            return redirect('teacher_homework_create')
+
+    # GET запрос - показываем форму
+    students = teacher.student_set.all().select_related('user')
+    subjects = teacher.subjects.all()
+
+    # Текущая дата + 7 дней для дедлайна по умолчанию
+    default_deadline = (timezone.now() + timedelta(days=7)).strftime('%Y-%m-%dT%H:%M')
 
     context = {
-        'form': form,
-        'student': student,
         'teacher': teacher,
+        'students': students,
+        'subjects': subjects,
+        'default_deadline': default_deadline,
+        'selected_student': student,
     }
-    return render(request, 'school/teacher/homework_form.html', context)
+    return render(request, 'school/teacher/homework_create.html', context)
 
 
 @login_required
 def teacher_homework_detail(request, homework_id):
-    """Детали задания для учителя"""
+    """Детали задания для учителя с возможностью проверки"""
     if request.user.role != 'teacher':
         messages.error(request, 'Доступ запрещен')
         return redirect('dashboard')
 
     teacher = request.user.teacher_profile
     homework = get_object_or_404(Homework, id=homework_id, teacher=teacher)
+
+    # ✅ ЛОГИРОВАНИЕ просмотра
+    log_user_action(
+        request,
+        'homework_view',
+        f'Просмотр домашнего задания #{homework.id} - {homework.title}',
+        object_id=homework.id,
+        object_type='homework',
+        additional_data={
+            'student': homework.student.user.get_full_name(),
+            'subject': homework.subject.name
+        }
+    )
 
     submission = None
     if hasattr(homework, 'submission'):
@@ -3738,16 +3910,38 @@ def teacher_homework_detail(request, homework_id):
             submission.checked_at = timezone.now()
             submission.save()
 
+            # ✅ ЛОГИРОВАНИЕ проверки
+            log_user_action(
+                request,
+                'homework_check',
+                f'Проверено домашнее задание #{homework.id}, оценка: {submission.grade}',
+                object_id=homework.id,
+                object_type='homework',
+                additional_data={
+                    'grade': submission.grade,
+                    'comment': submission.teacher_comment,
+                    'student': homework.student.user.get_full_name()
+                }
+            )
+
+            # ✅ ВНУТРЕННЕЕ УВЕДОМЛЕНИЕ ученику
             Notification.objects.create(
                 user=homework.student.user,
                 title='✅ Задание проверено',
                 message=f"Ваше задание '{homework.title}' проверено. Оценка: {submission.grade}",
                 notification_type='homework_checked',
-                link='/student/homeworks/'
+                link=f'/student/homework/{homework.id}/'
             )
 
-            messages.success(request, 'Задание проверено')
-            return redirect('teacher_homeworks')
+            # ✅ УВЕДОМЛЕНИЕ В TELEGRAM
+            try:
+                from school.telegram import notify_homework_checked
+                notify_homework_checked(submission)
+            except Exception as e:
+                print(f"❌ Ошибка отправки Telegram: {e}")
+
+            messages.success(request, '✅ Задание проверено')
+            return redirect('teacher_homework_detail', homework_id=homework.id)
     else:
         form = HomeworkCheckForm(instance=submission) if submission else None
 
@@ -3758,7 +3952,6 @@ def teacher_homework_detail(request, homework_id):
         'teacher': teacher,
     }
     return render(request, 'school/teacher/homework_detail.html', context)
-
 
 @login_required
 def student_homeworks(request):
@@ -4447,10 +4640,17 @@ def student_materials(request):
     student = request.user.student_profile
     teachers = student.teachers.all()
 
+    # Материалы, доступные ученику:
+    # 1. Публичные материалы
+    # 2. Материалы, назначенные конкретно этому ученику
+    # 3. Материалы учителей этого ученика
     materials = Material.objects.filter(
-        Q(students=student) | Q(is_public=True) | Q(teachers__in=teachers)
+        Q(is_public=True) |
+        Q(students=student) |
+        Q(teachers__in=teachers)
     ).distinct().order_by('-created_at')
 
+    # Фильтры
     subject_id = request.GET.get('subject')
     if subject_id:
         materials = materials.filter(subjects__id=subject_id)
@@ -4459,16 +4659,19 @@ def student_materials(request):
     if material_type:
         materials = materials.filter(material_type=material_type)
 
+    teacher_id = request.GET.get('teacher')
+    if teacher_id:
+        materials = materials.filter(teachers__id=teacher_id)
+
     subjects = Subject.objects.all()
 
     context = {
         'materials': materials,
         'subjects': subjects,
+        'teachers': teachers,
         'student': student,
     }
-
     return render(request, 'school/student/materials.html', context)
-
 
 @login_required
 def teacher_materials(request):
@@ -4706,9 +4909,6 @@ def complete_lesson(request, lesson_id):
     return redirect('teacher_lesson_detail', lesson_id=lesson.id)
 
 
-
-
-
 @login_required
 def telegram_settings(request):
     """Настройки Telegram уведомлений"""
@@ -4738,39 +4938,438 @@ def telegram_settings(request):
 
 
 
-
-
 User = get_user_model()
 
 
 @csrf_exempt
 def telegram_webhook(request):
     """Обработчик входящих сообщений от Telegram"""
+    print(f"\n🔥🔥🔥 ВЫЗВАНА ФУНКЦИЯ WEBHOOK 🔥🔥🔥")
+    print(f"Метод запроса: {request.method}")
+    print(f"Тело запроса: {request.body}")
+
     if request.method == 'POST':
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body)
+            print(f"\n{'=' * 50}")
+            print(f"📱 ПОЛУЧЕНО СООБЩЕНИЕ ОТ TELEGRAM")
+            print(json.dumps(data, indent=2, ensure_ascii=False))
+            print(f"{'=' * 50}\n")
 
-        # Получаем информацию о пользователе
-        if 'message' in data:
-            chat_id = data['message']['chat']['id']
-            username = data['message']['from'].get('username', '')
-            first_name = data['message']['from'].get('first_name', '')
-            last_name = data['message']['from'].get('last_name', '')
+            # Получаем информацию о пользователе
+            if 'message' in data:
+                chat_id = data['message']['chat']['id']
+                username = data['message']['from'].get('username', '')
+                first_name = data['message']['from'].get('first_name', '')
+                last_name = data['message']['from'].get('last_name', '')
+                text = data['message'].get('text', '')
 
-            print(f"📱 Получено сообщение от пользователя с ID: {chat_id}")
-            print(f"   Имя: {first_name} {last_name}")
-            print(f"   Username: @{username}")
+                print(f"✅ Chat ID: {chat_id}")
+                print(f"✅ Username: @{username}")
+                print(f"✅ Имя: {first_name} {last_name}")
+                print(f"✅ Текст: {text}")
 
-            # Здесь можно сохранить ID в базу, если хотите
-            # Например, найти пользователя по username и обновить его telegram_chat_id
+                # ✅ Отправляем ответ через Telegram API
+                bot_token = settings.TELEGRAM_BOT_TOKEN
+                url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
 
-            # Ответ бота (опционально)
-            return JsonResponse({
-                'method': 'sendMessage',
-                'chat_id': chat_id,
-                'text': f'Привет! Твой Telegram ID: {chat_id}'
-            })
+                response_text = f"Привет, {first_name}! Твой Telegram ID: {chat_id}\n\n"
+                response_text += "Скопируй этот ID и вставь в настройках профиля на сайте, чтобы получать уведомления."
+
+                response = requests.post(url, json={
+                    'chat_id': chat_id,
+                    'text': response_text,
+                    'parse_mode': 'HTML'
+                })
+
+                print(f"✅ Ответ отправлен, статус: {response.status_code}")
+                print(f"✅ Ответ API: {response.text}")
+
+                return JsonResponse({'ok': True})
+
+        except Exception as e:
+            print(f"❌ Ошибка: {e}")
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({'ok': False, 'error': str(e)})
 
     return JsonResponse({'ok': True})
 
 
+# school/views.py
 
+@login_required
+def teacher_student_detail(request, student_id):
+    """Детальная информация об ученике для учителя"""
+    if request.user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+
+    teacher = request.user.teacher_profile
+    student = get_object_or_404(Student, id=student_id, teachers=teacher)
+
+    # Получаем уроки ученика с этим учителем
+    lessons = Lesson.objects.filter(
+        teacher=teacher,
+        attendance__student=student
+    ).select_related('subject', 'format').distinct().order_by('-date')
+
+    # Получаем заметки об ученике
+    notes = StudentNote.objects.filter(teacher=teacher, student=student).order_by('-created_at')
+
+    # Получаем домашние задания
+    homeworks = Homework.objects.filter(student=student, teacher=teacher).order_by('-created_at')
+
+    # Статистика
+    total_lessons = lessons.count()
+    completed_lessons = lessons.filter(status='completed').count()
+
+    context = {
+        'student': student,
+        'lessons': lessons[:20],
+        'notes': notes,
+        'homeworks': homeworks[:10],
+        'total_lessons': total_lessons,
+        'completed_lessons': completed_lessons,
+    }
+    return render(request, 'school/teacher/student_detail.html', context)
+
+
+@login_required
+def teacher_payments(request):
+    """Страница со всеми выплатами учителя"""
+    if request.user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+
+    teacher = request.user.teacher_profile
+
+    # Все выплаты учителя
+    payments = Payment.objects.filter(
+        user=request.user,
+        payment_type='teacher_payment'
+    ).order_by('-created_at')
+
+    # Статистика по годам
+    import calendar
+    from django.db.models import Sum
+    from datetime import datetime
+
+    current_year = datetime.now().year
+    years = range(current_year - 2, current_year + 1)
+
+    monthly_stats = []
+    for year in years:
+        for month in range(1, 13):
+            month_payments = payments.filter(
+                created_at__year=year,
+                created_at__month=month
+            )
+            total = month_payments.aggregate(Sum('amount'))['amount__sum'] or 0
+            count = month_payments.count()
+
+            if total > 0 or count > 0:
+                monthly_stats.append({
+                    'year': year,
+                    'month': month,
+                    'month_name': calendar.month_name[month],
+                    'total': total,
+                    'count': count,
+                })
+
+    context = {
+        'payments': payments,
+        'monthly_stats': monthly_stats,
+        'total_payments': payments.aggregate(Sum('amount'))['amount__sum'] or 0,
+    }
+    return render(request, 'school/teacher/payments.html', context)
+
+
+@login_required
+def teacher_request_payment(request):
+    """Запрос выплаты учителем"""
+    if request.user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+
+    teacher = request.user.teacher_profile
+
+    if request.method == 'POST':
+        amount = request.POST.get('amount')
+        payment_method = request.POST.get('payment_method')
+        payment_details = request.POST.get('payment_details')
+
+        try:
+            amount = Decimal(amount)
+            if amount <= 0:
+                messages.error(request, 'Сумма должна быть положительной')
+                return redirect('teacher_request_payment')
+
+            if amount > teacher.wallet_balance:
+                messages.error(request, 'Недостаточно средств на балансе')
+                return redirect('teacher_request_payment')
+
+            # ✅ СОЗДАЕМ ЗАПРОС В БАЗЕ ДАННЫХ
+            payment_request = PaymentRequest.objects.create(
+                teacher=teacher,
+                amount=amount,
+                payment_method=payment_method,
+                payment_details=payment_details,
+                status='pending'
+            )
+
+            # Уведомление админу
+            admin_users = User.objects.filter(role='admin')
+            for admin in admin_users:
+                Notification.objects.create(
+                    user=admin,
+                    title='💰 Новый запрос выплаты',
+                    message=f'Учитель {teacher.user.get_full_name()} запросил выплату {amount} ₽',
+                    notification_type='system',
+                    link=f'/admin/school/paymentrequest/{payment_request.id}/change/'
+                )
+
+            # Уведомление учителю
+            Notification.objects.create(
+                user=request.user,
+                title='✅ Запрос отправлен',
+                message=f'Запрос на выплату {amount} ₽ отправлен администратору. Номер запроса: #{payment_request.id}',
+                notification_type='payment_withdrawn',
+                link='/teacher/dashboard/#payments'
+            )
+
+            # Telegram уведомление
+            try:
+                from school.telegram import send_telegram_message
+                admin_text = (
+                    f"💰 НОВЫЙ ЗАПРОС ВЫПЛАТЫ #{payment_request.id}\n\n"
+                    f"Учитель: {teacher.user.get_full_name()}\n"
+                    f"Сумма: {amount} ₽\n"
+                    f"Способ: {payment_method}\n"
+                    f"Ссылка: /admin/school/paymentrequest/{payment_request.id}/change/"
+                )
+                send_telegram_message(admin_text)
+            except:
+                pass
+
+            messages.success(request, f'✅ Запрос #{payment_request.id} на выплату {amount} ₽ отправлен администратору')
+            return redirect('teacher_dashboard')
+
+        except Exception as e:
+            messages.error(request, f'Ошибка: {str(e)}')
+            return redirect('teacher_request_payment')
+
+    # GET запрос - показываем форму
+    real_payments = Payment.objects.filter(
+        user=request.user,
+        payment_type='teacher_payment'
+    ).order_by('-created_at')[:5]
+
+    # Показываем последние запросы учителя
+    recent_requests = PaymentRequest.objects.filter(
+        teacher=teacher
+    ).order_by('-created_at')[:5]
+
+    from .models import Lesson
+    lessons = Lesson.objects.filter(teacher=teacher, status='completed')
+    calculator = PeriodFinanceCalculator(lessons)
+
+    context = {
+        'teacher': teacher,
+        'real_payments': real_payments,
+        'recent_requests': recent_requests,
+        'stats': {
+            'total_earned': calculator.lessons_stats['teacher_payment'],
+            'paid': calculator.payments_stats['teacher_payments'],
+            'available': teacher.wallet_balance,
+        }
+    }
+    return render(request, 'school/teacher/payment_request.html', context)
+
+
+@login_required
+@login_required
+def teacher_material_create(request):
+    """Создание методического материала (для учеников)"""
+    if request.user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+
+    teacher = request.user.teacher_profile
+
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        description = request.POST.get('description')
+        material_type = request.POST.get('material_type')
+        file = request.FILES.get('file')
+        link = request.POST.get('link')
+        subjects = request.POST.getlist('subjects')
+        students = request.POST.getlist('students')  # список ID учеников
+        is_public = request.POST.get('is_public') == 'on'
+
+        if not title or not material_type:
+            messages.error(request, 'Заполните обязательные поля')
+            return redirect('teacher_material_create')
+
+        if material_type == 'file' and not file:
+            messages.error(request, 'Выберите файл для загрузки')
+            return redirect('teacher_material_create')
+
+        if material_type == 'link' and not link:
+            messages.error(request, 'Введите ссылку')
+            return redirect('teacher_material_create')
+
+        # Создаем материал
+        material = Material.objects.create(
+            title=title,
+            description=description,
+            material_type=material_type,
+            file=file,
+            link=link,
+            created_by=request.user,
+            is_public=is_public
+        )
+
+        # Добавляем предметы
+        if subjects:
+            material.subjects.set(subjects)
+
+        # Добавляем учителя как владельца
+        material.teachers.add(teacher)
+
+        # Добавляем выбранных учеников
+        if students and not is_public:
+            material.students.set(students)
+
+        # Логирование
+        log_user_action(
+            request,
+            'material_add',
+            f'Добавлен методический материал: {title}',
+            object_id=material.id,
+            object_type='material'
+        )
+
+        # Уведомления ученикам
+        if students:
+            for student_id in students:
+                try:
+                    student = Student.objects.get(id=student_id)
+                    Notification.objects.create(
+                        user=student.user,
+                        title='📚 Новый учебный материал',
+                        message=f'Учитель {teacher.user.get_full_name()} добавил материал: {title}',
+                        notification_type='material_added',
+                        link=f'/student/materials/'
+                    )
+                except Student.DoesNotExist:
+                    pass
+
+        messages.success(request, f'✅ Материал "{title}" успешно добавлен')
+        return redirect('teacher_dashboard')
+
+    # GET запрос - показываем форму
+    students = teacher.student_set.all().select_related('user')
+    subjects = Subject.objects.all()
+
+    context = {
+        'teacher': teacher,
+        'students': students,
+        'subjects': subjects,
+    }
+    return render(request, 'school/teacher/material_form.html', context)
+
+
+@login_required
+def teacher_material_edit(request, material_id):
+    """Редактирование методического материала"""
+    if request.user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+
+    material = get_object_or_404(Material, id=material_id, created_by=request.user)
+    teacher = request.user.teacher_profile
+
+    if request.method == 'POST':
+        material.title = request.POST.get('title')
+        material.description = request.POST.get('description')
+        material.is_public = request.POST.get('is_public') == 'on'
+
+        subjects = request.POST.getlist('subjects')
+        students = request.POST.getlist('students')
+
+        if request.FILES.get('file'):
+            material.file = request.FILES['file']
+
+        if request.POST.get('link'):
+            material.link = request.POST.get('link')
+
+        material.save()
+
+        # Обновляем связи
+        if subjects:
+            material.subjects.set(subjects)
+
+        # Обновляем учеников
+        if not material.is_public and students:
+            material.students.set(students)
+        elif material.is_public:
+            material.students.clear()  # для публичных материалов ученики не нужны
+
+        messages.success(request, f'✅ Материал "{material.title}" обновлен')
+        return redirect('teacher_dashboard')
+
+    students = teacher.student_set.all().select_related('user')
+    subjects = Subject.objects.all()
+
+    context = {
+        'material': material,
+        'students': students,
+        'subjects': subjects,
+    }
+    return render(request, 'school/teacher/material_form.html', context)
+@login_required
+def teacher_material_delete(request, material_id):
+    """Удаление методического материала"""
+    if request.user.role != 'teacher':
+        messages.error(request, 'Доступ запрещен')
+        return redirect('dashboard')
+
+    material = get_object_or_404(Material, id=material_id, created_by=request.user)
+
+    if request.method == 'POST':
+        title = material.title
+        material.delete()
+        messages.success(request, f'✅ Материал "{title}" удален')
+        return redirect('teacher_dashboard')
+
+    context = {'material': material}
+    return render(request, 'school/teacher/material_confirm_delete.html', context)
+
+
+@login_required
+def material_detail(request, material_id):
+    """Просмотр материала"""
+    material = get_object_or_404(Material, id=material_id)
+
+    # Проверка доступа
+    if not material.is_public:
+        if request.user.role == 'student':
+            student = request.user.student_profile
+            if student not in material.students.all():
+                messages.error(request, 'Доступ запрещен')
+                return redirect('dashboard')
+        elif request.user.role == 'teacher':
+            teacher = request.user.teacher_profile
+            if teacher not in material.teachers.all() and material.created_by != request.user:
+                messages.error(request, 'Доступ запрещен')
+                return redirect('dashboard')
+
+    # Увеличиваем счетчик просмотров (можно добавить поле views)
+    # material.views += 1
+    # material.save()
+
+    context = {
+        'material': material,
+    }
+    return render(request, 'school/material_detail.html', context)

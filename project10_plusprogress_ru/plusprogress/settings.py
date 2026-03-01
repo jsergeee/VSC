@@ -20,7 +20,8 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here'
 
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,192.168.0.117').split(',')
+# ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,192.168.0.117').split(',')
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.0.117', 'preindulgent-cash-pseudomodern.ngrok-free.dev', 'cautiously-cunning-hummingbird.cloudpub.ru']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -89,7 +90,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Для разработки можно использовать консольный бэкенд
+
 if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
@@ -120,7 +121,7 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 # Email settings
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.yandex.ru'  # или ваш SMTP
+EMAIL_HOST = 'smtp.yandex.ru'
 EMAIL_PORT = 465
 EMAIL_USE_SSL = True
 EMAIL_HOST_USER = 'jserge@yandex.ru'
@@ -129,5 +130,7 @@ DEFAULT_FROM_EMAIL = 'jserge@yandex.ru'
 
 
 # Telegram bot settings
-TELEGRAM_BOT_TOKEN = '8391902139:AAGHIcvya9Zk1ZlsDFBkn6WJEBxE5TyK02Y'  # вставьте сюда
-TELEGRAM_CHAT_ID = '1226934902'        # вставьте сюда
+TELEGRAM_BOT_TOKEN = '8391902139:AAGHIcvya9Zk1ZlsDFBkn6WJEBxE5TyK02Y'
+TELEGRAM_CHAT_ID = '1226934902'
+
+BASE_URL = 'http://127.0.0.1:8080'
