@@ -1526,7 +1526,7 @@ def delete_queryset(self, request, queryset):
 
 # ==================== SCHEDULE ADMIN ====================
 
-@admin.register(Schedule)
+# @admin.register(Schedule)
 class ScheduleAdmin(admin.ModelAdmin):
     formfield_overrides = {
         models.TimeField: {'widget': forms.TimeInput(format='%H:%M', attrs={'type': 'time'})},
