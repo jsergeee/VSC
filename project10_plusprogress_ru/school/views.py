@@ -379,8 +379,9 @@ def find_student_by_id(student_id):
 
 def create_lesson_with_prices(teacher, student, subject, date, start_time, end_time):
     """Создание урока с автоматической подстановкой цен"""
-
-    cost, teacher_payment = StudentSubjectPrice.get_price_for(student, subject)
+    
+    # Теперь передаем teacher в метод get_price_for
+    cost, teacher_payment = StudentSubjectPrice.get_price_for(student, subject, teacher)
 
     if cost is None:
         cost = Decimal('1000')
@@ -406,8 +407,6 @@ def create_lesson_with_prices(teacher, student, subject, date, start_time, end_t
     )
 
     return lesson
-
-
 # ============================================
 # ЧАСТЬ 3: ОСНОВНЫЕ VIEWS (рефакторинг ключевых функций)
 # ============================================
@@ -3936,7 +3935,7 @@ def teacher_homework_detail(request, homework_id):
             # ✅ УВЕДОМЛЕНИЕ В TELEGRAM
             try:
                 from school.telegram import notify_homework_checked
-                notify_homework_checked(submission)
+                notify_homework_checked(homework, submission)
             except Exception as e:
                 print(f"❌ Ошибка отправки Telegram: {e}")
 
@@ -4404,7 +4403,7 @@ def teacher_create_schedule(request):
         student = get_object_or_404(Student, id=student_id, teachers=teacher)
         subject = get_object_or_404(Subject, id=subject_id)
 
-        cost, teacher_payment = StudentSubjectPrice.get_price_for(student, subject)
+        cost, teacher_payment = StudentSubjectPrice.get_price_for(student, subject, teacher)
 
         try:
             start_time = datetime.strptime(start_time_str, '%H:%M').time()

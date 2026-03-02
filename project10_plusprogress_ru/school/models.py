@@ -1305,7 +1305,9 @@ class Homework(models.Model):
         Lesson,
         on_delete=models.CASCADE,
         related_name='homeworks',
-        verbose_name='Урок'
+        verbose_name='Урок',
+        null=True,  # 👈 ДОБАВИТЬ
+        blank=True  # 👈 ДОБАВИТЬ
     )
     teacher = models.ForeignKey(
         Teacher,
@@ -1880,12 +1882,20 @@ class ScheduleTemplateStudent(models.Model):
 
 
 class StudentSubjectPrice(models.Model):
-    """Индивидуальная стоимость предмета для ученика"""
+    """Индивидуальная стоимость предмета для ученика у конкретного учителя"""
     student = models.ForeignKey(
         Student,
         on_delete=models.CASCADE,
         related_name='subject_prices',
         verbose_name='Ученик'
+    )
+    teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.CASCADE,
+        related_name='subject_prices',
+        verbose_name='Учитель',
+        null=True,  # Временно разрешаем null для обратной совместимости
+        blank=True
     )
     subject = models.ForeignKey(
         Subject,
@@ -1934,25 +1944,44 @@ class StudentSubjectPrice(models.Model):
     class Meta:
         verbose_name = 'Цена для ученика'
         verbose_name_plural = 'Цены для учеников'
-        unique_together = ['student', 'subject']  # Одна цена на пару ученик+предмет
-        ordering = ['student', 'subject']
+        unique_together = ['student', 'teacher', 'subject']  # Теперь уникальность с учетом учителя
+        ordering = ['student', 'teacher', 'subject']
 
     def __str__(self):
-        return f"{self.student} - {self.subject}: {self.cost}₽ (выплата {self.teacher_payment}₽)"
+        teacher_name = self.teacher.user.get_full_name() if self.teacher else 'Любой учитель'
+        return f"{self.student} - {teacher_name} - {self.subject}: {self.cost}₽ (выплата {self.teacher_payment}₽)"
 
     @classmethod
-    def get_price_for(cls, student, subject):
-        """Получить цену для ученика и предмета"""
+    def get_price_for(cls, student, subject, teacher=None):
+        """
+        Получить цену для ученика и предмета с учетом учителя
+        Если teacher указан, ищет цену для конкретного учителя
+        Если не найден, ищет цену без учителя (общую)
+        """
+        try:
+            # Сначала ищем с учителем
+            if teacher:
+                price = cls.objects.get(
+                    student=student,
+                    teacher=teacher,
+                    subject=subject,
+                    is_active=True
+                )
+                return price.cost, price.teacher_payment
+        except cls.DoesNotExist:
+            pass
+        
+        # Если не нашли с учителем или teacher не указан, ищем без учителя
         try:
             price = cls.objects.get(
                 student=student,
+                teacher__isnull=True,
                 subject=subject,
                 is_active=True
             )
             return price.cost, price.teacher_payment
         except cls.DoesNotExist:
             return None, None
-
 
 class TrialRequest(models.Model):
     """Заявка на пробный урок"""

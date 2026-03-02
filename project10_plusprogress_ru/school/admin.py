@@ -1,7 +1,6 @@
 # school/admin.py
 
 from django.contrib import admin, messages
-from .models import PaymentRequest
 from django.core.exceptions import ValidationError
 from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
@@ -16,21 +15,14 @@ from django.db.models import Prefetch, Sum, Count
 from django.db import transaction
 from .views import import_users_view
 from .telegram import notify_payment
+# В начале файла оставьте ТОЛЬКО ОДИН импорт всех моделей
 from .models import (
     User, Subject, Teacher, Student, Lesson, LessonFormat,
     LessonReport, Payment, Schedule, TrialRequest,
     Notification, LessonFeedback, TeacherRating,
     Homework, HomeworkSubmission, GroupLesson, GroupEnrollment,
     LessonAttendance, ScheduleTemplate, ScheduleTemplateStudent,
-    StudentSubjectPrice, UserActionLog  # 👈 ДОБАВЬТЕ ЭТОТ ИМПОРТ
-)
-from .models import (
-    User, Subject, Teacher, Student, Lesson, LessonFormat,
-    LessonReport, Payment, Schedule, TrialRequest,
-    Notification, LessonFeedback, TeacherRating,
-    Homework, HomeworkSubmission, GroupLesson, GroupEnrollment,
-    LessonAttendance, ScheduleTemplate, ScheduleTemplateStudent,
-    StudentSubjectPrice, PaymentRequest
+    StudentSubjectPrice, UserActionLog, PaymentRequest 
 )
 from .views import schedule_calendar_data, admin_complete_lesson
 
@@ -49,8 +41,8 @@ except admin.sites.NotRegistered:
 class StudentSubjectPriceInline(admin.TabularInline):
     model = StudentSubjectPrice
     extra = 1
-    fields = ['subject', 'cost', 'teacher_payment', 'discount', 'is_active']
-    autocomplete_fields = ['subject']
+    fields = ['teacher', 'subject', 'cost', 'teacher_payment', 'discount', 'is_active']
+    autocomplete_fields = ['subject', 'teacher']
 
 
 class LessonAttendanceInline(admin.TabularInline):
@@ -2006,11 +1998,11 @@ class ScheduleTemplateAdmin(admin.ModelAdmin):
 
 @admin.register(StudentSubjectPrice)
 class StudentSubjectPriceAdmin(admin.ModelAdmin):
-    list_display = ['student', 'subject', 'cost', 'teacher_payment', 'discount', 'is_active']
-    list_filter = ['subject', 'is_active']
+    list_display = ['student', 'teacher', 'subject', 'cost', 'teacher_payment', 'discount', 'is_active']
+    list_filter = ['subject','teacher', 'is_active']
     search_fields = ['student__user__last_name', 'subject__name']
     list_editable = ['cost', 'teacher_payment', 'is_active']
-    autocomplete_fields = ['student', 'subject']
+    autocomplete_fields = ['student','teacher', 'subject']
 
 
 # =================ЛОГИРОВАНИЕ=============================

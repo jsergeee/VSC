@@ -807,7 +807,7 @@ img {
 
 .view-toggle {
   margin-bottom: 20px;
-  text-align: left;
+  text-align: left !important;
 }
 .view-toggle a,
 .view-toggle button {
@@ -1373,7 +1373,6 @@ img {
 
 .d-flex {
   display: flex !important;
-  justify-content: flex-end !important;
 }
 
 .d-inline-block {
