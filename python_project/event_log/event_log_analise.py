@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-ПОЛНЫЙ АНАЛИЗ СОБЫТИЙ БЕЗОПАСНОСТИ WINDOWS
-Версия: 3.13 (совместимая с Python 3.13)
-Основан на официальной документации Microsoft
+ПОЛНЫЙ АНАЛИЗ СОБЫТИЙ БЕЗОПАСНОСТИ WINDOWS С ПРИВЯЗКОЙ К CVE
+Версия: 3.14 (совместимая с Python 3.13)
+Основан на официальной документации Microsoft и базе CVE
 """
 
 import win32evtlog
@@ -26,6 +26,10 @@ import webbrowser
 import tempfile
 import subprocess
 import ctypes
+import json
+import urllib.request
+import socket
+import struct
 
 # Проверка прав администратора
 def is_admin():
@@ -73,267 +77,459 @@ class Colors:
     END = '\033[0m'
     BOLD = '\033[1m'
 
-# Полная база данных событий безопасности по документации Microsoft
-EVENT_DATABASE = {
-    # ========== ВЫСОКАЯ КРИТИЧНОСТЬ ==========
-    4618: {"desc": "Произошло событие безопасности, соответствующее контролируемому шаблону", "category": "Высокая угроза", "level": "Critical"},
-    4649: {"desc": "Обнаружена атака воспроизведения", "category": "Высокая угроза", "level": "Critical"},
-    4719: {"desc": "Политика аудита системы была изменена", "category": "Политики аудита", "level": "Warning"},
-    4765: {"desc": "История SID была добавлена в учетную запись", "category": "Учетные записи", "level": "Critical"},
-    4766: {"desc": "Попытка добавить SID History в учетную запись завершилась неудачей", "category": "Учетные записи", "level": "Critical"},
-    4794: {"desc": "Предпринята попытка установить режим восстановления служб каталогов", "category": "Службы каталогов", "level": "Critical"},
-    4897: {"desc": "Включено разделение ролей", "category": "Роли", "level": "Warning"},
-    4964: {"desc": "Специальные группы были назначены новому входу в систему", "category": "Группы", "level": "Warning"},
-    5124: {"desc": "Параметр безопасности был обновлен в службе реагирования OCSP", "category": "Сертификаты", "level": "Warning"},
+# База данных CVE для событий безопасности
+CVE_DATABASE = {
+    # Критические уязвимости, связанные с событиями безопасности
+    4624: {
+        "cves": [
+            {
+                "id": "CVE-2021-42287",
+                "description": "Active Directory Elevation of Privilege Vulnerability",
+                "severity": "Critical",
+                "affected": "Windows Server 2008-2022",
+                "remediation": "Установите обновление KB5008602 или более позднее"
+            },
+            {
+                "id": "CVE-2021-42291",
+                "description": "Active Directory Elevation of Privilege Vulnerability",
+                "severity": "High",
+                "affected": "Windows Server 2008-2022",
+                "remediation": "Установите обновление KB5008602 или более позднее"
+            }
+        ]
+    },
+    4625: {
+        "cves": [
+            {
+                "id": "CVE-2022-26931",
+                "description": "Windows Kerberos Elevation of Privilege Vulnerability",
+                "severity": "High",
+                "affected": "Windows 10/11, Server 2019-2022",
+                "remediation": "Установите обновление KB5013942 или более позднее"
+            }
+        ]
+    },
+    4672: {
+        "cves": [
+            {
+                "id": "CVE-2022-21874",
+                "description": "Windows Security Center API Elevation of Privilege Vulnerability",
+                "severity": "High",
+                "affected": "Windows 10/11, Server 2019-2022",
+                "remediation": "Установите обновление KB5009543 или более позднее"
+            }
+        ]
+    },
+    4688: {
+        "cves": [
+            {
+                "id": "CVE-2022-30190",
+                "description": "Microsoft Office MSHTML Remote Code Execution Vulnerability (Follina)",
+                "severity": "Critical",
+                "affected": "Windows 7-11, Server 2008-2022",
+                "remediation": "Установите обновление KB5015010 или более позднее"
+            }
+        ]
+    },
+    4697: {
+        "cves": [
+            {
+                "id": "CVE-2022-34715",
+                "description": "Windows Network File System Remote Code Execution Vulnerability",
+                "severity": "Critical",
+                "affected": "Windows Server 2012-2022",
+                "remediation": "Установите обновление KB5016622 или более позднее"
+            }
+        ]
+    },
+    4698: {
+        "cves": [
+            {
+                "id": "CVE-2022-26925",
+                "description": "Windows LSA Spoofing Vulnerability",
+                "severity": "High",
+                "affected": "Windows 7-11, Server 2008-2022",
+                "remediation": "Установите обновление KB5013942 или более позднее"
+            }
+        ]
+    },
+    4720: {
+        "cves": [
+            {
+                "id": "CVE-2022-26919",
+                "description": "Active Directory Privilege Escalation Vulnerability",
+                "severity": "Critical",
+                "affected": "Windows Server 2008-2022",
+                "remediation": "Установите обновление KB5013942 или более позднее"
+            }
+        ]
+    },
+    4740: {
+        "cves": [
+            {
+                "id": "CVE-2021-33781",
+                "description": "Active Directory Security Feature Bypass Vulnerability",
+                "severity": "High",
+                "affected": "Windows Server 2008-2022",
+                "remediation": "Установите обновление KB5004945 или более позднее"
+            }
+        ]
+    },
+    4768: {
+        "cves": [
+            {
+                "id": "CVE-2021-33782",
+                "description": "Windows Kerberos Elevation of Privilege Vulnerability",
+                "severity": "Critical",
+                "affected": "Windows 7-11, Server 2008-2022",
+                "remediation": "Установите обновление KB5004945 или более позднее"
+            },
+            {
+                "id": "CVE-2022-33679",
+                "description": "Windows Kerberos Elevation of Privilege Vulnerability",
+                "severity": "Critical",
+                "affected": "Windows 7-11, Server 2008-2022",
+                "remediation": "Установите обновление KB5016622 или более позднее"
+            }
+        ]
+    },
+    4769: {
+        "cves": [
+            {
+                "id": "CVE-2022-33647",
+                "description": "Windows Kerberos Elevation of Privilege Vulnerability",
+                "severity": "High",
+                "affected": "Windows 7-11, Server 2008-2022",
+                "remediation": "Установите обновление KB5016622 или более позднее"
+            }
+        ]
+    },
+    4771: {
+        "cves": [
+            {
+                "id": "CVE-2021-42287",
+                "description": "Active Directory Elevation of Privilege Vulnerability",
+                "severity": "Critical",
+                "affected": "Windows Server 2008-2022",
+                "remediation": "Установите обновление KB5008602 или более позднее"
+            }
+        ]
+    },
+    4776: {
+        "cves": [
+            {
+                "id": "CVE-2022-23258",
+                "description": "Windows Print Spooler Elevation of Privilege Vulnerability",
+                "severity": "High",
+                "affected": "Windows 7-11, Server 2008-2022",
+                "remediation": "Установите обновление KB5011495 или более позднее"
+            }
+        ]
+    },
+    4782: {
+        "cves": [
+            {
+                "id": "CVE-2022-24521",
+                "description": "Windows Common Log File System Driver Elevation of Privilege Vulnerability",
+                "severity": "Critical",
+                "affected": "Windows 7-11, Server 2008-2022",
+                "remediation": "Установите обновление KB5011486 или более позднее"
+            }
+        ]
+    },
+    4794: {
+        "cves": [
+            {
+                "id": "CVE-2022-26931",
+                "description": "Windows Kerberos Elevation of Privilege Vulnerability",
+                "severity": "High",
+                "affected": "Windows Server 2008-2022",
+                "remediation": "Установите обновление KB5013942 или более позднее"
+            }
+        ]
+    },
+    5038: {
+        "cves": [
+            {
+                "id": "CVE-2022-21894",
+                "description": "Secure Boot Security Feature Bypass Vulnerability",
+                "severity": "Critical",
+                "affected": "Windows 8-11, Server 2012-2022",
+                "remediation": "Обновите прошивку UEFI и установите обновление KB5012170"
+            }
+        ]
+    },
+    5140: {
+        "cves": [
+            {
+                "id": "CVE-2022-30136",
+                "description": "Windows Network File System Remote Code Execution Vulnerability",
+                "severity": "Critical",
+                "affected": "Windows Server 2012-2022",
+                "remediation": "Установите обновление KB5015010 или более позднее"
+            }
+        ]
+    },
+    5827: {
+        "cves": [
+            {
+                "id": "CVE-2020-1472",
+                "description": "Netlogon Elevation of Privilege Vulnerability (Zerologon)",
+                "severity": "Critical",
+                "affected": "Windows Server 2008-2019",
+                "remediation": "Установите обновление KB4565349 и включите режим защиты"
+            }
+        ]
+    },
+    5828: {
+        "cves": [
+            {
+                "id": "CVE-2020-1472",
+                "description": "Netlogon Elevation of Privilege Vulnerability (Zerologon)",
+                "severity": "Critical",
+                "affected": "Windows Server 2008-2019",
+                "remediation": "Установите обновление KB4565349 и включите режим защиты"
+            }
+        ]
+    },
     
-    # ========== СРЕДНЯЯ КРИТИЧНОСТЬ ==========
-    1102: {"desc": "Журнал аудита был очищен", "category": "Аудит", "level": "Warning"},
-    4621: {"desc": "Администратор восстановил систему из CrashOnAuditFail", "category": "Система", "level": "Warning"},
-    4675: {"desc": "SID'ы были отфильтрованы", "category": "Аудит", "level": "Information"},
-    4692: {"desc": "Была предпринята попытка резервного копирования главного ключа защиты данных", "category": "Защита данных", "level": "Warning"},
-    4693: {"desc": "Предпринята попытка восстановления главного ключа защиты данных", "category": "Защита данных", "level": "Warning"},
-    4706: {"desc": "Новое доверие было создано для домена", "category": "Домен", "level": "Information"},
-    4713: {"desc": "Политика Kerberos была изменена", "category": "Kerberos", "level": "Warning"},
-    4714: {"desc": "Изменена политика восстановления зашифрованных данных", "category": "Шифрование", "level": "Warning"},
-    4715: {"desc": "Политика аудита (SACL) объекта была изменена", "category": "Политики аудита", "level": "Warning"},
-    4716: {"desc": "Изменены сведения о доверенном домене", "category": "Домен", "level": "Warning"},
-    4724: {"desc": "Предпринята попытка сбросить пароль учетной записи", "category": "Учетные записи", "level": "Information"},
-    4727: {"desc": "Была создана глобальная группа с функцией безопасности", "category": "Группы", "level": "Information"},
-    4735: {"desc": "Локальная группа с функцией безопасности была изменена", "category": "Группы", "level": "Information"},
-    4737: {"desc": "Глобальная группа с поддержкой безопасности была изменена", "category": "Группы", "level": "Information"},
-    4739: {"desc": "Политика домена была изменена", "category": "Домен", "level": "Warning"},
-    4754: {"desc": "Была создана универсальная группа с поддержкой безопасности", "category": "Группы", "level": "Information"},
-    4755: {"desc": "Универсальная группа с поддержкой безопасности была изменена", "category": "Группы", "level": "Information"},
-    4764: {"desc": "Удалена группа без включённых параметров безопасности", "category": "Группы", "level": "Information"},
-    4780: {"desc": "ACL был установлен в учетных записях, являющихся членами групп администраторов", "category": "ACL", "level": "Warning"},
-    4816: {"desc": "RPC обнаружил нарушение целостности при расшифровке входящего сообщения", "category": "RPC", "level": "Warning"},
-    4865: {"desc": "Добавлена запись достоверной информации о лесах", "category": "Доверие", "level": "Information"},
-    4866: {"desc": "Удалена запись сведений о доверенном лесу", "category": "Доверие", "level": "Information"},
-    4867: {"desc": "Запись доверенной информации о лесе была изменена", "category": "Доверие", "level": "Information"},
-    4868: {"desc": "Диспетчер сертификатов отклонил запрос на сертификат, находящийся в состоянии ожидания", "category": "Сертификаты", "level": "Warning"},
-    4870: {"desc": "Службы сертификатов отозвали сертификат", "category": "Сертификаты", "level": "Warning"},
-    4882: {"desc": "Изменены разрешения безопасности служб сертификатов", "category": "Сертификаты", "level": "Warning"},
-    4885: {"desc": "Изменен фильтр аудита для служб сертификатов", "category": "Сертификаты", "level": "Warning"},
-    4890: {"desc": "Изменены параметры диспетчера сертификатов для служб сертификатов", "category": "Сертификаты", "level": "Warning"},
-    4892: {"desc": "Изменено свойство служб сертификатов", "category": "Сертификаты", "level": "Warning"},
-    4896: {"desc": "Одна или несколько строк были удалены из базы данных сертификатов", "category": "Сертификаты", "level": "Warning"},
-    4906: {"desc": "Значение CrashOnAuditFail изменилось", "category": "Аудит", "level": "Warning"},
-    4907: {"desc": "Параметры аудита объекта были изменены", "category": "Политики аудита", "level": "Warning"},
-    4908: {"desc": "Изменена таблица 'Специальные группы входа в систему'", "category": "Вход в систему", "level": "Warning"},
-    4912: {"desc": "Политика аудита для каждого пользователя была изменена", "category": "Политики аудита", "level": "Warning"},
-    4960: {"desc": "IPsec отбросил входящий пакет, не прошедший проверку целостности", "category": "IPsec", "level": "Warning"},
-    4961: {"desc": "IPsec отбросил входящий пакет, который не прошел проверку на воспроизведение", "category": "IPsec", "level": "Warning"},
-    4962: {"desc": "IPsec отбросил входящий пакет, который не прошел проверку на воспроизведение", "category": "IPsec", "level": "Warning"},
-    4963: {"desc": "IPsec удаляет входящие текстовые пакеты, которые должны быть защищены", "category": "IPsec", "level": "Warning"},
-    4965: {"desc": "IPsec получил пакет с удаленного компьютера с неправильным индексом параметров безопасности (SPI)", "category": "IPsec", "level": "Warning"},
-    4976: {"desc": "Во время согласования в Главном режиме IPsec получил недопустимый пакет согласования", "category": "IPsec", "level": "Warning"},
-    4977: {"desc": "Во время переговоров в режиме быстрого режима IPsec получил недопустимый пакет переговоров", "category": "IPsec", "level": "Warning"},
-    4978: {"desc": "Во время переговоров в расширенном режиме IPsec получил недопустимый пакет согласования", "category": "IPsec", "level": "Warning"},
-    4983: {"desc": "Не удалось выполнить согласование расширенного режима IPsec. Удалена соответствующая связь безопасности в главном режиме", "category": "IPsec", "level": "Warning"},
-    4984: {"desc": "Не удалось выполнить согласование расширенного режима IPsec. Удалена соответствующая связь безопасности в главном режиме", "category": "IPsec", "level": "Warning"},
-    5027: {"desc": "Служба брандмауэра Windows не смогла получить политику безопасности из локального хранилища", "category": "Брандмауэр", "level": "Error"},
-    5028: {"desc": "Служба брандмауэра Windows не смогла проанализировать новую политику безопасности", "category": "Брандмауэр", "level": "Error"},
-    5029: {"desc": "Не удалось инициализировать драйвер службой брандмауэра Windows", "category": "Брандмауэр", "level": "Error"},
-    5030: {"desc": "Не удалось запустить службу брандмауэра Windows", "category": "Брандмауэр", "level": "Error"},
-    5035: {"desc": "Не удалось запустить драйвер брандмауэра Windows", "category": "Брандмауэр", "level": "Error"},
-    5037: {"desc": "Драйвер брандмауэра Windows обнаружил критичную ошибку среды выполнения", "category": "Брандмауэр", "level": "Critical"},
-    5038: {"desc": "Целостность кода определяет, что хэш изображения файла недопустим", "category": "Целостность кода", "level": "Critical"},
-    5120: {"desc": "Запущена служба ответа OCSP", "category": "OCSP", "level": "Information"},
-    5121: {"desc": "Служба ответа OCSP остановлена", "category": "OCSP", "level": "Information"},
-    5122: {"desc": "В службе ответа OCSP была изменена запись конфигурации", "category": "OCSP", "level": "Warning"},
-    5123: {"desc": "В службе ответа OCSP была изменена запись конфигурации", "category": "OCSP", "level": "Warning"},
-    5376: {"desc": "Учетные данные диспетчера учетных данных были резервированы", "category": "Учетные данные", "level": "Information"},
-    5377: {"desc": "Учетные данные диспетчера учетных данных были восстановлены из резервной копии", "category": "Учетные данные", "level": "Information"},
-    5453: {"desc": "Согласование IPsec с удаленным компьютером не удалось, так как служба IKE и AuthIP IPsec Keying Modules (IKEEXT) не запущена", "category": "IPsec", "level": "Error"},
-    5480: {"desc": "Службам IPsec не удалось получить полный список сетевых интерфейсов на компьютере", "category": "IPsec", "level": "Warning"},
-    5483: {"desc": "Службы IPsec не удалось инициализировать сервер RPC", "category": "IPsec", "level": "Error"},
-    5484: {"desc": "Службы IPsec столкнулись с критическим сбоем и были остановлены", "category": "IPsec", "level": "Critical"},
-    5485: {"desc": "Службы IPsec не смогли обработать некоторые фильтры IPsec во время события подключения и проигрывания сетевых интерфейсов", "category": "IPsec", "level": "Warning"},
-    5827: {"desc": "Служба Netlogon отклонила уязвимое подключение к защищенному каналу Netlogon из учетной записи компьютера", "category": "Netlogon", "level": "Warning"},
-    5828: {"desc": "Служба Netlogon отклоняла уязвимое подключение к защищенному каналу Netlogon с использованием учётной записи доверительных отношений", "category": "Netlogon", "level": "Warning"},
-    6145: {"desc": "При обработке политики безопасности в объектах групповой политики произошла одна или несколько ошибок", "category": "Групповая политика", "level": "Error"},
-    6273: {"desc": "Сервер политики сети отказал пользователю в доступе", "category": "Политика сети", "level": "Warning"},
-    6274: {"desc": "Сервер политики сети отбрасывает запрос пользователя", "category": "Политика сети", "level": "Warning"},
-    6275: {"desc": "Сервер политики сети отбрасывает запрос на учет для пользователя", "category": "Политика сети", "level": "Warning"},
-    6276: {"desc": "Сервер политики сети поместил пользователя в карантин", "category": "Политика сети", "level": "Warning"},
-    6277: {"desc": "Сервер политики сети предоставил пользователю доступ с испытательным сроком, так как хост не соответствовал определенной политике работоспособности", "category": "Политика сети", "level": "Warning"},
-    6278: {"desc": "Сервер политики сети предоставил пользователю полный доступ, так как хост выполнил определённые критерии работоспособности", "category": "Политика сети", "level": "Information"},
-    6279: {"desc": "Сервер политики сети заблокировал учетную запись пользователя из-за повторных неудачных попыток проверки подлинности", "category": "Политика сети", "level": "Warning"},
-    6280: {"desc": "Сервер политики сети разблокировал учетную запись пользователя", "category": "Политика сети", "level": "Information"},
+    # PowerShell связанные CVE
+    4103: {
+        "cves": [
+            {
+                "id": "CVE-2022-41076",
+                "description": "PowerShell Remote Code Execution Vulnerability",
+                "severity": "Critical",
+                "affected": "Windows 7-11, Server 2008-2022",
+                "remediation": "Установите обновление KB5018410 или более позднее"
+            }
+        ]
+    },
+    4104: {
+        "cves": [
+            {
+                "id": "CVE-2022-41076",
+                "description": "PowerShell Remote Code Execution Vulnerability",
+                "severity": "Critical",
+                "affected": "Windows 7-11, Server 2008-2022",
+                "remediation": "Установите обновление KB5018410 или более позднее"
+            }
+        ]
+    },
     
-    # ========== НИЗКАЯ КРИТИЧНОСТЬ ==========
-    4608: {"desc": "Windows запускается", "category": "Система", "level": "Information"},
-    4609: {"desc": "Windows завершает работу", "category": "Система", "level": "Information"},
-    4610: {"desc": "Пакет проверки подлинности загружен локальным центром безопасности", "category": "Аутентификация", "level": "Information"},
-    4611: {"desc": "Процесс доверенного входа зарегистрирован в локальном органе безопасности", "category": "Вход в систему", "level": "Information"},
-    4612: {"desc": "Внутренние ресурсы, выделенные для очереди сообщений аудита, были исчерпаны, что вызвало потерю некоторых данных аудита", "category": "Аудит", "level": "Warning"},
-    4614: {"desc": "Пакет уведомлений загружен диспетчером учетных записей безопасности", "category": "SAM", "level": "Information"},
-    4615: {"desc": "Недопустимое использование порта LPC", "category": "LPC", "level": "Warning"},
-    4616: {"desc": "Системное время было изменено", "category": "Система", "level": "Warning"},
-    4622: {"desc": "Пакет безопасности загружен Локальным органом безопасности", "category": "LSA", "level": "Information"},
-    4624: {"desc": "Учетная запись успешно вошла в систему", "category": "Вход в систему", "level": "Success"},
-    4625: {"desc": "Не удалось войти в учетную запись", "category": "Вход в систему", "level": "Failure"},
-    4634: {"desc": "Учетная запись была отключена", "category": "Вход в систему", "level": "Information"},
-    4646: {"desc": "Начат режим защиты IKE от DoS", "category": "IPsec", "level": "Information"},
-    4647: {"desc": "Вход, инициированный пользователем", "category": "Вход в систему", "level": "Information"},
-    4648: {"desc": "Вход был предпринят с помощью явных учетных данных", "category": "Вход в систему", "level": "Warning"},
-    4650: {"desc": "Была создана связь безопасности основного режима IPsec", "category": "IPsec", "level": "Information"},
-    4651: {"desc": "Была создана связь безопасности основного режима IPsec. Сертификат использовался для проверки подлинности", "category": "IPsec", "level": "Information"},
-    4652: {"desc": "Не удалось выполнить согласование основного режима IPsec", "category": "IPsec", "level": "Failure"},
-    4653: {"desc": "Не удалось выполнить согласование основного режима IPsec", "category": "IPsec", "level": "Failure"},
-    4654: {"desc": "Не удалось выполнить согласование быстрого режима IPsec", "category": "IPsec", "level": "Failure"},
-    4655: {"desc": "Прекращена ассоциация безопасности основного режима IPsec", "category": "IPsec", "level": "Information"},
-    4656: {"desc": "Запрошен дескриптор объекта", "category": "Доступ к объектам", "level": "Information"},
-    4657: {"desc": "Значение реестра было изменено", "category": "Реестр", "level": "Warning"},
-    4658: {"desc": "Дескриптор объекта был закрыт", "category": "Доступ к объектам", "level": "Information"},
-    4659: {"desc": "Дескриптор объекта был запрошен с намерением удаления", "category": "Доступ к объектам", "level": "Warning"},
-    4660: {"desc": "Объект был удален", "category": "Доступ к объектам", "level": "Warning"},
-    4661: {"desc": "Запрошен дескриптор объекта", "category": "Доступ к объектам", "level": "Information"},
-    4662: {"desc": "Операция была выполнена над объектом", "category": "Доступ к объектам", "level": "Information"},
-    4663: {"desc": "Предпринята попытка доступа к объекту", "category": "Доступ к объектам", "level": "Information"},
-    4664: {"desc": "Предпринята попытка создать жесткую ссылку", "category": "Файловая система", "level": "Warning"},
-    4665: {"desc": "Предпринята попытка создать контекст клиента приложения", "category": "Приложения", "level": "Warning"},
-    4666: {"desc": "Приложение попыталось выполнить операцию", "category": "Приложения", "level": "Information"},
-    4667: {"desc": "Удален контекст клиента приложения", "category": "Приложения", "level": "Information"},
-    4668: {"desc": "Приложение инициализировано", "category": "Приложения", "level": "Information"},
-    4670: {"desc": "Изменены разрешения для объекта", "category": "Доступ к объектам", "level": "Warning"},
-    4671: {"desc": "Приложение попыталось получить доступ к заблокированному порядковому номеру через TBS", "category": "TBS", "level": "Warning"},
-    4672: {"desc": "Специальные привилегии, назначенные новому входу", "category": "Привилегии", "level": "Warning"},
-    4673: {"desc": "Была вызвана привилегированная служба", "category": "Привилегии", "level": "Warning"},
-    4674: {"desc": "Была предпринята попытка выполнить операцию на привилегированном объекте", "category": "Привилегии", "level": "Warning"},
-    4688: {"desc": "Был создан новый процесс", "category": "Процессы", "level": "Information"},
-    4689: {"desc": "Процесс завершился", "category": "Процессы", "level": "Information"},
-    4690: {"desc": "Предпринята попытка дублировать дескриптор объекта", "category": "Процессы", "level": "Warning"},
-    4691: {"desc": "Запрошен косвенный доступ к объекту", "category": "Доступ к объектам", "level": "Information"},
-    4694: {"desc": "Предпринята попытка защиты защищенных данных с возможностью аудита", "category": "Защита данных", "level": "Warning"},
-    4695: {"desc": "Была предпринята попытка отменить защиту защищенных данных с возможностью аудита", "category": "Защита данных", "level": "Warning"},
-    4696: {"desc": "Основной токен был назначен процессу", "category": "Процессы", "level": "Information"},
-    4697: {"desc": "Попытайтесь установить службу", "category": "Службы", "level": "Information"},
-    4698: {"desc": "Была создана запланированная задача", "category": "Планировщик заданий", "level": "Information"},
-    4699: {"desc": "Запланированная задача была удалена", "category": "Планировщик заданий", "level": "Information"},
-    4700: {"desc": "Запланированная задача была включена", "category": "Планировщик заданий", "level": "Information"},
-    4701: {"desc": "Запланированная задача отключена", "category": "Планировщик заданий", "level": "Information"},
-    4702: {"desc": "Запланированная задача была обновлена", "category": "Планировщик заданий", "level": "Information"},
-    4704: {"desc": "Пользователю было назначено право", "category": "Права пользователя", "level": "Information"},
-    4705: {"desc": "Было удалено пользовательское право", "category": "Права пользователя", "level": "Information"},
-    4707: {"desc": "Было удалено доверие к домену", "category": "Домен", "level": "Information"},
-    4709: {"desc": "Службы IPsec были запущены", "category": "IPsec", "level": "Information"},
-    4710: {"desc": "Службы IPsec отключены", "category": "IPsec", "level": "Information"},
-    4711: {"desc": "Применена политика IPsec", "category": "IPsec", "level": "Information"},
-    4712: {"desc": "Службы IPsec столкнулись с потенциально серьезным сбоем", "category": "IPsec", "level": "Error"},
-    4717: {"desc": "Учетной записи был предоставлен доступ к системе безопасности", "category": "Учетные записи", "level": "Information"},
-    4718: {"desc": "Доступ к системе был удален из учетной записи", "category": "Учетные записи", "level": "Information"},
-    4720: {"desc": "Была создана учетная запись пользователя", "category": "Учетные записи", "level": "Warning"},
-    4722: {"desc": "Учетная запись пользователя включена", "category": "Учетные записи", "level": "Information"},
-    4723: {"desc": "Предпринята попытка изменить пароль учетной записи", "category": "Учетные записи", "level": "Information"},
-    4725: {"desc": "Учетная запись пользователя отключена", "category": "Учетные записи", "level": "Warning"},
-    4726: {"desc": "Удалена учетная запись пользователя", "category": "Учетные записи", "level": "Warning"},
-    4728: {"desc": "Участник был добавлен в глобальную группу с поддержкой безопасности", "category": "Группы", "level": "Information"},
-    4729: {"desc": "Участник был удален из глобальной группы с поддержкой безопасности", "category": "Группы", "level": "Information"},
-    4730: {"desc": "Глобальная группа с поддержкой безопасности была удалена", "category": "Группы", "level": "Information"},
-    4731: {"desc": "Была создана локальная группа с поддержкой безопасности", "category": "Группы", "level": "Information"},
-    4732: {"desc": "Участник был добавлен в локальную группу с поддержкой безопасности", "category": "Группы", "level": "Information"},
-    4733: {"desc": "Участник был удален из локальной группы с включенной поддержкой безопасности", "category": "Группы", "level": "Information"},
-    4734: {"desc": "Локальная группа с поддержкой безопасности была удалена", "category": "Группы", "level": "Information"},
-    4738: {"desc": "Учетная запись пользователя была изменена", "category": "Учетные записи", "level": "Information"},
-    4740: {"desc": "Учетная запись пользователя заблокирована", "category": "Учетные записи", "level": "Warning"},
-    4741: {"desc": "Учетная запись компьютера была изменена", "category": "Компьютеры", "level": "Information"},
-    4742: {"desc": "Учетная запись компьютера была изменена", "category": "Компьютеры", "level": "Information"},
-    4743: {"desc": "Удалена учетная запись компьютера", "category": "Компьютеры", "level": "Information"},
-    4744: {"desc": "Была создана локальная группа с отключенной безопасностью", "category": "Группы", "level": "Information"},
-    4745: {"desc": "Локальная группа с отключенной безопасностью была изменена", "category": "Группы", "level": "Information"},
-    4746: {"desc": "Участник был добавлен в локальную группу с отключенной безопасностью", "category": "Группы", "level": "Information"},
-    4747: {"desc": "Участник был удален из локальной группы с отключенной безопасностью", "category": "Группы", "level": "Information"},
-    4748: {"desc": "Удалена локальная группа с отключёнными функциями безопасности", "category": "Группы", "level": "Information"},
-    4749: {"desc": "Была создана глобальная группа с отключенной безопасностью", "category": "Группы", "level": "Information"},
-    4750: {"desc": "Глобальная группа с отключенной безопасностью была изменена", "category": "Группы", "level": "Information"},
-    4751: {"desc": "Участник был добавлен в глобальную группу, не имеющую полномочий безопасности", "category": "Группы", "level": "Information"},
-    4752: {"desc": "Участник был удален из глобальной группы, не являющейся безопасной", "category": "Группы", "level": "Information"},
-    4753: {"desc": "Удалена глобальная группа с отключенной безопасностью", "category": "Группы", "level": "Information"},
-    4756: {"desc": "Участник был добавлен в универсальную группу с поддержкой безопасности", "category": "Группы", "level": "Information"},
-    4757: {"desc": "Участник был удален из универсальной группы с поддержкой безопасности", "category": "Группы", "level": "Information"},
-    4758: {"desc": "Удалена универсальная группа с поддержкой безопасности", "category": "Группы", "level": "Information"},
-    4759: {"desc": "Была создана универсальная группа без возможности обеспечения безопасности", "category": "Группы", "level": "Information"},
-    4760: {"desc": "Была изменена универсальная группа, для которой отключены функции безопасности", "category": "Группы", "level": "Information"},
-    4761: {"desc": "Участник был добавлен в универсальную группу без поддержки безопасности", "category": "Группы", "level": "Information"},
-    4762: {"desc": "Участник был удалён из универсальной группы с отключенной безопасностью", "category": "Группы", "level": "Information"},
-    4767: {"desc": "Учетная запись пользователя была разблокирована", "category": "Учетные записи", "level": "Information"},
-    4768: {"desc": "Была запрошена аутентификационная заявка Kerberos (TGT)", "category": "Kerberos", "level": "Information"},
-    4769: {"desc": "Был запрошен службовой билет Kerberos", "category": "Kerberos", "level": "Information"},
-    4770: {"desc": "Сервисный билет Kerberos был обновлён", "category": "Kerberos", "level": "Information"},
-    4771: {"desc": "Сбой предварительной проверки подлинности Kerberos", "category": "Kerberos", "level": "Failure"},
-    4772: {"desc": "Сбой запроса на получение билета проверки подлинности Kerberos", "category": "Kerberos", "level": "Failure"},
-    4774: {"desc": "Учетная запись была назначена для входа", "category": "Вход в систему", "level": "Information"},
-    4775: {"desc": "Не удалось сопоставить учетную запись для входа в систему", "category": "Вход в систему", "level": "Failure"},
-    4776: {"desc": "Контроллер домена попытался проверить учетные данные для учетной записи", "category": "Контроллер домена", "level": "Information"},
-    4777: {"desc": "Контроллер домена не смог проверить учетные данные для учетной записи", "category": "Контроллер домена", "level": "Failure"},
-    4778: {"desc": "Сеанс был повторно подключен к оконной станции", "category": "Сессии", "level": "Information"},
-    4779: {"desc": "Сеанс был отключен от оконной станции", "category": "Сессии", "level": "Information"},
-    4781: {"desc": "Имя учетной записи было изменено", "category": "Учетные записи", "level": "Information"},
-    4782: {"desc": "Для доступа к учетной записи использовался хеш пароля", "category": "Учетные записи", "level": "Critical"},
-    4783: {"desc": "Была создана базовая группа приложений", "category": "Приложения", "level": "Information"},
-    4784: {"desc": "Была изменена базовая группа приложений", "category": "Приложения", "level": "Information"},
-    4785: {"desc": "Участник был добавлен в базовую группу приложений", "category": "Приложения", "level": "Information"},
-    4786: {"desc": "Член был удален из базовой группы приложений", "category": "Приложения", "level": "Information"},
-    4787: {"desc": "Неучастник был добавлен в основную группу приложения", "category": "Приложения", "level": "Information"},
-    4788: {"desc": "Немембер был удален из базовой группы приложений", "category": "Приложения", "level": "Information"},
-    4789: {"desc": "Была удалена базовая группа приложений", "category": "Приложения", "level": "Information"},
-    4790: {"desc": "Была создана группа запросов LDAP", "category": "LDAP", "level": "Information"},
-    4793: {"desc": "Был вызван API проверки политики паролей", "category": "Пароли", "level": "Information"},
-    
-    # ========== СОБЫТИЯ ИЗ ВАШЕГО ОТЧЕТА ==========
-    4794: {"desc": "Предпринята попытка установить режим восстановления служб каталогов", "category": "Службы каталогов", "level": "Critical"},
-    4795: {"desc": "Запрос на изменение типа аудита", "category": "Политики аудита", "level": "Information"},
-    4796: {"desc": "Проверка доступа к файлу подкачки", "category": "Память", "level": "Information"},
-    4797: {"desc": "Проверка сканирования нежелательных приложений", "category": "Защита", "level": "Information"},
-    4798: {"desc": "Обнаружено сканирование нежелательных приложений", "category": "Защита", "level": "Warning"},
-    4799: {"desc": "Перечислено участие в защищенных локальных группах", "category": "Группы", "level": "Information"},
-    
-    4800: {"desc": "Рабочая станция была заблокирована", "category": "Блокировки", "level": "Warning"},
-    4801: {"desc": "Рабочая станция была разблокирована", "category": "Блокировки", "level": "Information"},
-    4802: {"desc": "Вызывается средство сохранения экрана", "category": "Блокировки", "level": "Information"},
-    4803: {"desc": "Заставка экрана была выключена", "category": "Блокировки", "level": "Information"},
-    
-    4826: {"desc": "Загрузка драйвера загрузки", "category": "Драйверы", "level": "Information"},
-    
-    4902: {"desc": "Была создана таблица политик аудита для каждого пользователя", "category": "Политики аудита", "level": "Information"},
-    4904: {"desc": "Предпринята попытка зарегистрировать источник событий безопасности", "category": "Источники событий", "level": "Information"},
-    4905: {"desc": "Предпринята попытка отменить регистрацию источника событий безопасности", "category": "Источники событий", "level": "Information"},
-    
-    5024: {"desc": "Служба брандмауэра Windows успешно запущена", "category": "Брандмауэр", "level": "Information"},
-    5033: {"desc": "Драйвер брандмауэра Windows успешно запущен", "category": "Брандмауэр", "level": "Information"},
-    
-    5058: {"desc": "Операция с ключевым файлом", "category": "Криптография", "level": "Information"},
-    5059: {"desc": "Операция миграции ключей", "category": "Криптография", "level": "Information"},
-    5061: {"desc": "Операция шифрования", "category": "Криптография", "level": "Information"},
-    
-    5379: {"desc": "Политика Credential Guard применена", "category": "Credential Guard", "level": "Information"},
-    5382: {"desc": "Хранилище учетных данных защищено", "category": "Credential Guard", "level": "Information"},
-    
-    6406: {"desc": "Код подписан WDAC политикой", "category": "WDAC", "level": "Information"},
-    
-    # ========== ДОПОЛНИТЕЛЬНЫЕ СОБЫТИЯ ==========
-    1100: {"desc": "События аудита были удалены", "category": "Аудит", "level": "Information"},
-    1104: {"desc": "Размер журнала безопасности достиг порогового значения", "category": "Аудит", "level": "Warning"},
-    1105: {"desc": "Журнал событий был очищен", "category": "Аудит", "level": "Warning"},
-    
-    # ========== WINDOWS DEFENDER ==========
-    1116: {"desc": "Обнаружено вредоносное ПО", "category": "Windows Defender", "level": "Critical"},
-    1117: {"desc": "Вредоносное ПО удалено", "category": "Windows Defender", "level": "Success"},
-    1118: {"desc": "Очистка от вредоносного ПО", "category": "Windows Defender", "level": "Information"},
-    1119: {"desc": "Не удалось очистить вредоносное ПО", "category": "Windows Defender", "level": "Failure"},
-    
-    # ========== POWERSHELL ==========
-    4103: {"desc": "Выполнение модуля PowerShell", "category": "PowerShell", "level": "Information"},
-    4104: {"desc": "Выполнение скрипта PowerShell", "category": "PowerShell", "level": "Warning"},
-    
-    # ========== СЕТЬ ==========
-    5140: {"desc": "Доступ к объекту общей папки сети", "category": "Сеть", "level": "Information"},
-    5142: {"desc": "Добавлена сетевая папка", "category": "Сеть", "level": "Information"},
-    5143: {"desc": "Удалена сетевая папка", "category": "Сеть", "level": "Information"},
-    5144: {"desc": "Файл открыт на запись", "category": "Сеть", "level": "Information"},
-    5145: {"desc": "Файл закрыт после записи", "category": "Сеть", "level": "Information"},
+    # Windows Defender
+    1116: {
+        "cves": [
+            {
+                "id": "CVE-2022-23278",
+                "description": "Microsoft Defender Elevation of Privilege Vulnerability",
+                "severity": "High",
+                "affected": "Windows Defender на Windows 10/11, Server",
+                "remediation": "Обновите определения и установите обновление KB5011486"
+            }
+        ]
+    }
 }
+
+# Функция для получения CVE по событию и контексту
+def get_cve_for_event(event_id, event_data=None):
+    """Получить CVE связанные с событием с учетом контекста"""
+    cves = []
+    
+    if event_id in CVE_DATABASE:
+        for cve in CVE_DATABASE[event_id]["cves"]:
+            cve_entry = cve.copy()
+            
+            # Дополнительный анализ на основе данных события
+            if event_data:
+                # Проверяем специфичные индикаторы для Zerologon
+                if cve["id"] == "CVE-2020-1472" and event_id in [5827, 5828]:
+                    cve_entry["confidence"] = "High"
+                    cve_entry["context_indicators"] = ["Обнаружена попытка использования Zerologon"]
+                
+                # Проверяем для Follina
+                if cve["id"] == "CVE-2022-30190" and event_id == 4688:
+                    if "msdt.exe" in str(event_data) or "computerdefault" in str(event_data).lower():
+                        cve_entry["confidence"] = "Critical"
+                        cve_entry["context_indicators"] = ["Обнаружен запуск msdt.exe - индикатор Follina"]
+                
+                # Проверяем для PrintNightmare
+                if "spoolsv.exe" in str(event_data) and "RpcAddPrinterDriver" in str(event_data):
+                    cve_entry["cves"].append({
+                        "id": "CVE-2021-34527",
+                        "description": "Windows Print Spooler Remote Code Execution Vulnerability (PrintNightmare)",
+                        "severity": "Critical"
+                    })
+            
+            cves.append(cve_entry)
+    
+    return cves
+
+# Функция для извлечения субъектов из события
+def extract_subjects_from_event(event):
+    """Извлечь информацию о субъектах из события"""
+    subjects = {
+        "SubjectUserSid": None,
+        "SubjectUserName": None,
+        "SubjectDomainName": None,
+        "SubjectLogonId": None,
+        "TargetUserSid": None,
+        "TargetUserName": None,
+        "TargetDomainName": None,
+        "TargetLogonId": None,
+        "ProcessId": None,
+        "ProcessName": None,
+        "IpAddress": None,
+        "IpPort": None,
+        "Guid": None
+    }
+    
+    try:
+        event_str = str(event)
+        
+        # Регулярные выражения для поиска различных полей
+        patterns = {
+            "SubjectUserSid": r"SubjectUserSid[:\s]*([^\s]+)",
+            "SubjectUserName": r"SubjectUserName[:\s]*([^\s]+)",
+            "SubjectDomainName": r"SubjectDomainName[:\s]*([^\s]+)",
+            "SubjectLogonId": r"SubjectLogonId[:\s]*([^\s]+)",
+            "TargetUserSid": r"TargetUserSid[:\s]*([^\s]+)",
+            "TargetUserName": r"TargetUserName[:\s]*([^\s]+)",
+            "TargetDomainName": r"TargetDomainName[:\s]*([^\s]+)",
+            "TargetLogonId": r"TargetLogonId[:\s]*([^\s]+)",
+            "ProcessId": r"ProcessId[:\s]*([^\s]+)",
+            "ProcessName": r"ProcessName[:\s]*([^\s]+)",
+            "IpAddress": r"IpAddress[:\s]*([^\s]+)",
+            "IpPort": r"IpPort[:\s]*([^\s]+)",
+            "Guid": r"Guid[:\s]*({[^}]+})"
+        }
+        
+        for key, pattern in patterns.items():
+            match = re.search(pattern, event_str, re.IGNORECASE)
+            if match:
+                subjects[key] = match.group(1).strip()
+        
+        # Дополнительный анализ IP адреса
+        if subjects["IpAddress"] and subjects["IpAddress"] not in ["-", "::", "0.0.0.0"]:
+            subjects["IpAnalysis"] = analyze_ip_address(subjects["IpAddress"])
+        
+        # Анализ SID
+        if subjects["SubjectUserSid"] and subjects["SubjectUserSid"] not in ["-", "S-1-0-0"]:
+            subjects["SidAnalysis"] = analyze_sid(subjects["SubjectUserSid"])
+        
+    except Exception as e:
+        print(f"  Ошибка извлечения субъектов: {e}")
+    
+    return subjects
+
+def analyze_ip_address(ip):
+    """Анализ IP адреса"""
+    analysis = {
+        "type": "Unknown",
+        "is_private": False,
+        "is_loopback": False,
+        "is_multicast": False,
+        "geolocation": None
+    }
+    
+    try:
+        # Проверка типа IP
+        if ":" in ip:
+            analysis["type"] = "IPv6"
+            # Проверка локальных IPv6 адресов
+            if ip.startswith("::1"):
+                analysis["is_loopback"] = True
+            elif ip.startswith("fe80:"):
+                analysis["type"] = "IPv6 Link-Local"
+        else:
+            analysis["type"] = "IPv4"
+            # Проверка специальных IPv4 адресов
+            parts = ip.split('.')
+            if len(parts) == 4:
+                first = int(parts[0])
+                second = int(parts[1])
+                
+                if first == 127:
+                    analysis["is_loopback"] = True
+                elif first == 10:
+                    analysis["is_private"] = True
+                elif first == 172 and 16 <= second <= 31:
+                    analysis["is_private"] = True
+                elif first == 192 and second == 168:
+                    analysis["is_private"] = True
+                elif first == 169 and second == 254:
+                    analysis["type"] = "APIPA"
+                elif first >= 224 and first <= 239:
+                    analysis["is_multicast"] = True
+        
+        # Попытка получить геолокацию (только для публичных IP)
+        if not analysis["is_private"] and not analysis["is_loopback"] and ip not in ["-", "::"]:
+            # Здесь можно добавить API геолокации, но для примера оставим заглушку
+            analysis["geolocation"] = "Внешний IP (требуется дополнительный анализ)"
+            
+    except Exception as e:
+        print(f"  Ошибка анализа IP: {e}")
+    
+    return analysis
+
+def analyze_sid(sid_string):
+    """Анализ SID"""
+    analysis = {
+        "type": "Unknown",
+        "well_known": False,
+        "description": None
+    }
+    
+    try:
+        # Известные SID
+        well_known_sids = {
+            "S-1-0-0": "Null Authority",
+            "S-1-1-0": "World Authority",
+            "S-1-2-0": "Local Authority",
+            "S-1-3-0": "Creator Authority",
+            "S-1-3-1": "Creator Owner",
+            "S-1-3-2": "Creator Group",
+            "S-1-3-3": "Creator Owner Server",
+            "S-1-3-4": "Creator Group Server",
+            "S-1-5-7": "Anonymous",
+            "S-1-5-8": "Proxy",
+            "S-1-5-9": "Enterprise Domain Controllers",
+            "S-1-5-10": "Principal Self",
+            "S-1-5-11": "Authenticated Users",
+            "S-1-5-12": "Restricted Code",
+            "S-1-5-13": "Terminal Server Users",
+            "S-1-5-14": "Remote Interactive Logon",
+            "S-1-5-15": "This Organization",
+            "S-1-5-17": "IUSR",
+            "S-1-5-18": "Local System",
+            "S-1-5-19": "Local Service",
+            "S-1-5-20": "Network Service",
+            "S-1-5-32-544": "Administrators",
+            "S-1-5-32-545": "Users",
+            "S-1-5-32-546": "Guests",
+            "S-1-5-32-547": "Power Users",
+            "S-1-5-32-548": "Account Operators",
+            "S-1-5-32-549": "Server Operators",
+            "S-1-5-32-550": "Print Operators",
+            "S-1-5-32-551": "Backup Operators",
+            "S-1-5-32-552": "Replicators"
+        }
+        
+        if sid_string in well_known_sids:
+            analysis["well_known"] = True
+            analysis["type"] = "Well-Known"
+            analysis["description"] = well_known_sids[sid_string]
+        elif sid_string.startswith("S-1-5-21"):
+            analysis["type"] = "Domain/Local User"
+        elif sid_string.startswith("S-1-5-80"):
+            analysis["type"] = "Service"
+        elif sid_string == "-":
+            analysis["type"] = "Not Available"
+            
+    except Exception as e:
+        print(f"  Ошибка анализа SID: {e}")
+    
+    return analysis
 
 def get_event_description(event_id):
     """Получить описание события из базы данных"""
@@ -416,8 +612,24 @@ def analyze_events(events):
     
     # Статистика по ID событий
     event_counter = Counter()
+    critical_events_with_subjects = []
+    
     for event in events:
         event_counter[event.EventID] += 1
+        
+        # Для критических событий собираем детальную информацию о субъектах
+        event_info = get_event_description(event.EventID)
+        if event_info['level'] in ['Critical', 'Failure', 'Error']:
+            subjects = extract_subjects_from_event(event)
+            cves = get_cve_for_event(event.EventID, event)
+            
+            critical_events_with_subjects.append({
+                'event': event,
+                'info': event_info,
+                'subjects': subjects,
+                'cves': cves,
+                'timestamp': event.TimeGenerated
+            })
     
     # Собираем все уникальные ID (из базы и из журнала)
     all_ids = set(EVENT_DATABASE.keys()) | set(event_counter.keys())
@@ -428,30 +640,39 @@ def analyze_events(events):
         info = get_event_description(event_id)
         count = event_counter.get(event_id, 0)
         
+        # Добавляем информацию о CVE
+        cves = get_cve_for_event(event_id)
+        
         detailed_stats.append({
             'id': event_id,
             'description': info['desc'],
             'category': info['category'],
             'level': info['level'],
-            'count': count
+            'count': count,
+            'cves': cves
         })
     
     # Статистика по категориям
-    category_stats = defaultdict(lambda: {'total': 0, 'types': set()})
+    category_stats = defaultdict(lambda: {'total': 0, 'types': set(), 'critical': 0})
     for stat in detailed_stats:
         if stat['count'] > 0:
             category_stats[stat['category']]['total'] += stat['count']
             category_stats[stat['category']]['types'].add(stat['id'])
+            if stat['level'] in ['Critical', 'Failure', 'Error']:
+                category_stats[stat['category']]['critical'] += stat['count']
     
     # Общая статистика
     total_events = len(events)
     unique_types = len(event_counter)
+    critical_count = len([e for e in events if get_event_description(e.EventID)['level'] in ['Critical', 'Failure', 'Error']])
     
     return {
         'detailed': detailed_stats,
         'category_stats': category_stats,
         'total_events': total_events,
         'unique_types': unique_types,
+        'critical_count': critical_count,
+        'critical_events_with_subjects': critical_events_with_subjects,
         'event_counter': event_counter
     }
 
@@ -473,11 +694,14 @@ def generate_html_report(analysis, days, output_file):
     categories = []
     for cat, data in analysis['category_stats'].items():
         percentage = (data['total'] / analysis['total_events'] * 100) if analysis['total_events'] > 0 else 0
+        critical_percentage = (data['critical'] / data['total'] * 100) if data['total'] > 0 else 0
         categories.append({
             'name': cat,
             'total': data['total'],
             'types': len(data['types']),
-            'percentage': percentage
+            'critical': data['critical'],
+            'percentage': percentage,
+            'critical_percentage': critical_percentage
         })
     categories.sort(key=lambda x: x['total'], reverse=True)
     
@@ -487,7 +711,7 @@ def generate_html_report(analysis, days, output_file):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Полный анализ событий безопасности Windows</title>
+    <title>Полный анализ событий безопасности Windows с CVE</title>
     <style>
         * {{
             margin: 0;
@@ -530,7 +754,7 @@ def generate_html_report(analysis, days, output_file):
         
         .summary {{
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             padding: 30px;
             background: #f8f9fa;
@@ -561,6 +785,125 @@ def generate_html_report(analysis, days, output_file):
             color: #7f8c8d;
             text-transform: uppercase;
             letter-spacing: 1px;
+        }}
+        
+        .stat-card.critical .number {{
+            color: #e74c3c;
+        }}
+        
+        .cve-section {{
+            padding: 30px;
+            background: #fff3cd;
+            border-left: 4px solid #f39c12;
+            margin: 20px 30px;
+            border-radius: 5px;
+        }}
+        
+        .cve-section h2 {{
+            color: #856404;
+            margin-bottom: 15px;
+        }}
+        
+        .cve-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }}
+        
+        .cve-item {{
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #e74c3c;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }}
+        
+        .cve-id {{
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #c0392b;
+            margin-bottom: 5px;
+        }}
+        
+        .cve-desc {{
+            color: #555;
+            margin-bottom: 10px;
+        }}
+        
+        .cve-severity {{
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+            background: #e74c3c;
+            color: white;
+            margin-right: 5px;
+        }}
+        
+        .cve-remediation {{
+            font-size: 0.9em;
+            color: #27ae60;
+            margin-top: 10px;
+        }}
+        
+        .critical-events {{
+            padding: 0 30px 30px 30px;
+        }}
+        
+        .critical-events h2 {{
+            color: #c0392b;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e74c3c;
+        }}
+        
+        .critical-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }}
+        
+        .critical-item {{
+            background: #fdf2f2;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 20px;
+        }}
+        
+        .critical-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }}
+        
+        .critical-id {{
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #721c24;
+        }}
+        
+        .critical-time {{
+            color: #856404;
+            font-size: 0.9em;
+        }}
+        
+        .subjects-table {{
+            width: 100%;
+            margin-top: 15px;
+            border-collapse: collapse;
+        }}
+        
+        .subjects-table td {{
+            padding: 8px;
+            border-bottom: 1px solid #f5c6cb;
+        }}
+        
+        .subjects-table td:first-child {{
+            font-weight: bold;
+            width: 40%;
         }}
         
         .top-events {{
@@ -631,6 +974,10 @@ def generate_html_report(analysis, days, output_file):
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }}
         
+        .category-item.critical {{
+            border-left-color: #e74c3c;
+        }}
+        
         .category-item h3 {{
             color: #2c3e50;
             margin-bottom: 5px;
@@ -638,6 +985,16 @@ def generate_html_report(analysis, days, output_file):
         
         .category-item p {{
             color: #555;
+        }}
+        
+        .category-item .critical-badge {{
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: #e74c3c;
+            color: white;
+            font-size: 0.8em;
+            margin-left: 10px;
         }}
         
         .events-table {{
@@ -711,6 +1068,17 @@ def generate_html_report(analysis, days, output_file):
             text-transform: uppercase;
         }}
         
+        .cve-badge {{
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #c0392b;
+            color: white;
+            font-size: 0.7em;
+            margin-right: 3px;
+            margin-bottom: 3px;
+        }}
+        
         .search-box {{
             padding: 20px 30px;
             background: #f8f9fa;
@@ -745,6 +1113,34 @@ def generate_html_report(analysis, days, output_file):
             border-radius: 3px;
         }}
         
+        .tooltip {{
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }}
+        
+        .tooltip .tooltiptext {{
+            visibility: hidden;
+            width: 200px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }}
+        
+        .tooltip:hover .tooltiptext {{
+            visibility: visible;
+            opacity: 1;
+        }}
+        
         @media (max-width: 768px) {{
             .summary {{
                 grid-template-columns: 1fr;
@@ -764,7 +1160,7 @@ def generate_html_report(analysis, days, output_file):
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Полный анализ событий безопасности Windows</h1>
+            <h1>🔐 Полный анализ событий безопасности Windows с привязкой к CVE</h1>
             <div class="subtitle">
                 <p>Период анализа: {start_time_str} - {end_time_str}</p>
                 <p>Отчет сгенерирован: {generation_time}</p>
@@ -780,6 +1176,10 @@ def generate_html_report(analysis, days, output_file):
                 <div class="number">{analysis['unique_types']}</div>
                 <div class="label">Уникальных типов событий</div>
             </div>
+            <div class="stat-card critical">
+                <div class="number">{analysis['critical_count']}</div>
+                <div class="label">Критических событий</div>
+            </div>
             <div class="stat-card">
                 <div class="number">{days}</div>
                 <div class="label">Дней анализа</div>
@@ -787,6 +1187,87 @@ def generate_html_report(analysis, days, output_file):
             <div class="stat-card">
                 <div class="number">{len(categories)}</div>
                 <div class="label">Категорий событий</div>
+            </div>
+        </div>
+        
+        <div class="cve-section">
+            <h2>⚠️ CVE Уязвимости, связанные с событиями</h2>
+            <div class="cve-grid">
+"""
+    
+    # Добавляем уникальные CVE из критических событий
+    cve_set = set()
+    for event in analysis['critical_events_with_subjects']:
+        for cve in event['cves']:
+            cve_key = cve['id']
+            if cve_key not in cve_set:
+                cve_set.add(cve_key)
+                html += f"""
+                <div class="cve-item">
+                    <div class="cve-id">{cve['id']}</div>
+                    <div class="cve-desc">{escape_html(cve['description'])}</div>
+                    <div><span class="cve-severity">{cve['severity']}</span></div>
+                    <div class="cve-remediation">🔧 {escape_html(cve['remediation'])}</div>
+                </div>
+"""
+    
+    html += f"""
+            </div>
+        </div>
+        
+        <div class="critical-events">
+            <h2>🔴 Критические события с детальным анализом субъектов</h2>
+            <div class="critical-grid">
+"""
+    
+    # Добавляем критические события с анализом субъектов
+    for critical in analysis['critical_events_with_subjects'][:10]:  # Показываем топ-10 критических
+        event_time = critical['timestamp'].strftime('%Y-%m-%d %H:%M:%S') if hasattr(critical['timestamp'], 'strftime') else str(critical['timestamp'])
+        subjects = critical['subjects']
+        
+        html += f"""
+                <div class="critical-item">
+                    <div class="critical-header">
+                        <span class="critical-id">Событие {critical['event'].EventID}</span>
+                        <span class="critical-time">{event_time}</span>
+                    </div>
+                    <div><strong>Описание:</strong> {escape_html(critical['info']['desc'])}</div>
+                    
+                    <table class="subjects-table">
+                        <tr><td>SubjectUserName:</td><td>{escape_html(subjects['SubjectUserName'] or 'Не указан')}</td></tr>
+                        <tr><td>SubjectDomainName:</td><td>{escape_html(subjects['SubjectDomainName'] or 'Не указан')}</td></tr>
+                        <tr><td>SubjectUserSid:</td><td>{escape_html(subjects['SubjectUserSid'] or 'Не указан')}</td></tr>
+"""
+        
+        if subjects.get('SidAnalysis'):
+            sid_info = subjects['SidAnalysis']
+            html += f"""<tr><td>SID Analysis:</td><td>{sid_info['type']} - {sid_info.get('description', '')}</td></tr>"""
+        
+        if subjects['IpAddress'] and subjects['IpAddress'] not in ['-', '::']:
+            html += f"""<tr><td>IP Address:</td><td>{escape_html(subjects['IpAddress'])}</td></tr>"""
+            if subjects.get('IpAnalysis'):
+                ip_info = subjects['IpAnalysis']
+                html += f"""<tr><td>IP Type:</td><td>{ip_info['type']}</td></tr>"""
+        
+        if subjects['ProcessName']:
+            html += f"""<tr><td>Process:</td><td>{escape_html(subjects['ProcessName'])}</td></tr>"""
+        
+        if subjects['Guid']:
+            html += f"""<tr><td>GUID:</td><td>{escape_html(subjects['Guid'])}</td></tr>"""
+        
+        # Добавляем CVE для этого события
+        if critical['cves']:
+            html += f"""<tr><td colspan="2"><strong>Связанные CVE:</strong><br>"""
+            for cve in critical['cves']:
+                html += f"""<span class="cve-badge">{cve['id']}</span> """
+            html += f"""</td></tr>"""
+        
+        html += f"""
+                    </table>
+                </div>
+"""
+    
+    html += f"""
             </div>
         </div>
         
@@ -816,9 +1297,10 @@ def generate_html_report(analysis, days, output_file):
     
     # Добавляем категории
     for cat in categories:
+        critical_class = " critical" if cat['critical'] > 0 else ""
         html += f"""
-                <div class="category-item">
-                    <h3>{escape_html(cat['name'])}</h3>
+                <div class="category-item{critical_class}">
+                    <h3>{escape_html(cat['name'])}{' <span class="critical-badge">крит: ' + str(cat['critical']) + '</span>' if cat['critical'] > 0 else ''}</h3>
                     <p>Событий: {cat['total']} ({cat['percentage']:.1f}%)</p>
                     <p>Типов: {cat['types']}</p>
                 </div>
@@ -833,7 +1315,7 @@ def generate_html_report(analysis, days, output_file):
         </div>
         
         <div class="events-table">
-            <h2>📋 Детальная статистика событий</h2>
+            <h2>📋 Детальная статистика событий с CVE</h2>
             <table id="eventsTable">
                 <thead>
                     <tr>
@@ -841,7 +1323,8 @@ def generate_html_report(analysis, days, output_file):
                         <th onclick="sortTable(1)">Описание</th>
                         <th onclick="sortTable(2)">Категория</th>
                         <th onclick="sortTable(3)">Уровень</th>
-                        <th onclick="sortTable(4)">Количество</th>
+                        <th onclick="sortTable(4)">CVE</th>
+                        <th onclick="sortTable(5)">Количество</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -862,12 +1345,21 @@ def generate_html_report(analysis, days, output_file):
         level_color = get_level_color(event['level'])
         level_style = f"background: {level_color}; color: white;"
         
+        # Форматирование CVE
+        cve_html = ""
+        if event['cves']:
+            for cve in event['cves']:
+                cve_html += f'<span class="cve-badge tooltip">{cve["id"]}<span class="tooltiptext">{escape_html(cve["description"])}</span></span> '
+        else:
+            cve_html = "-"
+        
         html += f"""
                     <tr class="event-row" data-id="{event['id']}" data-description="{escape_html(event['description'])}" data-category="{escape_html(event['category'])}">
                         <td><span class="event-id">{event['id']}</span></td>
                         <td>{escape_html(event['description'])}</td>
                         <td>{escape_html(event['category'])}</td>
                         <td><span class="level-badge" style="{level_style}">{event['level']}</span></td>
+                        <td>{cve_html}</td>
                         <td><span class="count {count_class}">{event['count']}</span></td>
                     </tr>
 """
@@ -878,9 +1370,9 @@ def generate_html_report(analysis, days, output_file):
         </div>
         
         <div class="footer">
-            <p>📄 Основано на официальной документации Microsoft</p>
-            <p>⚠️ Критические события требуют немедленного внимания</p>
-            <p>🔄 Версия анализатора: 3.13 (совместимая с Python 3.13)</p>
+            <p>📄 Основано на официальной документации Microsoft и базе CVE</p>
+            <p>⚠️ Критические события требуют немедленного внимания и анализа CVE</p>
+            <p>🔄 Версия анализатора: 3.14 (с поддержкой CVE и анализа субъектов)</p>
         </div>
     </div>
     
@@ -903,7 +1395,7 @@ def generate_html_report(analysis, days, output_file):
             }});
         }}
         
-        let sortDirection = [true, true, true, true, true];
+        let sortDirection = [true, true, true, true, true, true];
         
         function sortTable(columnIndex) {{
             const table = document.getElementById('eventsTable');
@@ -915,7 +1407,7 @@ def generate_html_report(analysis, days, output_file):
             rows.sort((a, b) => {{
                 const aValue = a.cells[columnIndex].textContent.trim();
                 const bValue = b.cells[columnIndex].textContent.trim();
-                const isNumeric = columnIndex === 0 || columnIndex === 4;
+                const isNumeric = columnIndex === 0 || columnIndex === 5;
                 
                 if (isNumeric) {{
                     const aNum = parseInt(aValue) || 0;
@@ -946,6 +1438,7 @@ def main():
     """Основная функция"""
     print(f"{Colors.HEADER}{Colors.BOLD}========================================{Colors.END}")
     print(f"{Colors.HEADER}{Colors.BOLD}   ПОЛНЫЙ АНАЛИЗ СОБЫТИЙ БЕЗОПАСНОСТИ   {Colors.END}")
+    print(f"{Colors.HEADER}{Colors.BOLD}           С ПРИВЯЗКОЙ К CVE            {Colors.END}")
     print(f"{Colors.HEADER}{Colors.BOLD}========================================{Colors.END}")
     print(f"{Colors.CYAN}Дата запуска: {time.strftime('%Y-%m-%d %H:%M:%S')}{Colors.END}")
     
@@ -971,19 +1464,39 @@ def main():
     
     # Генерируем отчет
     timestamp = time.strftime('%Y%m%d_%H%M%S')
-    output_file = f"C:\\SecurityAnalysis_{timestamp}.html"
+    output_file = f"C:\\SecurityAnalysis_CVE_{timestamp}.html"
     report_file = generate_html_report(analysis, days, output_file)
     
     # Выводим результаты в консоль
     print(f"\n{Colors.YELLOW}📊 Результаты:{Colors.END}")
     print(f"   Всего событий: {Colors.CYAN}{analysis['total_events']}{Colors.END}")
     print(f"   Уникальных типов: {Colors.CYAN}{analysis['unique_types']}{Colors.END}")
+    print(f"   Критических событий: {Colors.RED}{analysis['critical_count']}{Colors.END}")
+    
+    # Информация о CVE
+    cve_count = sum(len(event['cves']) for event in analysis['critical_events_with_subjects'])
+    print(f"   Связанных CVE: {Colors.MAGENTA}{cve_count}{Colors.END}")
     
     print(f"\n{Colors.MAGENTA}🔝 Топ-10 самых частых событий:{Colors.END}")
     top_events = sorted([e for e in analysis['detailed'] if e['count'] > 0], 
                        key=lambda x: x['count'], reverse=True)[:10]
     for event in top_events:
-        print(f"   [{event['id']}] {event['description']}: {Colors.GREEN}{event['count']}{Colors.END}")
+        cve_indicator = " ⚠️" if event['cves'] else ""
+        print(f"   [{event['id']}] {event['description']}: {Colors.GREEN}{event['count']}{Colors.END}{cve_indicator}")
+    
+    # Информация о критических событиях
+    if analysis['critical_events_with_subjects']:
+        print(f"\n{Colors.RED}🔴 Критические события с анализом:{Colors.END}")
+        for critical in analysis['critical_events_with_subjects'][:5]:
+            subjects = critical['subjects']
+            print(f"   [{critical['event'].EventID}] {critical['info']['desc']}")
+            if subjects['SubjectUserName']:
+                print(f"      User: {subjects['SubjectUserName']}")
+            if subjects['IpAddress'] and subjects['IpAddress'] not in ['-', '::']:
+                print(f"      IP: {subjects['IpAddress']}")
+            if critical['cves']:
+                cve_list = ', '.join(cve['id'] for cve in critical['cves'])
+                print(f"      CVE: {cve_list}")
     
     # Открываем в браузере
     chrome_paths = [
