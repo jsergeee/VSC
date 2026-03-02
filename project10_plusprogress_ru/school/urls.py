@@ -121,5 +121,15 @@ urlpatterns = [
     path('teacher/materials/<int:material_id>/edit/', views.teacher_material_edit, name='teacher_material_edit'),
     path('teacher/materials/<int:material_id>/delete/', views.teacher_material_delete, name='teacher_material_delete'),
     path('material/<int:material_id>/', views.material_detail, name='material_detail'),
+
+    # Статьи
+    path('articles/artikli-v-anglijskom-yazyke/', views.article_artikli, name='article_artikli'),
+    path('articles/glagol-to-be-v-anglijskom-yazyke/', views.article_glagol, name='article_glagol'),
+    path('articles/kolichestvennye-mestoimeniya-v-anglijskom-yazyke/', views.article_kolichestvennye,
+         name='article_kolichestvennye'),
+    path('articles/mestoimeniya-v-anglijskom-yazyke/', views.article_mestoimeniya, name='article_mestoimeniya'),
+
+    # Обработка заявки
+    path('trial-request/', views.trial_request, name='trial_request'),
 ]
 

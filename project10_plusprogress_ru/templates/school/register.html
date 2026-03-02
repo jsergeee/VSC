@@ -5,8 +5,8 @@
 {% block title %}Регистрация{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row">
+<div class="container auth-container" style="margin-top: 120px !important; min-height: calc(100vh - 250px); display: flex; align-items: center;">
+    <div class="row w-100">
         <div class="col-md-8 mx-auto">
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-primary text-white py-3 {% if form.errors %}bg-warning{% endif %}">
@@ -142,7 +142,6 @@
         font-size: 0.85rem;
     }
 
-    /* Стили для crispy форм на всякий случай */
     .asteriskField {
         color: #dc3545;
         margin-left: 4px;
@@ -155,12 +154,10 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Подсветка полей с ошибками
         document.querySelectorAll('.is-invalid').forEach(function(element) {
             element.classList.add('border-danger');
         });
 
-        // Убираем подсветку при вводе
         document.querySelectorAll('.form-control, .form-select').forEach(function(element) {
             element.addEventListener('input', function() {
                 this.classList.remove('border-danger');
@@ -172,7 +169,6 @@
         });
     });
 
-    // Валидация паролей
     document.querySelector('form')?.addEventListener('submit', function(e) {
         const password1 = document.getElementById('id_password1');
         const password2 = document.getElementById('id_password2');

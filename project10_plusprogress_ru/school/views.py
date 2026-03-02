@@ -5372,3 +5372,43 @@ def material_detail(request, material_id):
         'material': material,
     }
     return render(request, 'school/material_detail.html', context)
+
+
+
+
+'''Отдельные представления страниц сайта'''
+
+
+def article_artikli(request):
+    return render(request, 'school/articles/artikli-v-anglijskom-yazyke.html')
+
+
+def article_glagol(request):
+    return render(request, 'school/articles/glagol-to-be-v-anglijskom-yazyke.html')
+
+
+def article_kolichestvennye(request):
+    return render(request, 'school/articles/kolichestvennye-mestoimeniya-v-anglijskom-yazyke.html')
+
+
+def article_mestoimeniya(request):
+    return render(request, 'school/articles/mestoimeniya-v-anglijskom-yazyke.html')
+
+
+@require_POST
+def trial_request(request):
+    """Обработка заявки на пробный урок"""
+    name = request.POST.get('name')
+    email = request.POST.get('email')
+    phone = request.POST.get('phone')
+    subject = request.POST.get('subject')
+
+    TrialRequest.objects.create(
+        name=name,
+        email=email,
+        phone=phone,
+        subject=subject
+    )
+
+    messages.success(request, 'Спасибо! Ваша заявка принята. Мы свяжемся с вами в ближайшее время.')
+    return redirect(request.META.get('HTTP_REFERER', 'home'))

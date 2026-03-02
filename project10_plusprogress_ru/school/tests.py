@@ -293,7 +293,7 @@ class ViewTest(TestCase):
             is_email_verified=True
         )
 
-        self.teacher_user = User.objects.create_user(
+        self.teacher_user = User.obtetsjects.create_user(
             username='teacher',
             password='testpass123',
             first_name='Мария',

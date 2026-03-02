@@ -1,18 +1,20 @@
-<!-- templates/school/home.html -->
 {% extends 'base.html' %}
 {% load static %}
 
+{% block title %}Плюс Прогресс - английский, русский, математика, биология онлайн. Подготовка к ОГЭ, ЕГЭ.{% endblock %}
+
 {% block content %}
-<!-- Home Section -->
+<!--begin home section -->
 <section class="home-section" id="home">
     <div class="home-section-overlay"></div>
     <div class="container">
         <div class="row">
             <div class="col-md-6 margin-top-20">
                 <h1>Английский онлайн</h1>
+
                 <div style="display: inline-flex; margin-top: 10px">
                     <div style="width: 50%">
-                        <p class="hero-text">Взрослым:
+                        <p class="hero-text">Взрослым:</p>
                         <ul style="margin-top: -20px; margin-left: 2px; color: black">
                             <li>бизнес английский</li>
                             <li>подготовка к экзаменам (IELTS, TOEFL и др.)</li>
@@ -21,10 +23,9 @@
                             <li>общий английский</li>
                             <li>разговорный английский</li>
                         </ul>
-                        </p>
                     </div>
                     <div style="margin-left: 40px; width: 50%">
-                        <p class="hero-text">Детям и подросткам:
+                        <p class="hero-text">Детям и подросткам:</p>
                         <ul style="margin-top: -20px; margin-left: 2px; color: black">
                             <li>курс чтения</li>
                             <li>школьный английский</li>
@@ -35,32 +36,79 @@
                             <li>разбор трудных тем</li>
                             <li>помощь в выполнении домашнего задания</li>
                         </ul>
-                        </p>
                     </div>
                 </div>
-                
+
+                <h4>Русский, математика, биология онлайн</h4>
+
+                <div style="display: inline-flex; margin-top: 10px">
+                    <div style="width: 50%">
+                        <p class="hero-text">Математика онлайн:</p>
+                        <ul style="margin-top: -20px; margin-left: 2px; color: black">
+                            <li>помощь в освоении школьной программы</li>
+                            <li>углубленное изучение математики</li>
+                            <li>разбор трудных тем</li>
+                            <li>подготовка к ОГЭ, ЕГЭ</li>
+                        </ul>
+                    </div>
+                    <div style="margin-left: 40px; width: 50%">
+                        <p class="hero-text">Русский язык онлайн:</p>
+                        <ul style="margin-top: -20px; margin-left: 2px; color: black">
+                            <li>помощь в освоении школьной программы</li>
+                            <li>углубленное изучение русского языка</li>
+                            <li>разбор трудных тем</li>
+                            <li>подготовка к ОГЭ, ЕГЭ</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div style="display: inline-flex; margin-top: 10px">
+                    <div style="width: 50%">
+                        <p class="hero-text">Биология онлайн:</p>
+                        <ul style="margin-top: -20px; margin-left: 2px; color: black">
+                            <li>помощь в освоении школьной программы</li>
+                            <li>углубленное изучение биологии</li>
+                            <li>разбор трудных тем</li>
+                            <li>подготовка к ОГЭ, ЕГЭ</li>
+                        </ul>
+                    </div>
+                    <div style="margin-left: 40px; width: 50%">
+                        <p class="hero-text">Предметы начальной школы:</p>
+                        <ul style="margin-top: -20px; margin-left: 2px; color: black">
+                            <li>помощь в освоении школьной программы</li>
+                            <li>углубленное изучение предметов начальной школы</li>
+                            <li>разбор трудных тем</li>
+                        </ul>
+                    </div>
+                </div>
+
                 <a href="#about" class="btn-red scrool">Узнать больше</a>
             </div>
-            
+
+            <!-- ФОРМА ПРЯМО НА СТРАНИЦЕ (без модального окна) -->
             <div class="col-md-5 offset-md-1 margin-top-70">
-                <div class="h3 register-form-home-wrapper" style="font-family: 'Roboto Slab'; color: #071e55">
-                    Оставить заявку
-                </div>
+                <div class="h3 register-form-home-wrapper" style="font-family: 'Roboto Slab'; color: #071e55">Оставить заявку</div>
+
                 <div class="register-form-home-wrapper wow bounceIn" data-wow-delay="0.5s">
                     <h3>Заявка на бесплатный пробный урок</h3>
                     <p>Запишитесь на бесплатный пробный урок. Мы определим ваш уровень, покажем, как проходит урок,
                         ответим на все ваши вопросы:</p>
-                    
+
                     <div>
-                        <p class="register_success_box_home" style="display:none;">Мы успешно получили вашу заявку,
-                            Спасибо!</p>
-                        
-                        <form method="post" class="register-form-home register mt-3">
+                        <p class="register_success_box_home" style="display:none;">Мы успешно получили вашу заявку, Спасибо!</p>
+
+                        <form method="post" action="{% url 'trial_request' %}" class="register-form-home register mt-3">
                             {% csrf_token %}
-                            {{ trial_form.name }}
-                            {{ trial_form.email }}
-                            {{ trial_form.phone }}
-                            {{ trial_form.subject }}
+                            <input class="register-input-home" required name="name" placeholder="Ваше имя" type="text">
+                            <input class="register-input-home" name="email" placeholder="Адрес электронной почты" type="email">
+                            <input class="register-input-home" required name="phone" placeholder="Ваш телефон" type="text">
+                            <select required name="subject" class="register-input-home">
+                                <option disabled selected hidden="">Предмет</option>
+                                <option value="Английский">Английский</option>
+                                <option value="Русский">Русский</option>
+                                <option value="Математика">Математика</option>
+                                <option value="Биология">Биология</option>
+                            </select>
                             <input value="Отправить" class="register-submit-home" type="submit">
                         </form>
                     </div>
@@ -68,24 +116,27 @@
             </div>
         </div>
     </div>
+    <a id="blink-wa" href="https://wa.me/79872736974?text=Здравствуйте, пишу Вам с сайта." target="_blank">Написать <i class="fa fa-whatsapp ml-1"></i></a>
 </section>
 
-<!-- Partners Section -->
+<!-- УДАЛЯЕМ МОДАЛЬНОЕ ОКНО - оно больше не нужно -->
+
+<!--begin partners-section-->
 <div class="partners-section">
     <div class="container">
         <div class="row">
             <div class="col-md-10 mx-auto text-center partners">
                 <h5 class="partners-title">Наши сертификаты:</h5>
-                <a href="#" target="_blank">
+                <a href="https://sun9-60.userapi.com/impg/KUN2uBYEsTe45kVEm-fLtTaDAN4rs0GgQXRKrA/rv7fKhVKMIQ.jpg?size=948x728&quality=96&proxy=1&sign=dc78dc6c8650f53c23d2a5358c40d548&type=album" target="_blank">
                     <img src="{% static 'images/certificates/tesol.png' %}" class="partners" alt="image">
                 </a>
-                <a href="#" target="_blank">
+                <a href="https://thumb.cloud.mail.ru/weblink/thumb/xw1/Qcoi/MCkaPoAis" target="_blank">
                     <img src="{% static 'images/certificates/ihbelfast-logo.png' %}" class="partners" alt="image">
                 </a>
-                <a href="#" target="_blank">
+                <a href="https://sun9-16.userapi.com/impg/v5-RzUsAWTt0mqHAzNQ_i3f0552N7Zk9fbK59g/liEBRZ2f_9c.jpg?size=951x728&quality=96&proxy=1&sign=55c1177873d944a38c9122ac581c4efe&type=album" target="_blank">
                     <img src="{% static 'images/certificates/coursera.png' %}" style="width: 150px" class="partners" alt="image">
                 </a>
-                <a href="#" target="_blank">
+                <a href="https://sun9-51.userapi.com/impg/KuB81U-xIVdl7wWVC7igN3KnUmimEI5ha1KP-A/1HCvHD0hxJo.jpg?size=608x786&quality=96&proxy=1&sign=f6f04ef7a0dbcb265acd4c3929ff8a7a&type=album" target="_blank">
                     <img src="{% static 'images/certificates/global-tefl-logo.png' %}" class="partners" alt="image">
                 </a>
             </div>
@@ -93,7 +144,7 @@
     </div>
 </div>
 
-<!-- About Section -->
+<!--begin section-white -->
 <section class="section-white" id="about">
     <div class="container">
         <div class="row">
@@ -102,10 +153,10 @@
             </div>
         </div>
     </div>
-    
+
     <div class="services-wrapper">
         <div class="container">
-            <div class="row">
+            <div class="row" style="cursor: pointer">
                 <div class="col-md-6">
                     <div class="main-services green">
                         <i class="fa fa-thumbs-up"></i>
@@ -115,21 +166,29 @@
                             гаджет!</p>
                     </div>
                 </div>
+
                 <div class="col-md-6">
                     <div class="main-services yellow">
                         <i class="fa fa-credit-card" aria-hidden="true"></i>
                         <h4>Доступные цены без потери качества</h4>
                         <p>У нас умеренные цены, и при этом НЕ нужно выкупать большой пакет занятий на 6-9 месяцев
                             вперед. Цена действительна даже при оплате за 1 месяц.</p>
+                        <p>В наших группах всего от 2 до 5 человек. Это позволяет подобрать наиболее подходящих друг
+                            другу по уровню учеников, так чтобы занятия были максимально результативными для всех. В
+                            таких маленьких группах учитель успевает уделить достаточное для прогресса количество
+                            времени каждому, а ученики чувствуют себя более комфортно.</p>
                     </div>
                 </div>
+
                 <div class="col-md-12">
                     <div class="main-services red">
                         <i class="fa fa-university"></i>
                         <h4>Наша методика</h4>
                         <p>Применяемые методы личностно-ориентированного подхода повышают мотивацию к обучению, а
                             принципы гуманной педагогики создают атмосферу комфорта и доброжелательности на занятиях и
-                            вселяют в наших студентов уверенность в собственные силы.</p>
+                            вселяют в наших студентов уверенность в собственные силы. Всё это, а также профессионализм
+                            наших преподавателей и желание студентов развиваться, помогает нам вместе добиться высоких
+                            результатов в обучении.</p>
                     </div>
                 </div>
             </div>
@@ -137,7 +196,7 @@
     </div>
 </section>
 
-<!-- Testimonials Section -->
+<!--begin testimonials section -->
 <section class="section-grey" id="testimonials">
     <div class="container">
         <h2 class="section-title" style="text-align: center; margin-bottom: 25px">Отзывы клиентов</h2>
@@ -147,26 +206,113 @@
                     <ol class="carousel-indicators testimonials-indicators">
                         <li data-target="#carouselIndicators2" data-slide-to="0" class="active"></li>
                         <li data-target="#carouselIndicators2" data-slide-to="1"></li>
+                        <li data-target="#carouselIndicators2" data-slide-to="2"></li>
+                        <li data-target="#carouselIndicators2" data-slide-to="3"></li>
+                        <li data-target="#carouselIndicators2" data-slide-to="4"></li>
+                        <li data-target="#carouselIndicators2" data-slide-to="5"></li>
                     </ol>
+
                     <div class="carousel-inner">
+                        <!-- Отзыв 1 -->
                         <div class="carousel-item active">
                             <div class="row align-items-center testim-inner">
                                 <div class="col-md-10">
                                     <i class="fa fa-quote-left" aria-hidden="true"></i>
                                     <p>Добрый день! Сын с июня месяца занимается индивидуально онлайн обучением
                                         английского языка у Гульмиры! Занимаясь онлайн занятиями, поняли что, это очень
-                                        удобно, нет проблем, ребенок сам подключается онлайн.</p>
+                                        удобно, нет проблем, ребенок сам подключается онлайн. Занимаемся 2раза в неделю
+                                        по 40 мин. За это время мы получили огромные знания, все понятно, доступно и
+                                        очень интересно. А самое главное, ребенок получает огромное удовольствие,
+                                        особенно когда замечаешь большой прорыв за короткий срок в школе. Сейчас всем
+                                        своим знакомым с удовольствием предлагаю данного педагога.</p>
                                     <h6>Динара<span>, мама Таира (8 лет).</span></h6>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Отзыв 2 -->
+                        <div class="carousel-item">
+                            <div class="row align-items-center testim-inner">
+                                <div class="col-md-10">
+                                    <i class="fa fa-quote-left" aria-hidden="true"></i>
+                                    <p>Добрый день, хочу выразить свою признательность и уважение к педагогу школы
+                                        английского языка Яковенко Гульмире Булатовне. Моему сыну Александру 8 лет,
+                                        занимается в группе полгода и ни разу не сказал, что не пойдет на английский. С
+                                        первого занятия его привлекло обучение английскому языку именно здесь. До этого
+                                        был опыт поиска курсов, школ и педагогов, но никто так не заинтересовал его как
+                                        Гульмира Булатовна. Очень важно чтобы первый учитель,первый тренер и т д были
+                                        знатоками своего дела, фанатами, любили и уважали тех кого они обучают. Нам
+                                        очень повезло, что наши детки начинали знакомство с языком именно с Гульмирой
+                                        Булатовной, с человеком который и свое дело знает и любит и дети в восторге от
+                                        совместного общения !!! А сколько у Гульмиры Булатовны терпения и
+                                        доброты!!!!Детки ,особенно мальчики,и побаловаться могут и отвлечься, она
+                                        никогда их не ругает и не повышает голос))) Огромное спасибо Вам за любовь к
+                                        нашим деткам,за терпение и конечно за умение в игровой ,увлекательной форме так
+                                        много им дать!</p>
+                                    <h6>Елена<span>, мама Саши.</span></h6>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Отзыв 3 -->
                         <div class="carousel-item">
                             <div class="row align-items-center testim-inner">
                                 <div class="col-md-10">
                                     <i class="fa fa-quote-left" aria-hidden="true"></i>
                                     <p>Гульмира Булатовна прекрасный преподаватель английского языка. Она помогала мне в
-                                        подготовке к ЕГЭ и я его успешно прошла и уехала в Санкт-Петербург.</p>
+                                        подготовке к ЕГЭ и я его успешно прошла и уехала в Санкт-Петербург. Через
+                                        некоторое время решила сдать международный экзамен IELTS. Сейчас мы с ней
+                                        занимаемся онлайн. Что для ЕГЭ, что для IELTS Гульмира Булатовна даёт много
+                                        информации для подготовки, разбирает все моменты, которые у меня не получались,
+                                        отвечает на все вопросы. Занятие структурированно, расписание занятий
+                                        гибкое.</p>
                                     <h6>Анастасия<span>, 29 лет, г. Санкт-Петербург.</span></h6>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Отзыв 4 -->
+                        <div class="carousel-item">
+                            <div class="row align-items-center testim-inner">
+                                <div class="col-md-10">
+                                    <i class="fa fa-quote-left" aria-hidden="true"></i>
+                                    <p>Отличное обучение. За месяц получил навыки общения на английском. Прошёл
+                                        собеседование на англ, вылетаю за границу работать. Очень доволен!</p>
+                                    <h6>Алексей<span>,40 лет, г. Долгопрудный.</span></h6>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Отзыв 5 -->
+                        <div class="carousel-item">
+                            <div class="row align-items-center testim-inner">
+                                <div class="col-md-10">
+                                    <i class="fa fa-quote-left" aria-hidden="true"></i>
+                                    <p>Моя дочь, Александра, занимается английским у Гульмиры Булатовны уже третий год.
+                                        Начинали с нуля, как дополнение к урокам в школе. За это время улучшилось знание
+                                        и понимание языка. Школьные задания дочь выполняет самостоятельно. У неё
+                                        появилась уверенность в своих силах в знание английского. Дочери нравятся
+                                        занятия, так как они проходят в игровой форме, много интересных заданий, формат
+                                        группы небольшой и каждому уделяется максимальное внимание. Спасибо большое
+                                        педагогу, Гульмире Булатовне, за доброжелательное отношение к ребёнку, а также
+                                        за умение заинтересовать ребёнка в предмете, закрепить полученные знания и
+                                        навыки. Планируем продолжать занятия и дальше, уже в старшей группе.</p>
+                                    <h6>Светлана<span>, мама Саши (10 лет).</span></h6>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Отзыв 6 -->
+                        <div class="carousel-item">
+                            <div class="row align-items-center testim-inner">
+                                <div class="col-md-8">
+                                    <i class="fa fa-quote-left" aria-hidden="true"></i>
+                                    <p>Моя дочь занимается у Гульмиры Булатовны уже полтора года, ребенок изучает язык с
+                                        большим удовольствием. Занятия проходят в живой и дружелюбной атмосфере.
+                                        Преподаватель легко находит подход к детям, интересно и доступно обьясняет
+                                        материал. Результаты очень заметны. С удовольствием рекомендую даного
+                                        учителя!</p>
+                                    <h6>Ирина <span>, мама Вики.</span></h6>
                                 </div>
                             </div>
                         </div>
@@ -177,58 +323,159 @@
     </div>
 </section>
 
-<!-- Pricing Section -->
+<!--begin pricing section -->
 <section class="section-grey" id="pricing">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-12 col-sm-12" style="text-align: center">
                 <h2>Стоимость занятий</h2>
                 <p>Цена действительна БЕЗ выкупа большого пакета занятий</p>
+                <p>Уроки проводят опытные преподаватели с оконченным образованием</p>
             </div>
-        </div>
-    </div>
-</section>
 
-<!-- Contact Section -->
-<section class="section-bg-2" id="contact">
-    <div class="section-bg-overlay"></div>
-    <div class="container">
-        <div class="row">
-            <div class="col-md-7 mx-auto text-center">
-                <h2 class="white-text">Хотите учиться у нас? <br>Всё ещё остались вопросы?</h2>
-                <p class="section-subtitle white">Заполните форму заявки на бесплатный пробный урок, либо позвоните нам: 
-                <a style="color: white; font-weight: bold" href="tel:79272418211">+7 927 241-82-11</a></p>
-                <a class="btn-white small scrool" href="#" data-toggle="modal" data-target="#exampleModal">Заполнить заявку</a>
-                <a href="tel:79272418211" class="btn-white-border small scrool">Позвонить</a>
-            </div>
-        </div>
-    </div>
-</section>
+            <div class="col-md-12 col-sm-12 wow bounceIn" data-wow-delay="0.25s">
+                <div class="price-box-white row">
+                    <div class="col-md-6 p-0">
+                        <ul class="pricing-list" style="list-style-type: none;">
+                            <li class="price-title">Английский язык</li>
+                            <li class="price-text">1 урок (60 мин.) в мини-группе из 3-5 человек - 500 руб.</li>
+                            <li class="price-text">1 урок (60 мин.) в парной группе (2 человека) – 700 руб.</li>
+                            <li class="price-text">1 урок (35 мин.) индивидуально - 750 руб.</li>
+                            <li class="price-text">1 урок (45 мин.) индивидуально – 950 руб.</li>
+                            <li class="price-text">1 урок (60 мин.) индивидуально – 1100 руб.</li>
+                            <li class="price-text">ОГЭ 1 урок (60 мин.) индивидуально - 1200 руб.</li>
+                            <li class="price-text">ЕГЭ, IELTS и др. (60 мин.) индивидуально - 1400 руб.</li>
+                        </ul>
+                    </div>
 
-<!-- Modal -->
-<div class="modal fade" id="exampleModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered mt-5">
-        <div class="modal-content">
-            <div class="register-form-home-wrapper">
-                <h3>Заявка на бесплатный пробный урок</h3>
-                <p>Запишитесь на бесплатный пробный урок. Мы определим ваш уровень, покажем, как проходит урок,
-                    ответим на все ваши вопросы:</p>
-                
-                <div>
-                    <form method="post" class="register-form-home register mt-3">
-                        {% csrf_token %}
-                        {{ trial_form.name }}
-                        {{ trial_form.email }}
-                        {{ trial_form.phone }}
-                        {{ trial_form.subject }}
-                        <input value="Отправить" class="register-submit-home" type="submit">
-                    </form>
+                    <div class="col-md-6 p-0">
+                        <ul class="pricing-list">
+                            <li class="price-title">Французский и немецкий языки</li>
+                            <li class="price-text">1 урок индивидуально 45 мин. 850 руб.</li>
+                            <li class="price-text">1 урок индивидуально 60 мин. 1000 руб.</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex justify-content-center align-items-center width-100 flex-wrap" style="gap: 15px">
+                        <ul class="pricing-list">
+                            <li class="price-tag"><a href="#home" class="scrool">Оставить заявку</a></li>
+                        </ul>
+                        <ul class="pricing-list">
+                            <li class="price-tag__red"><a href="https://wa.me/79872736974?text=Здравствуйте, пишу Вам с сайта." target="_blank" class="d-flex align-items-center">Написать <i class="fa fa-whatsapp ml-1" style="font-size: 26px"></i></a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
+
+            <div class="col-md-12 col-sm-12 wow bounceIn" data-wow-delay="0.25s">
+                <div class="price-box-white row">
+                    <div class="col-md-6 p-0">
+                        <ul class="pricing-list" style="list-style-type: none;">
+                            <li class="price-title">Математика</li>
+                            <li class="price-text">1 урок в группе из 2 человек (50 мин.) 550 руб.</li>
+                            <li class="price-text">1 урок в группе из 2 человек (60 мин.) 650 руб.</li>
+                            <li class="price-text">1 урок индивидуально (35 мин.) 700 руб.</li>
+                            <li class="price-text">1 урок индивидуально (45 мин.) 850 руб.</li>
+                            <li class="price-text">1 урок индивидуально (60 мин.) 1000 руб.</li>
+                            <li class="price-text">1 урок (ОГЭ)индивидуально (60 мин.) 1100 руб.</li>
+                            <li class="price-text">1 урок (ЕГЭ)индивидуально (60 мин.) 1350 руб.</li>
+                        </ul>
+                    </div>
+
+                    <div class="col-md-6 p-0">
+                        <ul class="pricing-list">
+                            <li class="price-title">Русский язык</li>
+                            <li class="price-text">1 урок в группе из 2 человек (50 мин.) 550руб.</li>
+                            <li class="price-text">1 урок в группе из 2 человек (60 мин.) 650 руб.</li>
+                            <li class="price-text">1 урок индивидуально (35 мин.) 700 руб.</li>
+                            <li class="price-text">1 урок индивидуально (45 мин.) 850 руб.</li>
+                            <li class="price-text">1 урок индивидуально (60 мин.) 950 руб.</li>
+                            <li class="price-text">1 урок (ОГЭ) индивидуально (60 мин.) 1100 руб.</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex justify-content-center align-items-center width-100 flex-wrap" style="gap: 15px">
+                        <ul class="pricing-list">
+                            <li class="price-tag"><a href="#home" class="scrool">Оставить заявку</a></li>
+                        </ul>
+                        <ul class="pricing-list">
+                            <li class="price-tag__red"><a href="https://wa.me/79872736974?text=Здравствуйте, пишу Вам с сайта." target="_blank" class="d-flex align-items-center">Написать <i class="fa fa-whatsapp ml-1" style="font-size: 26px"></i></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-12 col-sm-12 wow bounceIn" data-wow-delay="0.25s">
+                <div class="price-box-white row">
+                    <div class="col-md-6 p-0">
+                        <ul class="pricing-list">
+                            <li class="price-title">Предметы начальной школы</li>
+                            <li class="price-text">1 урок индивидуально (35 мин.) 750 руб.</li>
+                            <li class="price-text">1 урок индивидуально (45 мин.) 850 руб.</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex justify-content-center align-items-center width-100 flex-wrap" style="gap: 15px">
+                        <ul class="pricing-list">
+                            <li class="price-tag"><a href="#home" class="scrool">Оставить заявку</a></li>
+                        </ul>
+                        <ul class="pricing-list">
+                            <li class="price-tag__red"><a href="https://wa.me/79872736974?text=Здравствуйте, пишу Вам с сайта." target="_blank" class="d-flex align-items-center">Написать <i class="fa fa-whatsapp ml-1" style="font-size: 26px"></i></a></li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-</div>
+</section>
+
+<!--begin articles section -->
+<section class="section-grey" id="articles">
+    <div class="container">
+        <h2 class="mb-5">Полезные статьи</h2>
+        <div class="card-group">
+            <div class="card">
+                <img src="{% static 'images/articles.jpg' %}" class="card-img-top" alt="...">
+                <div class="card-body">
+                    <h5 class="card-title">Артикли в английском языке.</h5>
+                    <p class="card-text">В чем трудность данной темы для изучающих английский в нашей стране? Только в
+                        том, что в русском языке им нет аналога. Именно поэтому многих пугает...</p>
+                    <a href="{% url 'article_artikli' %}" class="btn-red scrool">Читать далее</a>
+                </div>
+            </div>
+            <div class="card">
+                <img src="{% static 'images/articles-2.jpg' %}" class="card-img-top" alt="...">
+                <div class="card-body">
+                    <h5 class="card-title">Глагол to be.</h5>
+                    <p class="card-text">Очень важный и часто используемый глагол в английском языке. Он лежит в основе
+                        построения огромного количества грамматических конструкций...</p>
+                    <a href="{% url 'article_glagol' %}" class="btn-red scrool">Читать далее</a>
+                </div>
+            </div>
+            <div class="card">
+                <img src="{% static 'images/article-3.jpg' %}" class="card-img-top" alt="...">
+                <div class="card-body">
+                    <h5 class="card-title">Количественные местоимения.</h5>
+                    <p class="card-text">Особое внимание придется уделить количественным местоимениям
+                        (quantifiers), так как имея одно и то же значение, употребляются они
+                        по-разному...</p>
+                    <a href="{% url 'article_kolichestvennye' %}" class="btn-red scrool">Читать далее</a>
+                </div>
+            </div>
+        </div>
+        <div class="card-group">
+            <div class="card">
+                <img src="{% static 'images/art-4.jpg' %}" class="card-img-top" alt="...">
+                <div class="card-body">
+                    <h5 class="card-title">Местоимения в английском. Pronouns.</h5>
+                    <a href="{% url 'article_mestoimeniya' %}" class="btn-red scrool">Читать далее</a>
+                </div>
+            </div>
+            <div class="card"></div>
+            <div class="card"></div>
+        </div>
+    </div>
+</section>
+
+<!-- Удаляем все скрипты для модальных окон, так как их больше нет -->
 {% endblock %}
