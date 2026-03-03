@@ -18,7 +18,11 @@ urlpatterns = [
     path('resend-verification/', views.resend_verification, name='resend_verification'),
     path('telegram-settings/', telegram_settings, name='telegram_settings'),
     path('telegram-webhook/', views.telegram_webhook, name='telegram_webhook'),
-
+    
+    # Заявка на пробный урок
+    path('api/trial-request/', views.trial_request_ajax, name='trial_request_ajax'),
+#     path('trial-request/', views.trial_request, name='trial_request'),
+     
     # Student URLs
     path('student/dashboard/', views.student_dashboard, name='student_dashboard'),
 
@@ -129,7 +133,6 @@ urlpatterns = [
          name='article_kolichestvennye'),
     path('articles/mestoimeniya-v-anglijskom-yazyke/', views.article_mestoimeniya, name='article_mestoimeniya'),
 
-    # Обработка заявки
-    path('trial-request/', views.trial_request, name='trial_request'),
+
 ]
 

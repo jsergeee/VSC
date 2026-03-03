@@ -120,21 +120,99 @@
     {% include 'includes/footer.html' %}
 </footer>
 
-<!-- 1. Сначала jQuery (обязательно в начале) -->
+<!-- 1. Сначала jQuery -->
 <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<!-- 2. WOW.js - ДО того, как его вызовут в plugins.js -->
+ 
+ <!-- 3. СКРИПТ УВЕДОМЛЕНИЙ - ОЧЕНЬ ВАЖНО! -->
+<script src="{% static 'js/notifications.js' %}"></script>
+<script src="{% static 'js/wow.js' %}"></script>
+<script>new WOW().init();</script>
 
-<!-- 2. Потом скрипты, которые зависят от jQuery -->
+<!-- 3. Потом остальные скрипты, которые могут использовать WOW -->
 <script src="{% static 'js/bootstrap.min.js' %}"></script>
 <script src="{% static 'js/jquery.scrollTo-min.js' %}"></script>
 <script src="{% static 'js/jquery.magnific-popup.min.js' %}"></script>
 <script src="{% static 'js/jquery.nav.js' %}"></script>
-<script src="{% static 'js/plugins.js' %}"></script>
+<script src="{% static 'js/plugins.js' %}"></script> 
 <script src="{% static 'js/custom.js' %}"></script>
 
-<script>new WOW().init();</script>
 
 <script>
+// 1. Сначала определяем функцию получения cookie
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// 2. Потом получаем токен
+const csrftoken = getCookie('csrftoken');
+
+// 3. Затем настраиваем AJAX
+$.ajaxSetup({
+    beforeSend: function(xhr, settings) {
+        if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+            xhr.setRequestHeader("X-CSRFToken", csrftoken);
+        }
+    }
+});
+
+// 4. И только потом весь остальной код
 $(document).ready(function() {
+    // ===== ОБРАБОТКА ФОРМЫ ЗАЯВКИ =====
+    $('.register-form-home').on('submit', function(e) {
+        e.preventDefault();
+        
+        var form = $(this);
+        var submitBtn = form.find('input[type="submit"]');
+        var originalValue = submitBtn.val();
+        
+        // Блокируем кнопку
+        submitBtn.prop('disabled', true).val('Отправка...');
+        
+        // Прячем старое сообщение об успехе
+        $('.register_success_box_home').hide();
+        
+        $.ajax({
+            url: form.attr('action'),
+            method: 'POST',
+            data: form.serialize(),
+            dataType: 'json',
+            success: function(response) {
+                // Показываем сообщение об успехе
+                $('.register_success_box_home').show();
+                form[0].reset(); // Очищаем форму
+                
+                // Автоматически скрываем сообщение через 5 секунд
+                setTimeout(function() {
+                    $('.register_success_box_home').fadeOut();
+                }, 5000);
+            },
+            error: function(xhr) {
+                var errorMsg = 'Ошибка отправки. Попробуйте позже.';
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMsg = xhr.responseJSON.error;
+                }
+                alert(errorMsg);
+            },
+            complete: function() {
+                // Разблокируем кнопку
+                submitBtn.prop('disabled', false).val(originalValue);
+            }
+        });
+    });
+    
+    // ===== ОБРАБОТКА ССЫЛОК С ЯКОРЯМИ =====
     // Перехватываем клики по ссылкам с якорем
     $('a[href*="#"]').on('click', function(e) {
         var href = $(this).attr('href');

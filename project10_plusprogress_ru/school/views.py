@@ -38,11 +38,12 @@ from .utils import log_user_action
 from .forms import TelegramSettingsForm
 from django.conf import settings
 import json
-from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
 import requests
 from django.conf import settings
+
+
 
 
 # Импорты моделей
@@ -5395,8 +5396,46 @@ def article_mestoimeniya(request):
     return render(request, 'school/articles/mestoimeniya-v-anglijskom-yazyke.html')
 
 
+
+
 @require_POST
 def trial_request(request):
+    """Обработка заявки на пробный урок (старая версия, скоро будет удалена)"""
+    """ODO: Удалить после проверки trial_request_ajax"""
+    
+    # Проверяем, AJAX ли это запрос
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # AJAX запрос - возвращаем JSON
+        name = request.POST.get('name')
+        email = request.POST.get('email')
+        phone = request.POST.get('phone')
+        subject = request.POST.get('subject')
+        
+        TrialRequest.objects.create(
+            name=name,
+            email=email,
+            phone=phone,
+            subject=subject
+        )
+        
+        return JsonResponse({'status': 'ok', 'message': 'Заявка отправлена!'})
+    
+    else:
+        # Обычный POST запрос - редирект (для обратной совместимости)
+        name = request.POST.get('name')
+        email = request.POST.get('email')
+        phone = request.POST.get('phone')
+        subject = request.POST.get('subject')
+        
+        TrialRequest.objects.create(
+            name=name,
+            email=email,
+            phone=phone,
+            subject=subject
+        )
+        
+        messages.success(request, 'Спасибо! Ваша заявка принята. Мы свяжемся с вами в ближайшее время.')
+        return redirect(request.META.get('HTTP_REFERER', 'home'))
     """Обработка заявки на пробный урок"""
     name = request.POST.get('name')
     email = request.POST.get('email')
@@ -5412,3 +5451,59 @@ def trial_request(request):
 
     messages.success(request, 'Спасибо! Ваша заявка принята. Мы свяжемся с вами в ближайшее время.')
     return redirect(request.META.get('HTTP_REFERER', 'home'))
+
+
+
+logger = logging.getLogger(__name__)
+
+@require_POST
+def trial_request_ajax(request):
+    """
+    AJAX обработка заявки на пробный урок
+    """
+    logger.info("="*50)
+    logger.info("🔥 ПОЛУЧЕН AJAX ЗАПРОС НА ЗАЯВКУ")
+    logger.info(f"POST данные: {request.POST}")
+    try:
+        # Получаем данные
+        name = request.POST.get('name', '').strip()
+        email = request.POST.get('email', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        subject = request.POST.get('subject', '').strip()
+        
+        # Валидация
+        if not name:
+            return JsonResponse({'error': 'Укажите имя'}, status=400)
+        if not phone:
+            return JsonResponse({'error': 'Укажите телефон'}, status=400)
+        if not subject:
+            return JsonResponse({'error': 'Выберите предмет'}, status=400)
+        
+        # Сохраняем в базу
+        trial = TrialRequest.objects.create(
+            name=name,
+            email=email,
+            phone=phone,
+            subject=subject
+        )
+        
+        logger.info(f"Новая заявка #{trial.id} от {name}")
+        
+        # Отправляем email (опционально)
+        try:
+            from django.core.mail import send_mail
+            send_mail(
+                f'🔔 Новая заявка от {name}',
+                f'Имя: {name}\nEmail: {email}\nТелефон: {phone}\nПредмет: {subject}',
+                'jserge@yandex.ru',
+                ['jserge@yandex.ru'],
+                fail_silently=True,
+            )
+        except Exception as e:
+            logger.error(f"Ошибка отправки email: {e}")
+        
+        return JsonResponse({'status': 'ok'})
+        
+    except Exception as e:
+        logger.error(f"Ошибка в заявке: {e}")
+        return JsonResponse({'error': 'Ошибка сервера'}, status=500)

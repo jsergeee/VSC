@@ -20,8 +20,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here'
 
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-# ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,192.168.0.117').split(',')
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.0.117', 'preindulgent-cash-pseudomodern.ngrok-free.dev', 'cautiously-cunning-hummingbird.cloudpub.ru']
+ALLOWED_HOSTS = ['plusprogress.ru', 'www.plusprogress.ru']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
