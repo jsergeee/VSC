@@ -1,0 +1,12 @@
+venv/
+.env
+*.pyc
+__pycache__/
+db.sqlite3
+.git
+.gitignore
+README.md
+staticfiles/
+media/
+plusprogress/settings.py
+Dockerfile

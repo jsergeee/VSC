@@ -1,0 +1,200 @@
+{
+  "scan_info": {
+    "target": "192.168.252.0/24",
+    "scan_type": "netbios",
+    "timestamp": "2026-01-29T09:01:05.012629",
+    "date": "2026-01-29"
+  },
+  "hosts": [
+    {
+      "address": "192.168.252.1",
+      "hostname": null,
+      "nbstat_info": {},
+      "ports": [
+        {
+          "port": "137/udp",
+          "state": "closed",
+          "service": "netbios-ns"
+        }
+      ],
+      "mac": "CC:2D:E0:74:A4:E3",
+      "vendor": "Routerboard.com"
+    },
+    {
+      "address": "192.168.252.104",
+      "hostname": null,
+      "nbstat_info": {},
+      "ports": [
+        {
+          "port": "137/udp",
+          "state": "closed",
+          "service": "netbios-ns"
+        }
+      ],
+      "mac": "F4:A9:97:D5:64:27",
+      "vendor": "Canon"
+    },
+    {
+      "address": "192.168.252.141",
+      "hostname": null,
+      "nbstat_info": {},
+      "ports": [
+        {
+          "port": "137/udp",
+          "state": "open|filtered",
+          "service": "netbios-ns"
+        }
+      ],
+      "mac": "C8:1F:EA:5D:C3:E5",
+      "vendor": "Avaya"
+    },
+    {
+      "address": "192.168.252.153",
+      "hostname": null,
+      "nbstat_info": {},
+      "ports": [
+        {
+          "port": "137/udp",
+          "state": "open|filtered",
+          "service": "netbios-ns"
+        }
+      ],
+      "mac": "70:38:EE:D3:0A:10",
+      "vendor": "Avaya"
+    },
+    {
+      "address": "192.168.252.162",
+      "hostname": null,
+      "nbstat_info": {
+        "summary": "NetBIOS name: DESKTOP-8OMJOUR, NetBIOS user: <unknown>, NetBIOS MAC: 98:fa:9b:54:ab:a8 (LCFC(Hefei) Electronics Technology)"
+      },
+      "ports": [
+        {
+          "port": "137/udp",
+          "state": "open",
+          "service": "netbios-ns"
+        }
+      ],
+      "mac": "98:FA:9B:54:AB:A8",
+      "vendor": "LCFC(Hefei) Electronics Technology"
+    },
+    {
+      "address": "w-kz-litovchenko.alkor.ru",
+      "hostname": "(192.168.252.165)",
+      "nbstat_info": {
+        "summary": "NetBIOS name: W-KZ-LITOVCHENK, NetBIOS user: <unknown>, NetBIOS MAC: 98:fa:9b:54:a2:43 (LCFC(Hefei) Electronics Technology)"
+      },
+      "ports": [
+        {
+          "port": "137/udp",
+          "state": "open",
+          "service": "netbios-ns"
+        }
+      ],
+      "mac": "98:FA:9B:54:A2:43",
+      "vendor": "LCFC(Hefei) Electronics Technology"
+    },
+    {
+      "address": "w-kz-garipova.alkor.ru",
+      "hostname": "(192.168.252.172)",
+      "nbstat_info": {
+        "summary": "NetBIOS name: W-KZ-ZAGAYNOVA, NetBIOS user: <unknown>, NetBIOS MAC: 6c:4b:90:56:97:74 (LiteON)"
+      },
+      "ports": [
+        {
+          "port": "137/udp",
+          "state": "open",
+          "service": "netbios-ns"
+        }
+      ],
+      "mac": "6C:4B:90:56:97:74",
+      "vendor": "LiteON"
+    },
+    {
+      "address": "192.168.252.183",
+      "hostname": null,
+      "nbstat_info": {},
+      "ports": [
+        {
+          "port": "137/udp",
+          "state": "open|filtered",
+          "service": "netbios-ns"
+        }
+      ],
+      "mac": "70:38:EE:D3:0A:6C",
+      "vendor": "Avaya"
+    },
+    {
+      "address": "192.168.252.189",
+      "hostname": null,
+      "nbstat_info": {},
+      "ports": [
+        {
+          "port": "137/udp",
+          "state": "open|filtered",
+          "service": "netbios-ns"
+        }
+      ],
+      "mac": "70:38:EE:D3:0A:67",
+      "vendor": "Avaya"
+    },
+    {
+      "address": "192.168.252.192",
+      "hostname": null,
+      "nbstat_info": {},
+      "ports": [
+        {
+          "port": "137/udp",
+          "state": "open|filtered",
+          "service": "netbios-ns"
+        }
+      ],
+      "mac": "70:38:EE:D1:32:AC",
+      "vendor": "Avaya"
+    },
+    {
+      "address": "192.168.252.195",
+      "hostname": null,
+      "nbstat_info": {},
+      "ports": [
+        {
+          "port": "137/udp",
+          "state": "open|filtered",
+          "service": "netbios-ns"
+        }
+      ],
+      "mac": "2C:F4:C5:EE:80:56",
+      "vendor": "Avaya"
+    },
+    {
+      "address": "192.168.252.197",
+      "hostname": null,
+      "nbstat_info": {},
+      "ports": [
+        {
+          "port": "137/udp",
+          "state": "open|filtered",
+          "service": "netbios-ns"
+        }
+      ],
+      "mac": "70:38:EE:D3:0B:F1",
+      "vendor": "Avaya"
+    },
+    {
+      "address": "w-kz-yakovenkodb.alkor.ru",
+      "hostname": "(192.168.252.101)",
+      "nbstat_info": {},
+      "ports": [
+        {
+          "port": "137/udp",
+          "state": "open|filtered",
+          "service": "netbios-ns"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_hosts": 13,
+    "scan_duration": "N/A"
+  }
+}

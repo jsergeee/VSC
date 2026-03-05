@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+<style>
+    .lesson-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        padding: 30px;
+        color: white;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    .lesson-header h1 { font-size: 2.5rem; margin-bottom: 10px; }
+    .lesson-header .badge { font-size: 1rem; padding: 10px 20px; border-radius: 30px; }
+    .info-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        border: 1px solid #f0f0f0;
+    }
+    .student-photo {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #667eea;
+    }
+    .btn-video {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        padding: 15px 30px;
+        border-radius: 50px;
+        font-weight: bold;
+        transition: all 0.3s;
+        width: 100%;
+        margin-bottom: 10px;
+        display: inline-block;
+        text-decoration: none;
+    }
+    .btn-video:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        color: white;
+        text-decoration: none;
+    }
+    .btn-complete {
+        background: linear-gradient(45deg, #ffc107, #ff9800);
+        border: none;
+        color: white;
+        padding: 12px 25px;
+        border-radius: 50px;
+        font-weight: bold;
+        transition: all 0.3s;
+        width: 100%;
+    }
+    .btn-complete:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4);
+    }
+    .status-badge { padding: 8px 16px; border-radius: 30px; font-size: 0.9rem; font-weight: 600; }
+    .status-scheduled { background: #cce5ff; color: #004085; }
+    .status-completed { background: #d4edda; color: #155724; }
+    .status-cancelled { background: #f8d7da; color: #721c24; }
+    .status-overdue { background: #fff3cd; color: #856404; }
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .info-label {
+        font-weight: 600;
+        color: #666;
+    }
+    .info-value {
+        font-weight: 500;
+        color: #333;
+    }
+    .payment-positive {
+        color: #28a745;
+        font-weight: bold;
+    }
+    .video-note {
+        background: #e8f4fd;
+        border-left: 4px solid #2196f3;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 10px;
+        font-size: 0.9rem;
+    }
+    .previous-lesson {
+        padding: 15px;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background 0.3s;
+    }
+    .previous-lesson:hover {
+        background: #f8f9fa;
+    }
+    .previous-lesson:last-child {
+        border-bottom: none;
+    }
+    .link-box {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+    .link-box label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 5px;
+    }
+    .copy-btn {
+        cursor: pointer;
+    }
+    .student-item {
+        border-bottom: 1px solid #e9ecef;
+        padding: 10px 0;
+    }
+    .student-item:last-child {
+        border-bottom: none;
+    }
+    .total-cost {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #28a745;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 2px solid #e9ecef;
+    }
+
+    /* ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ МОДАЛЬНОГО ОКНА */
+    .modal-backdrop {
+        z-index: 1040 !important;
+    }
+
+    .modal {
+        z-index: 1050 !important;
+    }
+
+    .modal-content {
+        pointer-events: auto !important;
+        background-color: #fff !important;
+        border: 1px solid rgba(0,0,0,0.2) !important;
+        border-radius: 0.3rem !important;
+    }
+
+    .modal-footer button,
+    .modal-body input,
+    .modal-body textarea,
+    .modal-body button {
+        pointer-events: auto !important;
+        cursor: pointer !important;
+    }
+
+    .modal-body input,
+    .modal-body textarea {
+        cursor: text !important;
+        background-color: #fff !important;
+        border: 1px solid #ced4da !important;
+        padding: 0.375rem 0.75rem !important;
+        border-radius: 0.25rem !important;
+        width: 100% !important;
+    }
+
+    .modal-body input:focus,
+    .modal-body textarea:focus {
+        border-color: #80bdff !important;
+        outline: 0 !important;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25) !important;
+    }
+</style>
+
+<div class="container mt-4">
+    <!-- Заголовок урока -->
+    <div class="lesson-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1>{{ lesson.subject.name }}</h1>
+                <p class="mb-2">
+                    <i class="fa fa-calendar"></i> {{ lesson.date|date:"d.m.Y" }}
+                    <i class="fa fa-clock ml-3"></i> {{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i"
+                    }}
+                </p>
+                <p class="mb-0">
+                    <span class="badge status-{{ lesson.status }} status-badge">
+                        {% if lesson.status == 'scheduled' %}Запланировано
+                        {% elif lesson.status == 'completed' %}Проведено
+                        {% elif lesson.status == 'cancelled' %}Отменено
+                        {% elif lesson.status == 'overdue' %}Просрочено
+                        {% endif %}
+                    </span>
+                </p>
+            </div>
+            <div class="col-md-4 text-right">
+                {% if lesson.status == 'scheduled' %}
+                <span class="zoom-link"
+                      style="background: #ffc107; padding: 15px 30px; border-radius: 50px; color: white; font-weight: bold;">
+                    <i class="fa fa-hourglass-half"></i> Ожидает проведения
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Левая колонка - информация об учениках и финансах -->
+        <div class="col-md-4">
+            <!-- Карточки учеников -->
+            <div class="info-card">
+                <h5><i class="fa fa-users"></i> Ученики</h5>
+                {% for attendance in attendances %}
+                <div class="student-item">
+                    <div class="row">
+                        <div class="col-3">
+                            {% if attendance.student.user.photo %}
+                            <img src="{{ attendance.student.user.photo.url }}" class="student-photo"
+                                 style="width: 50px; height: 50px;" alt="">
+                            {% else %}
+                            <div class="student-photo bg-secondary d-flex align-items-center justify-content-center"
+                                 style="width: 50px; height: 50px;">
+                                <i class="fa fa-user fa-2x text-white"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-9">
+                            <h6>{{ attendance.student.user.get_full_name }}</h6>
+                            <p class="small text-muted mb-1">
+                                <i class="fa fa-envelope"></i> {{ attendance.student.user.email|truncatechars:20 }}
+                            </p>
+                            <div class="info-row">
+                                <span class="info-label">Стоимость:</span>
+                                <span class="info-value">{{ attendance.cost }} ₽</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Статус:</span>
+                                <span class="badge badge-{% if attendance.status == 'attended' %}success{% else %}warning{% endif %}">
+                                    {{ attendance.get_status_display }}
+                                </span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Баланс:</span>
+                                <span class="info-value {% if attendance.student.user.balance < attendance.cost %}text-danger{% endif %}">
+                                    {{ attendance.student.user.balance|floatformat:0 }} ₽
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </div>
+                {% empty %}
+                <p class="text-muted">Нет учеников</p>
+                {% endfor %}
+
+                <!-- Итого по финансам -->
+                <div class="total-cost">
+                    <div class="info-row">
+                        <span class="info-label">Общая стоимость:</span>
+                        <span class="info-value">{{ total_cost }} ₽</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Ваш гонорар:</span>
+                        <span class="info-value payment-positive">{{ teacher_payment }} ₽</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ВИДЕО-ЗВОНОК JITSI -->
+            {% if lesson.status == 'scheduled' %}
+            <div class="info-card">
+                <h5><i class="fa fa-video-camera"></i> Видео-урок</h5>
+
+                {% if not lesson.video_room %}
+                <!-- Кнопка создания комнаты -->
+                <button onclick="createVideoRoom()" class="btn-video" id="createRoomBtn">
+                    <i class="fa fa-plus-circle"></i> Создать комнату для урока
+                </button>
+                <div id="loading" style="display: none;" class="text-center mt-2">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Создание...</span>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Комната уже создана -->
+                <div class="alert alert-success">
+                    <i class="fa fa-check-circle"></i> Комната создана!
+                </div>
+
+                {% with room_name="plusprogress-"|add:lesson.id|stringformat:"s"|add:"-"|add:lesson.video_room %}
+                <!-- Ссылка для учителя -->
+                <div class="link-box">
+                    <label><i class="fa fa-user"></i> Ваша ссылка для входа:</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="teacherLink"
+                               value="https://meet.jit.si/{{ room_name }}#userInfo.displayName={{ request.user.get_full_name|urlencode }}&userInfo.email={{ request.user.email|urlencode }}&config.startWithAudioMuted=false"
+                               readonly>
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-primary copy-btn" onclick="copyLink('teacherLink')">
+                                <i class="fa fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ссылка для учеников -->
+                <div class="link-box">
+                    <label><i class="fa fa-users"></i> Ссылка для учеников:</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="studentLink"
+                               value="https://meet.jit.si/{{ room_name }}#config.startWithAudioMuted=false"
+                               readonly>
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-primary copy-btn" onclick="copyLink('studentLink')">
+                                <i class="fa fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <small class="text-muted">Ученики войдут под своими именами</small>
+                </div>
+
+                <!-- Кнопка начала урока -->
+                <a href="https://meet.jit.si/{{ room_name }}#userInfo.displayName={{ request.user.get_full_name|urlencode }}&userInfo.email={{ request.user.email|urlencode }}&config.startWithAudioMuted=false"
+                   target="_blank"
+                   class="btn-video">
+                    <i class="fa fa-play"></i> Начать урок
+                </a>
+
+                <!-- Кнопка редактирования (вне блока with, чтобы не зависеть от room_name) -->
+                <a href="{% url 'teacher_edit_lesson' lesson.id %}" class="btn btn-sm btn-outline-secondary mt-2">
+                    <i class="fa fa-edit"></i> Редактировать урок
+                </a>
+
+                {% endwith %}  <!-- закрываем with -->
+                {% endif %}
+
+                <!-- Кнопка завершения урока -->
+                {% if lesson.status == 'scheduled' %}
+                <div class="info-card">
+                    <h5><i class="fa fa-check-circle"></i> Завершение урока</h5>
+                    <button onclick="document.getElementById('simpleModal').style.display='block'" class="btn-complete">
+                        <i class="fa fa-file-text"></i> Завершить урок и создать отчет
+                    </button>
+                </div>
+                {% endif %}
+
+                <!-- Предыдущие уроки -->
+                {% if previous_lessons %}
+                <div class="info-card">
+                    <h5><i class="fa fa-history"></i> Предыдущие уроки</h5>
+                    {% for prev in previous_lessons %}
+                    <div class="previous-lesson">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ prev.date|date:"d.m.Y" }} {{ prev.start_time|time:"H:i" }}</strong><br>
+                                <small class="text-muted">{{ prev.subject.name }}</small>
+                            </div>
+                            <a href="{% url 'teacher_lesson_detail' prev.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fa fa-eye"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Правая колонка - информация об уроке и отчет -->
+            <div class="col-md-8">
+                {% if lesson.status == 'completed' and lesson.report %}
+                <!-- Существующий отчет -->
+                <div class="info-card">
+                    <h5><i class="fa fa-file-text"></i> Отчет о занятии</h5>
+                    <p><strong>Тема:</strong> {{ lesson.report.topic }}</p>
+                    <p><strong>Что прошли:</strong> {{ lesson.report.covered_material }}</p>
+                    <p><strong>ДЗ:</strong> {{ lesson.report.homework }}</p>
+                    <p><strong>Прогресс ученика:</strong> {{ lesson.report.student_progress }}</p>
+                    {% if lesson.report.next_lesson_plan %}
+                    <p><strong>План следующего урока:</strong> {{ lesson.report.next_lesson_plan }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Оценки от учеников -->
+                {% if lesson.feedback %}
+                <div class="info-card">
+                    <h5><i class="fa fa-star"></i> Оценки учеников</h5>
+                    <div class="text-center">
+                        <div class="rating-stars mb-2">
+                            {% for i in "12345"|make_list %}
+                            {% if forloop.counter <= lesson.feedback.rating %}★{% else %}☆{% endif %}
+                            {% endfor %}
+                        </div>
+                        {% if lesson.feedback.comment %}
+                        <p>"{{ lesson.feedback.comment }}"</p>
+                        {% endif %}
+                        <small class="text-muted">{{ lesson.feedback.created_at|date:"d.m.Y H:i" }}</small>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% elif lesson.status == 'scheduled' %}
+                <!-- Запланированный урок -->
+                <div class="info-card">
+                    <h5><i class="fa fa-info-circle"></i> Информация об уроке</h5>
+                    <p><i class="fa fa-calendar"></i> <strong>Дата:</strong> {{ lesson.date|date:"d.m.Y" }}</p>
+                    <p><i class="fa fa-clock"></i> <strong>Время:</strong> {{ lesson.start_time|time:"H:i" }} - {{
+                        lesson.end_time|time:"H:i" }}</p>
+                    <p><i class="fa fa-book"></i> <strong>Предмет:</strong> {{ lesson.subject.name }}</p>
+                    {% if lesson.format %}
+                    <p><i class="fa fa-tag"></i> <strong>Формат:</strong> {{ lesson.format.name }}</p>
+                    {% endif %}
+
+                    {% if lesson.notes %}
+                    <hr>
+                    <p><strong>Заметки:</strong><br>{{ lesson.notes }}</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Простое модальное окно (без Bootstrap) -->
+    <div id="simpleModal"
+         style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; z-index: 999999; border-radius: 10px; box-shadow: 0 5px 30px rgba(0,0,0,0.3); width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 15px 20px; margin: -30px -30px 20px -30px; border-radius: 10px 10px 0 0; color: white; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">Завершить урок {{ lesson.subject.name }}</h3>
+            <button onclick="document.getElementById('simpleModal').style.display='none'"
+                    style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">&times;
+            </button>
+        </div>
+
+        <form method="post" action="{% url 'complete_lesson' lesson.id %}">
+            {% csrf_token %}
+            <div style="padding: 0 20px;">
+                <div style="background: #e8f4fd; border-left: 4px solid #2196f3; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+                    <i class="fa fa-info-circle" style="color: #2196f3;"></i> После завершения урока:
+                    <ul style="margin: 10px 0 0 0;">
+                        <li>С баланса учеников спишутся суммы согласно их стоимости</li>
+                        <li>На ваш кошелек поступит {{ teacher_payment }} ₽</li>
+                        <li>Ученики смогут оценить урок</li>
+                    </ul>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="font-weight: 600; display: block; margin-bottom: 5px;">Тема урока *</label>
+                    <input type="text" name="topic" required
+                           style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="font-weight: 600; display: block; margin-bottom: 5px;">Что прошли *</label>
+                    <textarea name="covered_material" rows="3" required
+                              style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;"></textarea>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="font-weight: 600; display: block; margin-bottom: 5px;">Домашнее задание *</label>
+                    <textarea name="homework" rows="3" required
+                              style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;"></textarea>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="font-weight: 600; display: block; margin-bottom: 5px;">Прогресс ученика *</label>
+                    <textarea name="student_progress" rows="2" required
+                              style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;"></textarea>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="font-weight: 600; display: block; margin-bottom: 5px;">План следующего урока</label>
+                    <textarea name="next_lesson_plan" rows="2"
+                              style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;"></textarea>
+                </div>
+            </div>
+
+            <div style="padding: 20px; border-top: 1px solid #dee2e6; text-align: right;">
+                <button type="button" onclick="document.getElementById('simpleModal').style.display='none'"
+                        style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-right: 10px; cursor: pointer;">
+                    Отмена
+                </button>
+                <button type="submit"
+                        style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                    <i class="fa fa-check"></i> Завершить урок
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Скрипты -->
+    <script>
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function createVideoRoom() {
+            document.getElementById('createRoomBtn').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+
+            fetch("{% url 'create_video_room' lesson.id %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + data.error);
+                    document.getElementById('createRoomBtn').style.display = 'block';
+                    document.getElementById('loading').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                alert('Ошибка соединения');
+                document.getElementById('createRoomBtn').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+            });
+        }
+
+        function copyLink(elementId) {
+            var copyText = document.getElementById(elementId);
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+
+            var btn = event.target.closest('.copy-btn');
+            var originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fa fa-check"></i>';
+            setTimeout(function() {
+                btn.innerHTML = originalHtml;
+            }, 2000);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Проверяем авторизацию через JavaScript
+            {% if user.is_authenticated %}
+            const simpleModalForm = document.querySelector('#simpleModal form');
+            if (simpleModalForm) {
+                simpleModalForm.addEventListener('submit', function(e) {
+                    if (!confirm('Вы уверены, что хотите завершить урок? Это действие нельзя отменить.')) {
+                        e.preventDefault();
+                    }
+                });
+            }
+            {% endif %}
+        });
+    </script>
+
+
+
+
+
+</body>
+</html>

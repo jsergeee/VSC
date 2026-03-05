@@ -1,0 +1,44 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div id="content-main">
+    <div class="module" style="margin-bottom: 20px;">
+        <h2>Статистика отчетов</h2>
+        <div style="display: flex; gap: 20px; padding: 15px; background: #f8f8f8; border-radius: 4px;">
+            <div style="flex: 1; text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #447e9b;">{{ total_reports }}</div>
+                <div style="color: #666;">Всего отчетов</div>
+            </div>
+            <div style="flex: 1; text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #28a745;">{{ completed_lessons }}</div>
+                <div style="color: #666;">Завершенных занятий</div>
+            </div>
+            <div style="flex: 1; text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #ffc107;">{{ pending_reports }}</div>
+                <div style="color: #666;">Без отчетов</div>
+            </div>
+        </div>
+    </div>
+    
+    {{ block.super }}
+</div>
+
+<style>
+    .row1, .row2 {
+        transition: background-color 0.3s;
+    }
+    .row1:hover, .row2:hover {
+        background-color: #e8f4f8 !important;
+    }
+    .field-__str__ {
+        font-weight: bold;
+    }
+    .field-topic {
+        max-width: 300px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+</style>
+{% endblock %}

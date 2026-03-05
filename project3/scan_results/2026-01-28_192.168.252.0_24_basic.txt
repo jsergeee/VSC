@@ -1,0 +1,47 @@
+Сканирование сети
+Дата: 2026-01-28
+Время: 13:09:38
+Цель: 192.168.252.0/24
+Тип: basic
+============================================================
+
+Starting Nmap 7.98 ( https://nmap.org ) at 2026-01-28 13:09 +0300
+Nmap scan report for 192.168.252.1
+Host is up (0.0065s latency).
+MAC Address: CC:2D:E0:74:A4:E3 (Routerboard.com)
+Nmap scan report for 192.168.252.104
+Host is up (0.0040s latency).
+MAC Address: F4:A9:97:D5:64:27 (Canon)
+Nmap scan report for 192.168.252.141
+Host is up (0.0030s latency).
+MAC Address: C8:1F:EA:5D:C3:E5 (Avaya)
+Nmap scan report for 192.168.252.153
+Host is up (0.0090s latency).
+MAC Address: 70:38:EE:D3:0A:10 (Avaya)
+Nmap scan report for 192.168.252.162
+Host is up (0.0060s latency).
+MAC Address: 98:FA:9B:54:AB:A8 (LCFC(Hefei) Electronics Technology)
+Nmap scan report for w-kz-litovchenko.alkor.ru (192.168.252.165)
+Host is up (0.0050s latency).
+MAC Address: 98:FA:9B:54:A2:43 (LCFC(Hefei) Electronics Technology)
+Nmap scan report for w-kz-garipova.alkor.ru (192.168.252.172)
+Host is up (0.0030s latency).
+MAC Address: 6C:4B:90:56:97:74 (LiteON)
+Nmap scan report for 192.168.252.183
+Host is up (0.0040s latency).
+MAC Address: 70:38:EE:D3:0A:6C (Avaya)
+Nmap scan report for 192.168.252.189
+Host is up (0.0020s latency).
+MAC Address: 70:38:EE:D3:0A:67 (Avaya)
+Nmap scan report for 192.168.252.192
+Host is up (0.0030s latency).
+MAC Address: 70:38:EE:D1:32:AC (Avaya)
+Nmap scan report for 192.168.252.195
+Host is up (0.0040s latency).
+MAC Address: 2C:F4:C5:EE:80:56 (Avaya)
+Nmap scan report for 192.168.252.197
+Host is up (0.0032s latency).
+MAC Address: 70:38:EE:D3:0B:F1 (Avaya)
+Nmap scan report for w-kz-yakovenkodb.alkor.ru (192.168.252.101)
+Host is up.
+Nmap done: 256 IP addresses (13 hosts up) scanned in 3.28 seconds

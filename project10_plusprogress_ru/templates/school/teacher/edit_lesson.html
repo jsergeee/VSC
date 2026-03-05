@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Редактировать урок{% endblock %}
+
+{% block extra_css %}
+<style>
+    .edit-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        padding: 30px;
+        color: white;
+        margin-bottom: 30px;
+    }
+    .edit-card {
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-group label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 5px;
+    }
+    .form-control {
+        border: 1px solid #ced4da;
+        border-radius: 8px;
+        padding: 10px 15px;
+    }
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    .save-btn {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 50px;
+        font-weight: bold;
+        width: 100%;
+    }
+    .save-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Заголовок -->
+    <div class="edit-header">
+        <h1>Редактировать урок</h1>
+        <p class="mb-0">{{ lesson.subject.name }} - {{ lesson.date|date:"d.m.Y" }} {{ lesson.start_time|time:"H:i" }}</p>
+    </div>
+
+    <!-- Форма редактирования -->
+    <div class="edit-card">
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Дата</label>
+                        <input type="date" name="date" class="form-control" value="{{ lesson.date|date:'Y-m-d' }}" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>День недели</label>
+                        <input type="text" class="form-control" value="{{ lesson.date|date:'l' }}" readonly disabled>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Время начала</label>
+                        <input type="time" name="start_time" class="form-control" value="{{ lesson.start_time|time:'H:i' }}" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Время окончания</label>
+                        <input type="time" name="end_time" class="form-control" value="{{ lesson.end_time|time:'H:i' }}" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Ссылка на занятие</label>
+                <input type="url" name="meeting_link" class="form-control" value="{{ lesson.meeting_link }}" placeholder="https://...">
+            </div>
+
+            <div class="form-group">
+                <label>Платформа</label>
+                <input type="text" name="meeting_platform" class="form-control" value="{{ lesson.meeting_platform }}" placeholder="Zoom / Skype / Jitsi">
+            </div>
+
+            <div class="form-group">
+                <label>Заметки</label>
+                <textarea name="notes" class="form-control" rows="4" placeholder="Дополнительная информация...">{{ lesson.notes }}</textarea>
+            </div>
+
+            <!-- Информация об учениках (только для просмотра) -->
+            <div class="form-group">
+                <label>Ученики</label>
+                <div class="border rounded p-3 bg-light">
+                    {% for attendance in lesson.attendance.all %}
+                    <div class="mb-1">
+                        <i class="fa fa-user"></i> {{ attendance.student.user.get_full_name }}
+                        {% if attendance.cost %} ({{ attendance.cost }} ₽){% endif %}
+                    </div>
+                    {% empty %}
+                    <p class="text-muted mb-0">Нет учеников</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="row">
+                <div class="col-md-6">
+                    <a href="{% url 'teacher_lesson_detail' lesson.id %}" class="btn btn-outline-secondary btn-block">
+                        <i class="fa fa-arrow-left"></i> Отмена
+                    </a>
+                </div>
+                <div class="col-md-6">
+                    <button type="submit" class="save-btn">
+                        <i class="fa fa-save"></i> Сохранить изменения
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

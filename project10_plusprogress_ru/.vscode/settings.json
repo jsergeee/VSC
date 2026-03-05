@@ -1,0 +1,15 @@
+{
+  "files.associations": {
+    "**/templates/**/*.html": "django-html",
+    "**/templates/**/*": "django-txt"
+  },
+  "[django-html]": {
+    "editor.formatOnSave": false,
+    "editor.quickSuggestions": {
+      "other": true,
+      "comments": true,
+      "strings": true
+    }
+  },
+  "git.ignoreLimitWarning": true
+}
