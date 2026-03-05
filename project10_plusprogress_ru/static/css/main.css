@@ -901,7 +901,7 @@ img {
     right: 0;
     background: white;
     border-bottom: 1px solid var(--border-light);
-    padding: var(--space-sm) 0;
+    padding: 0px !important;
     z-index: 1000;
     height: 60px;
 }
@@ -920,7 +920,7 @@ img {
 }
 
 .footer {
-  background: var(--color-dark);
+  background: #f1faff;
   color: white;
   padding: var(--space-xl) 0;
   margin-top: auto;
@@ -1787,21 +1787,3 @@ img {
         background: #007bff;
         color: white;
     }
-
-
-    .app-icon {
-    height: 25px !important;
-    width: auto !important;
-    max-width: none !important;
-}
-
-/* Специально для мобильных устройств */
-@media (max-width: 768px) {
-    .mobile-icons img,
-    .mobile-icons a img {
-        height: 25px !important;
-        width: auto !important;
-        max-width: none !important;
-    }
-}
-

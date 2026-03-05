@@ -653,8 +653,8 @@ iframe {
 .navbar {
 	width: 100%;
 	z-index: 9999;
-	padding-top: 10px;
-	padding-bottom: 10px;
+	padding-top: 0px !important;
+	padding-bottom: 0px !important;
 }
 
 .navbar-toggler {
@@ -677,6 +677,7 @@ iframe {
 	border-bottom: 1px solid #efefef;
 	box-shadow: 0px 0px 25px 0px rgba(0, 0, 0, 0.04)!important;
 	transition: background-color 0.25s ease 0s;
+	min-height: 150px;
 }
 
 .navbar-fixed-top.opaque {
@@ -1009,8 +1010,8 @@ ul.footer_social li a i:hover {
 
 /* -----  Register ----- */
 .register-form-home-wrapper{
-	margin-top: 25px;
-	padding: 40px 40px;
+	margin-top: 15px;
+	padding: 20px 40px;
 	background: rgba(255,255,255,1);
 	border-radius: 5px 5px;
 }
@@ -2139,15 +2140,11 @@ ul.benefits.white li i {
 }
 
 @media (max-width: 991px) {
-<<<<<<< HEAD
    .navbar-nav .navbar-collapse > ul {
     align-content: center !important;
     flex-wrap: wrap !important;
     }
 git
-=======
-
->>>>>>> develop
 	.navbar-fixed-top {
 	    background-color: #fff!important;
 	}
@@ -2280,37 +2277,28 @@ git
 		max-width: 100%;
 	}
 
-<<<<<<< HEAD
     .navbar-nav .navbar-collapse > ul {
         align-content: center !important;
         flex-wrap: wrap !important;
     }
 
-=======
->>>>>>> develop
 }
 @media (max-width: 425px) {
 	.add_palitra {
 		display: none;
 	}
-<<<<<<< HEAD
 	.navbar-nav .navbar-collapse > ul {
     align-content: center !important;
     flex-wrap: wrap !important;
 }
-=======
->>>>>>> develop
 
 }
 
 @media (max-width: 375px) {
-<<<<<<< HEAD
     .navbar-nav .navbar-collapse > ul {
         align-content: center !important;
         flex-wrap: wrap !important;
     }
-=======
->>>>>>> develop
 
 	.navbar-toggle {
 	    border: 1px solid #9f9f9f!important;
@@ -3234,7 +3222,6 @@ git
     font-weight: bold;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
-<<<<<<< HEAD
 .app-icon {
     height: 25px !important;
     width: auto !important;
@@ -3247,5 +3234,3 @@ git
 }
 
 
-=======
->>>>>>> develop
