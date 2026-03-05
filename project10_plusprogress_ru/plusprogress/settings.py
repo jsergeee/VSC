@@ -18,9 +18,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here')
 
-DEBUG = config('DEBUG', default=False, cast=bool)
+DEBUG = True
 
-ALLOWED_HOSTS = ['plusprogress.ru', 'www.plusprogress.ru', '185.104.115.44']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -98,11 +98,11 @@ TIME_ZONE = 'Europe/Moscow'
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -132,4 +132,3 @@ DEFAULT_FROM_EMAIL = 'jserge@yandex.ru'
 TELEGRAM_BOT_TOKEN = '8391902139:AAGHIcvya9Zk1ZlsDFBkn6WJEBxE5TyK02Y'
 TELEGRAM_CHAT_ID = '1226934902'
 
-BASE_URL = 'https://plusprogress.ru'

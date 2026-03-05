@@ -3,6 +3,7 @@ from django.urls import path
 from . import views
 from .views import log_video_entry
 from .views import telegram_settings
+from django.conf.urls.static import static
 
 
 urlpatterns = [

@@ -1787,3 +1787,21 @@ img {
         background: #007bff;
         color: white;
     }
+
+
+    .app-icon {
+    height: 25px !important;
+    width: auto !important;
+    max-width: none !important;
+}
+
+/* Специально для мобильных устройств */
+@media (max-width: 768px) {
+    .mobile-icons img,
+    .mobile-icons a img {
+        height: 25px !important;
+        width: auto !important;
+        max-width: none !important;
+    }
+}
+
