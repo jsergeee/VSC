@@ -1,29 +1,30 @@
-"openJdk-25/
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Virtual environments
 venv/
-.env
-.venv/
 ENV/
+env/
+mylib_env/
 
-# Database files
-*.db
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Базы данных
 *.sqlite3
+*.db
+*.sqlite
 
-# Project specific
-static/js/dist/
-static/scss/dist/
+# IDE
+.vscode/
+.idea/
+local_settings.py
 
-# Ignore other project directories
-../project2/
-../project4/
-../project9_django_mylib/
-../python_project/
-../test_calendar_project/
-../static/
-../openJdk-25/
-" > .gitignore
 
+
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/

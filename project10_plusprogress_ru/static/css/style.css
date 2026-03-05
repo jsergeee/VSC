@@ -2139,11 +2139,15 @@ ul.benefits.white li i {
 }
 
 @media (max-width: 991px) {
+<<<<<<< HEAD
    .navbar-nav .navbar-collapse > ul {
     align-content: center !important;
     flex-wrap: wrap !important;
     }
 git
+=======
+
+>>>>>>> develop
 	.navbar-fixed-top {
 	    background-color: #fff!important;
 	}
@@ -2276,28 +2280,37 @@ git
 		max-width: 100%;
 	}
 
+<<<<<<< HEAD
     .navbar-nav .navbar-collapse > ul {
         align-content: center !important;
         flex-wrap: wrap !important;
     }
 
+=======
+>>>>>>> develop
 }
 @media (max-width: 425px) {
 	.add_palitra {
 		display: none;
 	}
+<<<<<<< HEAD
 	.navbar-nav .navbar-collapse > ul {
     align-content: center !important;
     flex-wrap: wrap !important;
 }
+=======
+>>>>>>> develop
 
 }
 
 @media (max-width: 375px) {
+<<<<<<< HEAD
     .navbar-nav .navbar-collapse > ul {
         align-content: center !important;
         flex-wrap: wrap !important;
     }
+=======
+>>>>>>> develop
 
 	.navbar-toggle {
 	    border: 1px solid #9f9f9f!important;
@@ -3221,6 +3234,7 @@ git
     font-weight: bold;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
+<<<<<<< HEAD
 .app-icon {
     height: 25px !important;
     width: auto !important;
@@ -3233,3 +3247,5 @@ git
 }
 
 
+=======
+>>>>>>> develop
