@@ -4,7 +4,12 @@ from . import views
 from .views import log_video_entry
 from .views import telegram_settings
 from django.conf.urls.static import static
+from rest_framework.routers import DefaultRouter
 
+router = DefaultRouter()
+router.register('teachers', views.TeacherViewSet)
+router.register('students', views.StudentViewSet)
+router.register('lessons', views.LessonViewSet)
 
 urlpatterns = [
     path('', views.home, name='home'),

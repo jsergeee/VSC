@@ -10,6 +10,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('', include('school.urls')),
     path('admin/', admin.site.urls),
+    path('api/', include('school.api_urls')),
 ]
 
 # ВСЕ добавления статических и медиа файлов ТОЛЬКО внутри DEBUG

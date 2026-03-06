@@ -866,4 +866,3 @@ class TelegramSettingsForm(forms.ModelForm):
             })
         }
 
-

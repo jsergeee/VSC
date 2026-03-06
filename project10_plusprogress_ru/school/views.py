@@ -42,6 +42,15 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
 import requests
 from django.conf import settings
+from rest_framework import generics 
+from .serializers import RegisterSerializer
+from rest_framework import viewsets, permissions, status, generics
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.authtoken.models import Token
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator  
 
 
 
@@ -5507,3 +5516,450 @@ def trial_request_ajax(request):
     except Exception as e:
         logger.error(f"Ошибка в заявке: {e}")
         return JsonResponse({'error': 'Ошибка сервера'}, status=500)
+
+# ============================================
+# REST API VIEWSETS 
+# ============================================
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.db.models import Q  # 👈 ЭТОТ ИМПОРТ НУЖЕН ДЛЯ MaterialViewSet
+from rest_framework import viewsets, permissions, status, generics
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from django.contrib.auth import authenticate
+from rest_framework.authtoken.models import Token
+from .serializers import (
+    TeacherSerializer, StudentSerializer, LessonSerializer, 
+    SimpleLessonSerializer, UserSerializer, 
+    HomeworkSerializer, HomeworkSubmissionSerializer,
+    MaterialSerializer, PaymentSerializer,
+    NotificationSerializer, LessonFeedbackSerializer,
+    GroupLessonSerializer, GroupEnrollmentSerializer,
+    ScheduleTemplateSerializer, StudentSubjectPriceSerializer,
+    TrialRequestSerializer, DepositSerializer,
+    StudentNoteSerializer, PaymentRequestSerializer, LessonReportSerializer
+)
+
+# 👇 ДОБАВЛЯЕМ НЕДОСТАЮЩИЙ ИМПОРТ IsTeacherUser
+# Создайте файл permissions.py или добавьте класс здесь
+class IsTeacherUser(permissions.BasePermission):
+    """Права для учителей"""
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == 'teacher'
+
+class IsStudentUser(permissions.BasePermission):
+    """Права для учеников"""
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == 'student'
+
+class RegisterView(generics.CreateAPIView):
+    """Регистрация нового пользователя"""
+    serializer_class = RegisterSerializer
+    permission_classes = [permissions.AllowAny]  # Разрешаем всем
+    authentication_classes = []  # Можно вообще без аутентификации
+    
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            
+            # Создаем профиль ученика автоматически
+            Student.objects.create(user=user)
+            
+            # Создаем токен для пользователя
+            from rest_framework.authtoken.models import Token
+            token, created = Token.objects.get_or_create(user=user)
+            
+            return Response({
+                'user': UserSerializer(user).data,
+                'token': token.key,
+                'message': 'Пользователь успешно зарегистрирован'
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class TeacherViewSet(viewsets.ModelViewSet):
+    """API для учителей"""
+    queryset = Teacher.objects.all().select_related('user').prefetch_related('subjects')
+    serializer_class = TeacherSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+class StudentViewSet(viewsets.ModelViewSet):
+    """API для учеников"""
+    queryset = Student.objects.all().select_related('user').prefetch_related('teachers')
+    serializer_class = StudentSerializer
+    permission_classes = [permissions.IsAdminUser]  # Для админов - полный доступ
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user_id = self.request.query_params.get('user_id')
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
+        return queryset
+    
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def me(self, request):
+        """Получить данные текущего ученика"""
+        try:
+            student = Student.objects.get(user=request.user)
+            serializer = self.get_serializer(student)
+            return Response(serializer.data)
+        except Student.DoesNotExist:
+            return Response(
+                {'detail': 'Профиль ученика не найден'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+class LessonViewSet(viewsets.ModelViewSet):
+    """API для уроков"""
+    queryset = Lesson.objects.all().select_related('teacher__user', 'subject')
+    permission_classes = [permissions.IsAdminUser]
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return SimpleLessonSerializer
+        return LessonSerializer
+
+class LoginAPIView(APIView):
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        import json
+        print("="*50)
+        print("🔥 LoginAPIView вызван")
+        print(f"Content-Type: {request.content_type}")
+        print(f"Данные запроса: {request.data}")
+        print("="*50)
+        
+        username = request.data.get('username')
+        password = request.data.get('password')
+        
+        if not username or not password:
+            return Response(
+                {'error': 'Не указаны username или password'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Аутентификация
+        user = authenticate(username=username, password=password)
+        
+        if user:
+            # Получаем или создаем токен
+            token, created = Token.objects.get_or_create(user=user)
+            return Response({
+                'token': token.key,
+                'user_id': user.id,
+                'username': user.username,
+                'role': user.role
+            })
+        
+        return Response(
+            {'error': 'Неверные учетные данные'}, 
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+class HomeworkViewSet(viewsets.ModelViewSet):
+    """API для домашних заданий"""
+    queryset = Homework.objects.all().select_related(
+        'teacher__user', 'student__user', 'subject', 'lesson'
+    )
+    serializer_class = HomeworkSerializer
+    
+    def get_permissions(self):
+        """Разные права для разных действий"""
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            permission_classes = [permissions.IsAdminUser | IsTeacherUser]
+        else:
+            permission_classes = [permissions.IsAuthenticated]
+        return [permission() for permission in permission_classes]
+    
+    def get_queryset(self):
+        """Пользователи видят только свои ДЗ"""
+        user = self.request.user
+        if user.is_anonymous:
+            return Homework.objects.none()
+        
+        queryset = super().get_queryset()
+        if user.role == 'student':
+            queryset = queryset.filter(student__user=user)
+        elif user.role == 'teacher':
+            queryset = queryset.filter(teacher__user=user)
+        
+        # Фильтр по статусу (упрощенный вариант)
+        status = self.request.query_params.get('status')
+        if status:
+            # Здесь нужна дополнительная логика фильтрации по статусу
+            pass
+        
+        return queryset
+    
+    @action(detail=True, methods=['post'])
+    def submit(self, request, pk=None):
+        """Сдать домашнее задание"""
+        homework = self.get_object()
+        # Проверка, что задание принадлежит ученику
+        if homework.student.user != request.user:
+            return Response(
+                {'error': 'Это не ваше задание'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Здесь логика сдачи ДЗ
+        serializer = HomeworkSubmissionSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(homework=homework, student=homework.student)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class HomeworkSubmissionViewSet(viewsets.ModelViewSet):
+    """API для сданных заданий"""
+    queryset = HomeworkSubmission.objects.all().select_related(
+        'homework', 'student__user'
+    )
+    serializer_class = HomeworkSubmissionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        """Учителя видят все, ученики только свои"""
+        user = self.request.user
+        if user.role == 'student':
+            return self.queryset.filter(student__user=user)
+        elif user.role == 'teacher':
+            return self.queryset.filter(homework__teacher__user=user)
+        return self.queryset
+    
+    @action(detail=True, methods=['post'])
+    def check(self, request, pk=None):
+        """Проверить задание (для учителя)"""
+        submission = self.get_object()
+        if request.user.role != 'teacher':
+            return Response(
+                {'error': 'Только учитель может проверять'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        submission.grade = request.data.get('grade')
+        submission.teacher_comment = request.data.get('teacher_comment')
+        submission.status = 'checked'
+        submission.checked_at = timezone.now()
+        submission.save()
+        
+        return Response(HomeworkSubmissionSerializer(submission).data)
+
+class MaterialViewSet(viewsets.ModelViewSet):
+    """API для методических материалов"""
+    queryset = Material.objects.all().prefetch_related('teachers', 'students', 'subjects')
+    serializer_class = MaterialSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        """Фильтрация материалов по доступности"""
+        user = self.request.user
+        queryset = super().get_queryset()
+        
+        if user.role == 'student':
+            # Ученики видят публичные материалы и свои
+            student = user.student_profile
+            return queryset.filter(
+                Q(is_public=True) | 
+                Q(students=student) |
+                Q(teachers__in=student.teachers.all())
+            ).distinct()
+        elif user.role == 'teacher':
+            # Учителя видят свои материалы
+            teacher = user.teacher_profile
+            return queryset.filter(
+                Q(teachers=teacher) | 
+                Q(created_by=user)
+            ).distinct()
+        
+        return queryset
+
+class PaymentViewSet(viewsets.ModelViewSet):
+    """API для платежей"""
+    queryset = Payment.objects.all().select_related('user', 'lesson')
+    serializer_class = PaymentSerializer
+    permission_classes = [permissions.IsAdminUser]
+    
+    def get_queryset(self):
+        """Фильтрация по пользователю и типу"""
+        queryset = super().get_queryset()
+        user_id = self.request.query_params.get('user')
+        payment_type = self.request.query_params.get('type')
+        
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
+        if payment_type:
+            queryset = queryset.filter(payment_type=payment_type)
+        
+        return queryset
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    """API для уведомлений"""
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = Notification.objects.all()
+    
+    def get_queryset(self):
+        """Пользователи видят только свои уведомления"""
+        return Notification.objects.filter(user=self.request.user)
+    
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        notification = self.get_object()
+        notification.is_read = True
+        notification.save()
+        return Response({'status': 'ok'})
+    
+    @action(detail=False, methods=['post'])
+    def mark_all_read(self, request):
+        self.get_queryset().update(is_read=True)
+        return Response({'status': 'ok'})
+
+class LessonFeedbackViewSet(viewsets.ModelViewSet):
+    """API для отзывов о уроках"""
+    queryset = LessonFeedback.objects.all().select_related(
+        'lesson', 'student__user', 'teacher__user'
+    )
+    serializer_class = LessonFeedbackSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        """Фильтрация по учителю/ученику"""
+        user = self.request.user
+        teacher_id = self.request.query_params.get('teacher')
+        student_id = self.request.query_params.get('student')
+        
+        queryset = super().get_queryset()
+        
+        if teacher_id:
+            queryset = queryset.filter(teacher_id=teacher_id)
+        if student_id:
+            queryset = queryset.filter(student_id=student_id)
+        
+        return queryset
+    
+    def perform_create(self, serializer):
+        """Автоматически подставляем ученика"""
+        lesson = serializer.validated_data['lesson']
+        student = lesson.attendance.get(student__user=self.request.user).student
+        serializer.save(student=student)
+
+class GroupLessonViewSet(viewsets.ModelViewSet):
+    """API для групповых уроков"""
+    queryset = GroupLesson.objects.all().select_related('teacher__user', 'subject', 'format')
+    serializer_class = GroupLessonSerializer
+    permission_classes = [permissions.IsAdminUser]
+    
+    @action(detail=True, methods=['post'])
+    def enroll(self, request, pk=None):
+        """Записать ученика на групповой урок"""
+        lesson = self.get_object()
+        student_id = request.data.get('student_id')
+        
+        try:
+            student = Student.objects.get(id=student_id)
+            enrollment, created = GroupEnrollment.objects.get_or_create(
+                group_lesson=lesson,
+                student=student,
+                defaults={'status': 'registered'}
+            )
+            return Response(GroupEnrollmentSerializer(enrollment).data)
+        except Student.DoesNotExist:
+            return Response(
+                {'error': 'Ученик не найден'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+class GroupEnrollmentViewSet(viewsets.ModelViewSet):
+    """API для записей на групповые уроки"""
+    queryset = GroupEnrollment.objects.all().select_related(
+        'group_lesson', 'student__user'
+    )
+    serializer_class = GroupEnrollmentSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+class ScheduleTemplateViewSet(viewsets.ModelViewSet):
+    """API для шаблонов расписания"""
+    queryset = ScheduleTemplate.objects.all().select_related('teacher__user', 'subject', 'format')
+    serializer_class = ScheduleTemplateSerializer
+    permission_classes = [permissions.IsAdminUser]
+    
+    @action(detail=True, methods=['post'])
+    def generate(self, request, pk=None):
+        """Сгенерировать уроки из шаблона"""
+        template = self.get_object()
+        lessons = template.generate_lessons()
+        return Response({
+            'message': f'Создано {len(lessons)} уроков',
+            'lessons': LessonSerializer(lessons, many=True).data
+        })
+
+class StudentSubjectPriceViewSet(viewsets.ModelViewSet):
+    """API для индивидуальных цен"""
+    queryset = StudentSubjectPrice.objects.all().select_related(
+        'student__user', 'teacher__user', 'subject'
+    )
+    serializer_class = StudentSubjectPriceSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+class TrialRequestViewSet(viewsets.ModelViewSet):
+    """API для заявок на пробный урок"""
+    queryset = TrialRequest.objects.all()
+    serializer_class = TrialRequestSerializer
+    
+    def get_permissions(self):
+        """На создание заявки могут все, остальное только админ"""
+        if self.action == 'create':
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
+
+class DepositViewSet(viewsets.ModelViewSet):
+    """API для депозитов"""
+    queryset = Deposit.objects.all().select_related('student__user', 'created_by')
+    serializer_class = DepositSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+class StudentNoteViewSet(viewsets.ModelViewSet):
+    """API для заметок об учениках"""
+    queryset = StudentNote.objects.all().select_related(
+        'teacher__user', 'student__user'
+    )
+    serializer_class = StudentNoteSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        """Учителя видят свои заметки, ученики - заметки о себе"""
+        user = self.request.user
+        if user.role == 'teacher':
+            return self.queryset.filter(teacher__user=user)
+        elif user.role == 'student':
+            return self.queryset.filter(student__user=user)
+        return self.queryset
+
+class PaymentRequestViewSet(viewsets.ModelViewSet):
+    """API для запросов на выплаты"""
+    queryset = PaymentRequest.objects.all().select_related('teacher__user', 'payment')
+    serializer_class = PaymentRequestSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+class LessonReportViewSet(viewsets.ModelViewSet):
+    """API для отчетов о уроках"""
+    queryset = LessonReport.objects.all().select_related('lesson')
+    serializer_class = LessonReportSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        """Доступ к отчетам есть у учителя и учеников урока"""
+        user = self.request.user
+        queryset = super().get_queryset()
+        
+        if user.role == 'teacher':
+            return queryset.filter(lesson__teacher__user=user)
+        elif user.role == 'student':
+            return queryset.filter(lesson__attendance__student__user=user)
+        
+        return queryset
+    
+    #Тестовый
+    

@@ -1,9 +1,13 @@
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-from django.utils import timezone
 from datetime import date, time, timedelta
 from decimal import Decimal
+from django.test import TestCase
+from rest_framework.test import APITestCase, APIClient
+from rest_framework import status
+from rest_framework.authtoken.models import Token
+from django.utils import timezone
 from .models import (
     User, Teacher, Student, Subject, Lesson, LessonAttendance,
     Payment, LessonReport, Notification, UserActionLog,
@@ -11,8 +15,409 @@ from .models import (
     GroupLesson, GroupEnrollment, Material, StudentSubjectPrice
 )
 
+
 User = get_user_model()
 
+class APITestCase(APITestCase):
+    """Базовый класс для тестов API"""
+    
+    def setUp(self):
+        """Настройка перед каждым тестом"""
+        # Создаем тестового админа
+        self.admin_user = User.objects.create_superuser(
+            username='admin',
+            password='admin123',
+            email='admin@test.com'
+        )
+        
+        # Создаем токен для админа
+        self.admin_token = Token.objects.create(user=self.admin_user)
+        
+        # Создаем тестового учителя
+        self.teacher_user = User.objects.create_user(
+            username='teacher1',
+            password='teacher123',
+            first_name='Иван',
+            last_name='Петров',
+            role='teacher'
+        )
+        self.teacher = Teacher.objects.create(
+            user=self.teacher_user,
+            bio='Опытный преподаватель',
+            experience=5
+        )
+        
+        # Создаем тестового ученика
+        self.student_user = User.objects.create_user(
+            username='student1',
+            password='student123',
+            first_name='Петр',
+            last_name='Сидоров',
+            role='student'
+        )
+        self.student = Student.objects.create(user=self.student_user)
+        self.student.teachers.add(self.teacher)
+        
+        # Создаем предмет
+        self.subject = Subject.objects.create(name='Математика')
+        self.teacher.subjects.add(self.subject)
+        
+        # Настраиваем клиент
+        self.client = APIClient()
+
+
+class RegistrationTests(APITestCase):
+    """Тесты регистрации пользователей"""
+    
+    def test_user_registration_success(self):
+        """Тест успешной регистрации"""
+        url = reverse('api-register')
+        data = {
+            'username': 'newuser',
+            'password': 'password123',
+            'password2': 'password123',
+            'email': 'newuser@test.com',
+            'first_name': 'Новый',
+            'last_name': 'Пользователь',
+            'phone': '+79991112233'
+        }
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn('token', response.data)
+        self.assertIn('user', response.data)
+        self.assertEqual(response.data['user']['username'], 'newuser')
+        self.assertEqual(response.data['user']['role'], 'student')
+        
+        # Проверяем, что ученик создан
+        user = User.objects.get(username='newuser')
+        self.assertTrue(hasattr(user, 'student_profile'))
+        
+        # Проверяем, что токен создан
+        token = Token.objects.get(user=user)
+        self.assertEqual(token.key, response.data['token'])
+    
+    def test_user_registration_password_mismatch(self):
+        """Тест несовпадения паролей"""
+        url = reverse('api-register')
+        data = {
+            'username': 'newuser',
+            'password': 'password123',
+            'password2': 'different123',
+            'email': 'newuser@test.com'
+        }
+        
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_user_registration_duplicate_username(self):
+        """Тест дубликата имени пользователя"""
+        url = reverse('api-register')
+        data = {
+            'username': 'newuser',
+            'password': 'password123',
+            'password2': 'password123',
+            'email': 'newuser@test.com'
+        }
+        
+        # Первая регистрация - успех
+        response1 = self.client.post(url, data, format='json')
+        self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
+        
+        # Вторая регистрация с тем же username - ошибка
+        response2 = self.client.post(url, data, format='json')
+        self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class LoginTests(APITestCase):
+    """Тесты авторизации"""
+    
+    def test_login_success(self):
+        """Тест успешного логина"""
+        url = reverse('api-login')
+        data = {
+            'username': 'teacher1',
+            'password': 'teacher123'
+        }
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('token', response.data)
+        self.assertIn('user_id', response.data)
+        self.assertIn('role', response.data)
+        self.assertEqual(response.data['username'], 'teacher1')
+        self.assertEqual(response.data['role'], 'teacher')
+    
+    def test_login_invalid_credentials(self):
+        """Тест неверных учетных данных"""
+        url = reverse('api-login')
+        data = {
+            'username': 'teacher1',
+            'password': 'wrongpassword'
+        }
+        
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class TeacherAPITests(APITestCase):
+    """Тесты API для учителей"""
+    
+    def test_create_teacher_as_admin(self):
+        """Тест создания учителя администратором"""
+        url = reverse('teacher-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.admin_token.key}')
+        
+        data = {
+            'user': {
+                'username': 'newteacher',
+                'password': 'teacher123',
+                'first_name': 'Новый',
+                'last_name': 'Учитель',
+                'email': 'newteacher@test.com'
+            },
+            'subjects': [self.subject.id],
+            'bio': 'Новый преподаватель',
+            'experience': 3
+        }
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['user']['username'], 'newteacher')
+        self.assertEqual(response.data['user']['role'], 'teacher')
+    
+    def test_create_teacher_without_auth(self):
+        """Тест создания учителя без авторизации"""
+        url = reverse('teacher-list')
+        data = {
+            'user': {
+                'username': 'newteacher',
+                'password': 'teacher123',
+                'first_name': 'Новый',
+                'last_name': 'Учитель'
+            },
+            'subjects': [self.subject.id]
+        }
+        
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+    
+    def test_list_teachers(self):
+        """Тест получения списка учителей"""
+        url = reverse('teacher-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.admin_token.key}')
+        
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(len(response.data) > 0)
+
+
+class StudentAPITests(APITestCase):
+    """Тесты API для учеников"""
+    
+    def test_create_student_as_admin(self):
+        """Тест создания ученика администратором"""
+        url = reverse('student-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.admin_token.key}')
+        
+        data = {
+            'user': {
+                'username': 'newstudent',
+                'password': 'student123',
+                'first_name': 'Новый',
+                'last_name': 'Ученик',
+                'email': 'newstudent@test.com'
+            },
+            'teachers': [self.teacher.id],
+            'parent_name': 'Родитель',
+            'parent_phone': '+79990000000'
+        }
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['user']['username'], 'newstudent')
+        self.assertEqual(response.data['user']['role'], 'student')
+    
+    def test_filter_student_by_user_id(self):
+        """Тест фильтрации ученика по user_id"""
+        # Добавляем метод фильтрации в ViewSet
+        url = reverse('student-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.admin_token.key}')
+        
+        # Тест с фильтром
+        response = self.client.get(url, {'user_id': self.student_user.id})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['user']['id'], self.student_user.id)
+
+
+class LessonAPITests(APITestCase):
+    """Тесты API для уроков"""
+    
+    def setUp(self):
+        super().setUp()
+        # Создаем второго ученика для группового урока
+        self.student2_user = User.objects.create_user(
+            username='student2',
+            password='student123',
+            first_name='Второй',
+            last_name='Ученик',
+            role='student'
+        )
+        self.student2 = Student.objects.create(user=self.student2_user)
+        self.student2.teachers.add(self.teacher)
+    
+    def test_create_lesson_with_students(self):
+        """Тест создания урока с учениками"""
+        url = reverse('lesson-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.admin_token.key}')
+        
+        data = {
+            'teacher': self.teacher.id,
+            'subject': self.subject.id,
+            'date': '2026-03-15',
+            'start_time': '10:00:00',
+            'end_time': '11:00:00',
+            'price_type': 'per_student',
+            'base_cost': 1000,
+            'base_teacher_payment': 700,
+            'students_data': [
+                {
+                    'student_id': self.student.id,
+                    'cost': 1000,
+                    'teacher_payment': 700
+                },
+                {
+                    'student_id': self.student2.id,
+                    'cost': 1000,
+                    'teacher_payment': 700
+                }
+            ]
+        }
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['teacher'], self.teacher.id)
+        self.assertEqual(response.data['subject'], self.subject.id)
+        
+        # Проверяем, что урок создан и ученики привязаны
+        lesson = Lesson.objects.get(id=response.data['id'])
+        self.assertEqual(lesson.attendance.count(), 2)
+    
+    def test_list_lessons(self):
+        """Тест получения списка уроков"""
+        url = reverse('lesson-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.admin_token.key}')
+        
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+class TokenTests(APITestCase):
+    """Тесты для токенов"""
+    
+    def test_token_authentication(self):
+        """Тест аутентификации по токену"""
+        # Создаем ученика через API
+        register_url = reverse('api-register')
+        register_data = {
+            'username': 'testuser',
+            'password': 'test1234',
+            'password2': 'test1234',
+            'email': 'test@test.com',
+            'first_name': 'Тест',
+            'last_name': 'Пользователь',
+            'phone': '+79991112233'
+        }
+        
+        register_response = self.client.post(register_url, register_data, format='json')
+        self.assertEqual(register_response.status_code, status.HTTP_201_CREATED)
+        
+        token = register_response.data['token']
+        
+        # Используем токен
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {token}')
+        
+        # Получаем свои данные через специальный endpoint
+        me_url = reverse('student-me')
+        response = self.client.get(me_url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['user']['id'], register_response.data['user']['id'])
+    
+    def test_student_can_access_own_data(self):
+        """Тест: ученик может получить свои данные"""
+        # Создаем ученика
+        register_url = reverse('api-register')
+        register_data = {
+            'username': 'ownertest',
+            'password': 'test1234',
+            'password2': 'test1234',
+            'email': 'owner@test.com',
+            'first_name': 'Owner',
+            'last_name': 'Test',
+            'phone': '+79991112255'
+        }
+        
+        register_response = self.client.post(register_url, register_data, format='json')
+        self.assertEqual(register_response.status_code, status.HTTP_201_CREATED)
+        
+        token = register_response.data['token']
+        
+        # Используем токен
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {token}')
+        
+        # Получаем свои данные через me endpoint
+        me_url = reverse('student-me')
+        response = self.client.get(me_url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['user']['username'], 'ownertest')
+    
+    def test_invalid_token(self):
+        """Тест невалидного токена"""
+        self.client.credentials(HTTP_AUTHORIZATION='Token invalidtoken123')
+        
+        students_url = reverse('student-list')
+        response = self.client.get(students_url)
+        
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+    
+    def test_login_after_registration(self):
+        """Тест логина после регистрации"""
+        # Сначала регистрируемся
+        register_url = reverse('api-register')
+        register_data = {
+            'username': 'logintest',
+            'password': 'test1234',
+            'password2': 'test1234',
+            'email': 'login@test.com',
+            'first_name': 'Login',
+            'last_name': 'Test',
+            'phone': '+79991112244'
+        }
+        
+        register_response = self.client.post(register_url, register_data, format='json')
+        self.assertEqual(register_response.status_code, status.HTTP_201_CREATED)
+        
+        # Теперь логинимся
+        login_url = reverse('api-login')
+        login_data = {
+            'username': 'logintest',
+            'password': 'test1234'
+        }
+        
+        login_response = self.client.post(login_url, login_data, format='json')
+        self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+        self.assertIn('token', login_response.data)
+        self.assertEqual(login_response.data['username'], 'logintest')
 
 class UserModelTest(TestCase):
     """Тесты модели пользователя"""
