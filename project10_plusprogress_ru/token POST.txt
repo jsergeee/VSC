@@ -1,13 +1,57 @@
-token f32743f018439a61db124de8f81c574af4832ad8 for user admin
-      f32743f018439a61db124de8f81c574af4832ad8
-   Laptop   ce7b9ade924ba9b73b23244e1c89ec9cb14dd397
-
-
+👤 admin (id: 1, role: student)
+   ✅ Токен: ce7b9ade924ba9b73b23244e1c89ec9cb14dd397
+------------------------------
+👤 petrov_teacher (id: 2, role: teacher)
+   ❌ Токена нет
+------------------------------
+👤 ivanov_student (id: 3, role: student)
+   ❌ Токена нет
+------------------------------
+>>>
+>>>
+>>> from rest_framework.authtoken.models import Token
+>>> from django.contrib.auth import get_user_model
+>>> User = get_user_model()
+>>>
+>>> # Получаем всех пользователей
+>>> users = User.objects.all()
+>>> for user in users:
+...     token, created = Token.objects.get_or_create(user=user)
+...     if created:
+...         print(f"✅ Создан новый токен для {user.username}: {token.key}")
+...     else:
+...         print(f"✅ Токен уже существует для {user.username}: {token.key}")
+...
 ✅ Токен уже существует для admin: ce7b9ade924ba9b73b23244e1c89ec9cb14dd397
 ✅ Создан новый токен для petrov_teacher: 68771597541ea1b3251e8cb81545d573dea7761b
 ✅ Создан новый токен для ivanov_student: 8e7f3d8be5eb9dbc9d60c79de114254851cb150c
 >>>
-? petrov_teacher (id: 2, роль: teacher)
+>>>
+>>>
+>>>
+>>> from rest_framework.authtoken.models import Token
+>>> from django.contrib.auth import get_user_model
+>>>
+>>> User = get_user_model()
+>>>
+>>> # Посмотреть всех пользователей и их токены
+>>> users = User.objects.all()
+>>> for user in users:
+...     try:
+...         token = Token.objects.get(user=user)
+...         print(f"�� {user.username} (id: {user.id}, роль: {user.role})")
+...         print(f"   ✅ Токен: {token.key}")
+...         print(f"   �� Создан: {token.created}")
+...     except Token.DoesNotExist:
+...         print(f"�� {user.username} (id: {user.id})")
+...         print(f"   ❌ Токена нет")
+...     print("-" * 40)
+...
+👤 admin (id: 1, роль: student)
+   ✅ Токен: ce7b9ade924ba9b73b23244e1c89ec9cb14dd397
+   📅 Создан: 2026-03-06 15:55:56.876170+00:00
+----------------------------------------
+👤 petrov_teacher (id: 2, роль: teacher)
    ✅ Токен: 68771597541ea1b3251e8cb81545d573dea7761b
    📅 Создан: 2026-03-06 18:04:18.379550+00:00
 ----------------------------------------

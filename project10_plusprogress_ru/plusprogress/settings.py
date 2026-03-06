@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'school.apps.SchoolConfig',
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -98,6 +99,27 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'PlusProgress API',
+    'DESCRIPTION': 'API для онлайн школы PlusProgress',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    # Добавим поддержку токен-аутентификации в Swagger UI
+    'SWAGGER_UI_SETTINGS': {
+        'persistAuthorization': True,
+    },
+    'SECURITY': [
+        {
+            'Bearer': {
+                'type': 'apiKey',
+                'name': 'Authorization',
+                'in': 'header',
+                'description': 'Введите ваш токен в формате: Token <ваш_токен>'
+            }
+        },
+    ],
 }
 
 if DEBUG:
@@ -136,7 +158,6 @@ EMAIL_USE_SSL = True
 EMAIL_HOST_USER = 'jserge@yandex.ru'
 EMAIL_HOST_PASSWORD = 'fbbwcoxjkjfkovum'
 DEFAULT_FROM_EMAIL = 'jserge@yandex.ru'
-
 
 # Telegram bot settings
 TELEGRAM_BOT_TOKEN = '8391902139:AAGHIcvya9Zk1ZlsDFBkn6WJEBxE5TyK02Y'

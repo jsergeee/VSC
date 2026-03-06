@@ -5,6 +5,9 @@ from .views import log_video_entry
 from .views import telegram_settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
+from django.contrib import admin
+from django.urls import path, include
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 router = DefaultRouter()
 router.register('teachers', views.TeacherViewSet)
@@ -24,11 +27,11 @@ urlpatterns = [
     path('resend-verification/', views.resend_verification, name='resend_verification'),
     path('telegram-settings/', telegram_settings, name='telegram_settings'),
     path('telegram-webhook/', views.telegram_webhook, name='telegram_webhook'),
-    
+
     # Заявка на пробный урок
     path('api/trial-request/', views.trial_request_ajax, name='trial_request_ajax'),
-#     path('trial-request/', views.trial_request, name='trial_request'),
-     
+    #     path('trial-request/', views.trial_request, name='trial_request'),
+
     # Student URLs
     path('student/dashboard/', views.student_dashboard, name='student_dashboard'),
 
@@ -59,7 +62,6 @@ urlpatterns = [
     path('lesson/<int:lesson_id>/', views.lesson_detail, name='lesson_detail'),
     path('lesson/<int:lesson_id>/feedback/', views.lesson_feedback, name='lesson_feedback'),
     path('log-video-entry/<int:lesson_id>/', log_video_entry, name='log_video_entry'),
-
 
     # Teacher URLs
     path('teacher/dashboard/', views.teacher_dashboard, name='teacher_dashboard'),
@@ -118,8 +120,8 @@ urlpatterns = [
     path('calendar/export/pdf/', views.export_calendar_pdf, name='export_calendar_pdf'),
     path('teacher/calendar/export/pdf/', views.teacher_export_calendar_pdf, name='teacher_export_calendar_pdf'),
     path('admin/calendar/export/pdf/', views.admin_export_calendar_pdf, name='admin_export_calendar_pdf'),
-    
-        # URL для скачивания шаблона импорта пользователей
+
+    # URL для скачивания шаблона импорта пользователей
     path('admin/user/download-template/', views.download_user_template, name='download_user_template'),
     path('admin/user/import/', views.import_users_view, name='import_users'),
     # Выплаты
@@ -139,6 +141,11 @@ urlpatterns = [
          name='article_kolichestvennye'),
     path('articles/mestoimeniya-v-anglijskom-yazyke/', views.article_mestoimeniya, name='article_mestoimeniya'),
 
-
+    # 📄 Маршруты для документации API
+    # Схема в формате JSON/YAML (нужно для генерации)
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    # Swagger UI (интерактивная документация)
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    # ReDoc (альтернативный, более читаемый вариант)
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ]
-
