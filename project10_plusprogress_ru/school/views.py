@@ -51,7 +51,7 @@ from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator  
-
+from .permissions import IsTeacherUser, IsStudentUser
 
 
 
@@ -5584,12 +5584,13 @@ class TeacherViewSet(viewsets.ModelViewSet):
     serializer_class = TeacherSerializer
     permission_classes = [permissions.IsAdminUser]
 
+
 class StudentViewSet(viewsets.ModelViewSet):
     """API для учеников"""
     queryset = Student.objects.all().select_related('user').prefetch_related('teachers')
     serializer_class = StudentSerializer
     permission_classes = [permissions.IsAdminUser]  # Для админов - полный доступ
-    
+
     def get_queryset(self):
         queryset = super().get_queryset()
         user_id = self.request.query_params.get('user_id')
@@ -5610,15 +5611,71 @@ class StudentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+
 class LessonViewSet(viewsets.ModelViewSet):
     """API для уроков"""
     queryset = Lesson.objects.all().select_related('teacher__user', 'subject')
-    permission_classes = [permissions.IsAdminUser]
-    
+    serializer_class = LessonSerializer
+
+    def get_permissions(self):
+        """Разные права для разных действий"""
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            # Создавать и изменять уроки могут только админ и учителя
+            permission_classes = [permissions.IsAdminUser | IsTeacherUser]
+        else:
+            # Просматривать могут все аутентифицированные пользователи
+            permission_classes = [permissions.IsAuthenticated]
+        return [permission() for permission in permission_classes]
+
     def get_serializer_class(self):
         if self.action == 'list':
             return SimpleLessonSerializer
         return LessonSerializer
+
+    def get_queryset(self):
+        """Автоматическая фильтрация уроков по роли пользователя"""
+        user = self.request.user
+        queryset = super().get_queryset()
+
+        # АВТОМАТИЧЕСКАЯ ФИЛЬТРАЦИЯ ПО РОЛИ
+        if user.role == 'teacher':
+            # Учитель видит только свои уроки
+            queryset = queryset.filter(teacher__user=user)
+            print(f"👨‍🏫 Учитель {user.username} видит свои уроки")
+
+        elif user.role == 'student':
+            # Ученик видит только уроки, где он есть в attendance
+            queryset = queryset.filter(attendance__student__user=user).distinct()
+            print(f"👨‍🎓 Ученик {user.username} видит свои уроки")
+
+        else:  # admin
+            # Админ видит все уроки
+            print(f"👑 Админ {user.username} видит все уроки")
+
+        # ДОПОЛНИТЕЛЬНЫЕ ФИЛЬТРЫ ИЗ ПАРАМЕТРОВ ЗАПРОСА
+        teacher_id = self.request.query_params.get('teacher')
+        student_id = self.request.query_params.get('student')
+        subject_id = self.request.query_params.get('subject')
+        status = self.request.query_params.get('status')
+        date_from = self.request.query_params.get('date_from')
+        date_to = self.request.query_params.get('date_to')
+
+        if teacher_id:
+            queryset = queryset.filter(teacher_id=teacher_id)
+        if student_id:
+            queryset = queryset.filter(attendance__student_id=student_id)
+        if subject_id:
+            queryset = queryset.filter(subject_id=subject_id)
+        if status:
+            queryset = queryset.filter(status=status)
+        if date_from:
+            queryset = queryset.filter(date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(date__lte=date_to)
+
+        # Сортировка по дате (сначала новые)
+        return queryset.order_by('-date', '-start_time')
+
 
 class LoginAPIView(APIView):
     permission_classes = [permissions.AllowAny]

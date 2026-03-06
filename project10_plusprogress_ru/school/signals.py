@@ -5,9 +5,32 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import Lesson, Notification, User, LessonAttendance, Payment, LessonReport
 from django.db.models.signals import post_save, m2m_changed, post_delete
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from rest_framework.authtoken.models import Token
+from django.contrib.auth import get_user_model
+import logging
 
 # ИМПОРТИРУЕМ ФУНКЦИИ ИЗ TELEGRAM
 from .telegram import notify_new_lesson, notify_lesson_completed, notify_payment
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# Добавляем обработчик, который сразу выводит в консоль
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+logger.addHandler(console_handler)
+
+User = get_user_model()
+
+@receiver(post_save, sender=User)
+def create_auth_token(sender, instance=None, created=False, **kwargs):
+    """Автоматически создаем токен при создании любого пользователя"""
+    if created:
+        token, created = Token.objects.get_or_create(user=instance)
+        logger.info(f"✅ Токен создан для {instance.username} ({instance.role})")
 
 
 @receiver(m2m_changed, sender=Lesson.students.through)
@@ -143,3 +166,4 @@ def delete_payment_notifications(sender, instance, **kwargs):
     else:
         print(f"   ⚠️ Связанных уведомлений не найдено")
     print(f"{'💰' * 30}\n")
+

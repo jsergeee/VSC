@@ -31,9 +31,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'crispy_forms',
     'crispy_bootstrap5',
-    'school.apps.SchoolConfig',
     'rest_framework',
     'rest_framework.authtoken',
+    'school.apps.SchoolConfig',
 ]
 
 MIDDLEWARE = [

@@ -118,21 +118,31 @@ class LessonSerializer(serializers.ModelSerializer):
             )
         
         return lesson
-    
-    
+
+
 class SimpleLessonSerializer(serializers.ModelSerializer):
     teacher_name = serializers.CharField(source='teacher.user.get_full_name')
     subject_name = serializers.CharField(source='subject.name')
     students_count = serializers.SerializerMethodField()
-    
+    students_names = serializers.SerializerMethodField()  # 👈 Объявлено
+
     class Meta:
         model = Lesson
-        fields = ['id', 'date', 'start_time', 'end_time', 
-                  'subject_name', 'teacher_name', 'status', 'students_count']
-    
+        fields = [
+            'id', 'date', 'start_time', 'end_time',
+            'subject_name', 'teacher_name', 'status',
+            'students_count', 'students_names'  # 👈 Добавлено в fields
+        ]
+
     def get_students_count(self, obj):
         return obj.attendance.count()
-    
+
+    def get_students_names(self, obj):  # 👈 Метод должен быть здесь
+        """Возвращает список ФИО всех учеников на уроке"""
+        return [
+            attendance.student.user.get_full_name()
+            for attendance in obj.attendance.all()
+        ]
     
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
