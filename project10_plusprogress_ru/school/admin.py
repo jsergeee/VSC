@@ -2252,8 +2252,6 @@ class UserActionLogAdmin(admin.ModelAdmin):
     export_logs_excel.short_description = "📥 Экспорт логов в Excel"
 
 
-
-
 @admin.register(PaymentRequest)
 class PaymentRequestAdmin(admin.ModelAdmin):
     """
