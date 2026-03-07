@@ -9,6 +9,7 @@ from .models import (
     HomeworkSubmission, ScheduleTemplate, ScheduleTemplateStudent,
     StudentSubjectPrice, EmailVerificationToken, PaymentRequest
 )
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -312,3 +313,25 @@ class LessonReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = LessonReport
         fields = '__all__'
+
+
+# serializers.py
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+#JVT
+"""Login JVT"""
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        # Добавляем кастомные поля в токен
+        token['email'] = user.email
+        token['user_type'] = user.user_type  # если есть поле "ученик/учитель"
+        token['full_name'] = user.get_full_name()
+
+        return token
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer

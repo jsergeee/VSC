@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import os
 from pathlib import Path
 from decouple import config
+from datetime import timedelta
 
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here')
 
@@ -35,12 +36,10 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'school.apps.SchoolConfig',
     'drf_spectacular',
-    'django_mkdocs',
 ]
 
-MKDOCS_CONFIG = BASE_DIR / 'docs' / 'mkdocs.yml'
-
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -97,13 +96,29 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.TokenAuthentication',  # старый метод
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # новый
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
+
+CORS_ALLOW_ALL_ORIGINS = True  # — ТОЛЬКО ДЛЯ РАЗРАБОТКИ!
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),  # Короткий access token
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),  # Длинный refresh token
+    'ROTATE_REFRESH_TOKENS': True,  # Новый refresh при обновлении
+    'BLACKLIST_AFTER_ROTATION': True,  # Старые токены в черный список
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),  # Стандартный заголовок
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+}
+
 SPECTACULAR_SETTINGS = {
     'TITLE': 'PlusProgress API',
     'DESCRIPTION': 'API для онлайн школы PlusProgress',
