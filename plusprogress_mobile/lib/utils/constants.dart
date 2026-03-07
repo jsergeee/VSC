@@ -1,6 +1,6 @@
 class Constants {
  
-  static const String baseUrl = 'http://192.168.0.117:8000';  /
+  static const String baseUrl = 'http://192.168.0.117:8000';
   static const String apiUrl = '$baseUrl/api';
   
   // Эндпоинты
