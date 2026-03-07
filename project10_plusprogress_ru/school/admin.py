@@ -35,7 +35,25 @@ try:
 except admin.sites.NotRegistered:
     pass
 
+"""
+Модуль администрирования для приложения school.
 
+Содержит настройки отображения всех моделей в Django admin панели,
+кастомные действия, инлайн-формы и методы обработки.
+
+Основные компоненты:
+    * Кастомный UserAdmin — расширенное управление пользователями
+    * TeacherAdmin — управление учителями с финансовой статистикой
+    * StudentAdmin — управление учениками с балансом и отчетностью
+    * LessonAdmin — управление уроками с проверкой занятости учителя
+    * PaymentAdmin — управление платежами с автоматической корректировкой баланса
+    * PaymentRequestAdmin — управление запросами на выплаты учителям
+    * HomeworkAdmin — управление домашними заданиями
+    * И другие ModelAdmin классы для всех моделей проекта
+
+Также содержит кастомные действия (actions), инлайн-формы,
+методы для отображения статистики и интеграцию с Telegram уведомлениями.
+"""
 # ==================== INLINES ====================
 
 class StudentSubjectPriceInline(admin.TabularInline):
@@ -67,6 +85,34 @@ class ScheduleTemplateStudentInline(admin.TabularInline):
 # ==================== CUSTOM USER ADMIN ====================
 
 class CustomUserAdmin(UserAdmin):
+    """
+    Административный интерфейс для модели User.
+
+    Расширяет стандартный UserAdmin Django, добавляя поля для ролей,
+    подтверждения email, Telegram уведомлений и кастомные действия.
+
+    Атрибуты:
+        list_display: Поля, отображаемые в списке пользователей
+        list_filter: Поля для фильтрации
+        search_fields: Поля для поиска
+        fieldsets: Группировка полей в форме редактирования
+        add_fieldsets: Группировка полей в форме добавления
+        actions: Доступные массовые действия
+
+    Кастомные методы:
+        enable_telegram_notifications() - включает Telegram уведомления
+        disable_telegram_notifications() - отключает Telegram уведомления
+        mark_as_verified() - отмечает email как подтвержденный
+        mark_as_unverified() - отмечает email как неподтвержденный
+        export_users_excel() - экспортирует пользователей в Excel
+        get_full_name() - возвращает полное имя пользователя
+        is_email_verified_badge() - отображает статус email в виде цветного значка
+
+    Кастомные действия (actions):
+        * Включение/отключение Telegram уведомлений
+        * Подтверждение/снятие подтверждения email
+        * Экспорт в Excel
+    """
     list_display = ('id', 'username', 'get_full_name', 'email', 'phone', 'role',
                     'is_email_verified_badge', 'is_staff', 'telegram_notifications')
     list_filter = ('telegram_notifications', 'role', 'is_email_verified', 'is_staff', 'is_superuser', 'groups')
@@ -242,6 +288,31 @@ class SubjectAdmin(admin.ModelAdmin):
 
 
 class TeacherAdmin(admin.ModelAdmin):
+    """
+    Административный интерфейс для модели Teacher.
+
+    Предоставляет расширенный функционал для управления учителями,
+    включая финансовую статистику, рейтинги и расчет выплат.
+
+    Особенности:
+        * Отображение связанных данных (ученики, предметы)
+        * Фильтрация по предметам
+        * Расчет и отображение рейтинга учителя
+        * Календарь с фильтрацией по датам
+        * Экспорт в Excel
+        * Переход к расчету выплат
+
+    Методы:
+        changelist_view() - переопределяет отображение списка,
+                           добавляет финансовую статистику за период
+        export_teachers_excel() - экспорт выбранных учителей в Excel
+        calculate_payments() - переход к расчету выплат
+        get_telegram_status() - отображение статуса Telegram
+        user_link() - ссылка на профиль пользователя
+        display_subjects() - отображение списка предметов
+        students_count() - количество учеников
+        rating_display() - отображение рейтинга в виде звезд
+    """
     list_display = ('id', 'user_link', 'display_subjects', 'experience',
                     'students_count', 'rating_display', 'get_telegram_status')
     list_filter = ('subjects',)
@@ -816,6 +887,30 @@ class LessonFormatAdmin(admin.ModelAdmin):
 
 @admin.register(Lesson)
 class LessonAdmin(admin.ModelAdmin):
+    """
+    Административный интерфейс для модели Lesson.
+
+    Обеспечивает полное управление уроками, включая:
+        * Проверку занятости учителя при создании
+        * Отправку Telegram уведомлений о новых уроках
+        * Финансовую статистику по каждому уроку
+        * Календарное отображение
+        * Массовые операции (завершение, отметка оплаты)
+
+    Важные методы:
+        save_model() - переопределяет сохранение с проверкой занятости
+                       учителя и отправкой уведомлений
+        _check_teacher_busy() - проверяет, не занят ли учитель в это время
+        changelist_view() - переключает между таблицей и календарем
+        mark_as_completed() - массовое завершение уроков
+        export_lessons_finance() - экспорт финансовой статистики
+
+    Кастомные действия:
+        * Отметка уроков как проведенных
+        * Отметка посещаемости как оплаченной
+        * Отметка посещаемости как долга
+        * Экспорт финансов
+    """
     formfield_overrides = {
         models.TimeField: {'widget': forms.TimeInput(format='%H:%M', attrs={'type': 'time'})},
         models.DateField: {
@@ -1254,6 +1349,30 @@ class LessonReportAdmin(admin.ModelAdmin):
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
+    """
+    Административный интерфейс для модели Payment.
+
+    Критически важный класс для финансового учета.
+    Автоматически корректирует балансы пользователей при
+    создании, изменении и удалении платежей.
+
+    Ключевые методы:
+        save_model() - при создании/изменении платежа обновляет:
+            * Баланс ученика (income/expense)
+            * Кошелек учителя (teacher_payment/teacher_salary)
+            * Создает уведомления для пользователей
+
+        delete_model() - при удалении платежа корректирует баланс
+                         в обратную сторону
+
+        delete_queryset() - массовое удаление с корректировкой балансов
+
+    Кастомные действия:
+        export_payments_excel() - экспорт платежей в Excel
+
+    Важно: Все финансовые операции проходят через этот класс,
+    обеспечивая консистентность данных.
+    """
     list_display = ('id', 'user_link', 'amount_colored', 'payment_type_badge',
                     'description', 'lesson_link', 'created_at')
     list_filter = ('payment_type', 'created_at')
@@ -2135,26 +2254,34 @@ class UserActionLogAdmin(admin.ModelAdmin):
 
 
 
-
-
-# ==================== REGISTER ALL MODELS ====================
-
-admin.site.register(User, CustomUserAdmin)
-admin.site.register(Subject, SubjectAdmin)
-admin.site.register(Teacher, TeacherAdmin)
-admin.site.register(Student, StudentAdmin)
-admin.site.register(LessonFormat, LessonFormatAdmin)
-
-# Настройка заголовков админки
-admin.site.site_header = 'Плюс Прогресс - Администрирование'
-admin.site.site_title = 'Плюс Прогресс'
-admin.site.index_title = 'Управление онлайн школой'
-
-
-
-
 @admin.register(PaymentRequest)
 class PaymentRequestAdmin(admin.ModelAdmin):
+    """
+    Административный интерфейс для запросов на выплаты учителям.
+
+    Реализует полный цикл обработки запросов:
+        1. Учитель создает запрос (через API или другой интерфейс)
+        2. Админ видит запрос в статусе "pending"
+        3. Админ может одобрить, отклонить или сразу создать выплату
+
+    Жизненный цикл запроса:
+        pending (⏳) → approved (✅) → paid (💰)
+                   ↘ rejected (❌)
+
+    Методы:
+        approve_request() - одобрение запроса (без выплаты)
+        reject_request() - отклонение с указанием причины
+        create_payment() - создание фактического платежа и перевод в paid
+
+    Кастомные действия:
+        approve_requests() - массовое одобрение
+        reject_requests() - массовое отклонение
+        mark_as_paid() - массовое создание выплат
+
+    Кнопки действий в списке:
+        * Для pending: [Одобрить] [Отклонить]
+        * Для approved: [Создать выплату]
+    """
     list_display = (
     'id', 'teacher_link', 'amount_colored', 'status_badge', 'payment_method', 'created_at', 'action_buttons')
     list_filter = ('status', 'payment_method', 'created_at')
@@ -2322,3 +2449,20 @@ class PaymentRequestAdmin(admin.ModelAdmin):
         self.message_user(request, f'💰 Создано {count} выплат')
 
     mark_as_paid.short_description = "💰 Создать выплаты по одобренным запросам"
+
+
+
+# ==================== REGISTER ALL MODELS ====================
+# Регистрация всех моделей в административном интерфейсе
+admin.site.register(User, CustomUserAdmin)
+admin.site.register(Subject, SubjectAdmin)
+admin.site.register(Teacher, TeacherAdmin)
+admin.site.register(Student, StudentAdmin)
+admin.site.register(LessonFormat, LessonFormatAdmin)
+
+# Настройка заголовков админки
+admin.site.site_header = 'Плюс Прогресс - Администрирование'
+admin.site.site_title = 'Плюс Прогресс'
+admin.site.index_title = 'Управление онлайн школой'
+
+

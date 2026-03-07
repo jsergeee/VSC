@@ -1,0 +1,2935 @@
+{
+  "Deposit": {
+    "type": "object",
+    "description": "Сериализатор для депозитов",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "student_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "amount": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Сумма"
+      },
+      "description": {
+        "type": "string",
+        "title": "Описание",
+        "maxLength": 200
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Дата"
+      },
+      "student": {
+        "type": "integer"
+      },
+      "created_by": {
+        "type": "integer",
+        "nullable": true
+      }
+    },
+    "required": [
+      "amount",
+      "created_at",
+      "id",
+      "student",
+      "student_name"
+    ]
+  },
+  "GroupEnrollment": {
+    "type": "object",
+    "description": "Сериализатор для записей на групповые уроки",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "student_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "cost_to_pay": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Стоимость для ученика",
+        "description": "Может отличаться от базовой (скидка, акция)"
+      },
+      "discount": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+        "title": "Скидка %"
+      },
+      "status": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Status543Enum"
+          }
+        ],
+        "title": "Статус"
+      },
+      "attendance_confirmed": {
+        "type": "boolean",
+        "title": "Посещение подтверждено"
+      },
+      "registered_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Зарегистрирован"
+      },
+      "group_lesson": {
+        "type": "integer",
+        "title": "Групповое занятие"
+      },
+      "student": {
+        "type": "integer",
+        "title": "Ученик"
+      }
+    },
+    "required": [
+      "cost_to_pay",
+      "group_lesson",
+      "id",
+      "registered_at",
+      "student",
+      "student_name"
+    ]
+  },
+  "GroupLesson": {
+    "type": "object",
+    "description": "Сериализатор для групповых уроков",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "teacher_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "subject_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "students_count": {
+        "type": "string",
+        "readOnly": true
+      },
+      "date": {
+        "type": "string",
+        "format": "date",
+        "title": "Дата"
+      },
+      "start_time": {
+        "type": "string",
+        "format": "time",
+        "title": "Время начала"
+      },
+      "end_time": {
+        "type": "string",
+        "format": "time",
+        "title": "Время окончания"
+      },
+      "duration": {
+        "type": "integer",
+        "maximum": 9223372036854775807,
+        "minimum": -9223372036854775808,
+        "format": "int64",
+        "title": "Длительность (минут)"
+      },
+      "price_type": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/GroupLessonPriceTypeEnum"
+          }
+        ],
+        "title": "Тип оплаты"
+      },
+      "base_price": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Базовая стоимость",
+        "description": "Для per_student: цена за одного, для fixed: цена за всю группу"
+      },
+      "teacher_payment": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Начисление учителю",
+        "description": "Базовая выплата (может корректироваться в зависимости от числа учеников)"
+      },
+      "meeting_link": {
+        "type": "string",
+        "format": "uri",
+        "title": "Ссылка на занятие",
+        "maxLength": 200
+      },
+      "meeting_platform": {
+        "type": "string",
+        "title": "Платформа",
+        "maxLength": 50
+      },
+      "video_room": {
+        "type": "string",
+        "nullable": true,
+        "title": "Комната для видео",
+        "maxLength": 100
+      },
+      "status": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/StatusD86Enum"
+          }
+        ],
+        "title": "Статус"
+      },
+      "notes": {
+        "type": "string",
+        "title": "Заметки"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Создано"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Обновлено"
+      },
+      "teacher": {
+        "type": "integer",
+        "title": "Учитель"
+      },
+      "subject": {
+        "type": "integer",
+        "title": "Предмет"
+      },
+      "format": {
+        "type": "integer",
+        "nullable": true,
+        "title": "Формат"
+      }
+    },
+    "required": [
+      "base_price",
+      "created_at",
+      "date",
+      "end_time",
+      "id",
+      "start_time",
+      "students_count",
+      "subject",
+      "subject_name",
+      "teacher",
+      "teacher_name",
+      "teacher_payment",
+      "updated_at"
+    ]
+  },
+  "GroupLessonPriceTypeEnum": {
+    "enum": [
+      "fixed",
+      "per_student"
+    ],
+    "type": "string",
+    "description": "* `fixed` - Фиксированная за группу\n* `per_student` - За каждого ученика"
+  },
+  "Homework": {
+    "type": "object",
+    "description": "Сериализатор для домашних заданий",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "title": {
+        "type": "string",
+        "title": "Название",
+        "maxLength": 200
+      },
+      "description": {
+        "type": "string",
+        "title": "Описание задания"
+      },
+      "attachments": {
+        "type": "string",
+        "format": "uri",
+        "nullable": true,
+        "title": "Файл с заданием"
+      },
+      "deadline": {
+        "type": "string",
+        "format": "date-time",
+        "title": "Срок сдачи"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Дата выдачи"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Дата обновления"
+      },
+      "is_active": {
+        "type": "boolean",
+        "title": "Активно"
+      },
+      "status_display": {
+        "type": "string",
+        "readOnly": true
+      },
+      "teacher": {
+        "type": "integer",
+        "title": "Учитель"
+      },
+      "teacher_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "student": {
+        "type": "integer",
+        "title": "Ученик"
+      },
+      "student_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "subject": {
+        "type": "integer",
+        "title": "Предмет"
+      },
+      "subject_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "lesson": {
+        "type": "integer",
+        "nullable": true,
+        "title": "Урок"
+      }
+    },
+    "required": [
+      "created_at",
+      "deadline",
+      "description",
+      "id",
+      "status_display",
+      "student",
+      "student_name",
+      "subject",
+      "subject_name",
+      "teacher",
+      "teacher_name",
+      "title",
+      "updated_at"
+    ]
+  },
+  "HomeworkSubmission": {
+    "type": "object",
+    "description": "Сериализатор для сданных заданий",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "student_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "answer_text": {
+        "type": "string",
+        "title": "Текст ответа"
+      },
+      "file": {
+        "type": "string",
+        "format": "uri",
+        "nullable": true,
+        "title": "Файл с работой"
+      },
+      "status": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/HomeworkSubmissionStatusEnum"
+          }
+        ],
+        "title": "Статус"
+      },
+      "grade": {
+        "type": "integer",
+        "maximum": 9223372036854775807,
+        "minimum": -9223372036854775808,
+        "format": "int64",
+        "nullable": true,
+        "title": "Оценка"
+      },
+      "teacher_comment": {
+        "type": "string",
+        "title": "Комментарий учителя"
+      },
+      "submitted_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Дата сдачи"
+      },
+      "checked_at": {
+        "type": "string",
+        "format": "date-time",
+        "nullable": true,
+        "title": "Дата проверки"
+      },
+      "homework": {
+        "type": "integer",
+        "title": "Задание"
+      },
+      "student": {
+        "type": "integer",
+        "title": "Ученик"
+      }
+    },
+    "required": [
+      "homework",
+      "id",
+      "student",
+      "student_name",
+      "submitted_at"
+    ]
+  },
+  "HomeworkSubmissionStatusEnum": {
+    "enum": [
+      "submitted",
+      "checked"
+    ],
+    "type": "string",
+    "description": "* `submitted` - Отправлено на проверку\n* `checked` - Проверено"
+  },
+  "Lesson": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "teacher": {
+        "type": "integer",
+        "title": "Учитель"
+      },
+      "teacher_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "subject": {
+        "type": "integer",
+        "title": "Предмет"
+      },
+      "subject_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "date": {
+        "type": "string",
+        "format": "date",
+        "title": "Дата"
+      },
+      "start_time": {
+        "type": "string",
+        "format": "time",
+        "title": "Время начала"
+      },
+      "end_time": {
+        "type": "string",
+        "format": "time",
+        "title": "Время окончания"
+      },
+      "duration": {
+        "type": "integer",
+        "maximum": 9223372036854775807,
+        "minimum": -9223372036854775808,
+        "format": "int64",
+        "title": "Длительность (минут)"
+      },
+      "price_type": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/LessonPriceTypeEnum"
+          }
+        ],
+        "title": "Тип оплаты"
+      },
+      "base_cost": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Базовая стоимость"
+      },
+      "base_teacher_payment": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Базовая выплата учителю"
+      },
+      "meeting_link": {
+        "type": "string",
+        "format": "uri",
+        "title": "Ссылка на занятие",
+        "maxLength": 200
+      },
+      "meeting_platform": {
+        "type": "string",
+        "title": "Платформа",
+        "maxLength": 50
+      },
+      "video_room": {
+        "type": "string",
+        "nullable": true,
+        "title": "Комната для видео",
+        "description": "Уникальный идентификатор комнаты для Jitsi Meet",
+        "maxLength": 100
+      },
+      "status": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/StatusD86Enum"
+          }
+        ],
+        "title": "Статус"
+      },
+      "notes": {
+        "type": "string",
+        "title": "Заметки"
+      },
+      "attendances": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/LessonAttendance"
+        },
+        "readOnly": true
+      },
+      "students_data": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "writeOnly": true
+      }
+    },
+    "required": [
+      "attendances",
+      "date",
+      "end_time",
+      "id",
+      "start_time",
+      "students_data",
+      "subject",
+      "subject_name",
+      "teacher",
+      "teacher_name"
+    ]
+  },
+  "LessonAttendance": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "student": {
+        "type": "integer",
+        "title": "Ученик"
+      },
+      "student_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "cost": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Стоимость для ученика"
+      },
+      "discount": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+        "title": "Скидка %"
+      },
+      "teacher_payment_share": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Доля выплаты учителю",
+        "description": "Сколько учитель получает за этого ученика"
+      },
+      "status": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Status543Enum"
+          }
+        ],
+        "title": "Статус"
+      }
+    },
+    "required": [
+      "cost",
+      "id",
+      "student",
+      "student_name",
+      "teacher_payment_share"
+    ]
+  },
+  "LessonFeedback": {
+    "type": "object",
+    "description": "Сериализатор для отзывов о уроках",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "student_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "teacher_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "rating": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RatingEnum"
+          }
+        ],
+        "title": "Оценка",
+        "minimum": -9223372036854775808,
+        "maximum": 9223372036854775807
+      },
+      "comment": {
+        "type": "string",
+        "title": "Комментарий",
+        "description": "Что понравилось? Что можно улучшить?"
+      },
+      "is_public": {
+        "type": "boolean",
+        "title": "Публичный отзыв",
+        "description": "Показывать на сайте?"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Дата оценки"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Дата обновления"
+      },
+      "lesson": {
+        "type": "integer",
+        "title": "Урок"
+      },
+      "student": {
+        "type": "integer",
+        "title": "Ученик"
+      },
+      "teacher": {
+        "type": "integer",
+        "title": "Учитель"
+      }
+    },
+    "required": [
+      "created_at",
+      "id",
+      "lesson",
+      "rating",
+      "student",
+      "student_name",
+      "teacher",
+      "teacher_name",
+      "updated_at"
+    ]
+  },
+  "LessonPriceTypeEnum": {
+    "enum": [
+      "fixed",
+      "per_student",
+      "individual"
+    ],
+    "type": "string",
+    "description": "* `fixed` - Фиксированная за всех\n* `per_student` - За каждого ученика\n* `individual` - Индивидуальная для каждого"
+  },
+  "LessonReport": {
+    "type": "object",
+    "description": "Сериализатор для отчетов о уроках",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "topic": {
+        "type": "string",
+        "title": "Тема занятия",
+        "maxLength": 200
+      },
+      "covered_material": {
+        "type": "string",
+        "title": "Пройденный материал"
+      },
+      "homework": {
+        "type": "string",
+        "title": "Домашнее задание"
+      },
+      "student_progress": {
+        "type": "string",
+        "title": "Прогресс ученика"
+      },
+      "next_lesson_plan": {
+        "type": "string",
+        "title": "План следующего занятия"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Создано"
+      },
+      "lesson": {
+        "type": "integer",
+        "title": "Занятие"
+      }
+    },
+    "required": [
+      "covered_material",
+      "created_at",
+      "homework",
+      "id",
+      "lesson",
+      "student_progress",
+      "topic"
+    ]
+  },
+  "Material": {
+    "type": "object",
+    "description": "Сериализатор для методических материалов",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "created_by_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "title": {
+        "type": "string",
+        "title": "Название",
+        "maxLength": 200
+      },
+      "description": {
+        "type": "string",
+        "title": "Описание"
+      },
+      "material_type": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/MaterialTypeEnum"
+          }
+        ],
+        "title": "Тип"
+      },
+      "file": {
+        "type": "string",
+        "format": "uri",
+        "nullable": true,
+        "title": "Файл"
+      },
+      "link": {
+        "type": "string",
+        "format": "uri",
+        "title": "Ссылка",
+        "maxLength": 200
+      },
+      "is_public": {
+        "type": "boolean",
+        "title": "Публичный"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Создано"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Обновлено"
+      },
+      "created_by": {
+        "type": "integer",
+        "nullable": true
+      },
+      "teachers": {
+        "type": "array",
+        "items": {
+          "type": "integer",
+          "title": "Учителя"
+        },
+        "title": "Учителя"
+      },
+      "students": {
+        "type": "array",
+        "items": {
+          "type": "integer",
+          "title": "Ученики"
+        },
+        "title": "Ученики"
+      },
+      "subjects": {
+        "type": "array",
+        "items": {
+          "type": "integer",
+          "title": "Предметы"
+        },
+        "title": "Предметы"
+      }
+    },
+    "required": [
+      "created_at",
+      "created_by_name",
+      "id",
+      "title",
+      "updated_at"
+    ]
+  },
+  "MaterialTypeEnum": {
+    "enum": [
+      "file",
+      "link"
+    ],
+    "type": "string",
+    "description": "* `file` - Файл\n* `link` - Ссылка"
+  },
+  "Notification": {
+    "type": "object",
+    "description": "Сериализатор для уведомлений",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "title": {
+        "type": "string",
+        "title": "Заголовок",
+        "maxLength": 200
+      },
+      "message": {
+        "type": "string",
+        "title": "Сообщение"
+      },
+      "notification_type": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/NotificationTypeEnum"
+          }
+        ],
+        "title": "Тип уведомления"
+      },
+      "is_read": {
+        "type": "boolean",
+        "title": "Прочитано"
+      },
+      "link": {
+        "type": "string",
+        "title": "Ссылка",
+        "maxLength": 200
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Создано"
+      },
+      "expires_at": {
+        "type": "string",
+        "format": "date-time",
+        "nullable": true,
+        "title": "Истекает"
+      },
+      "user": {
+        "type": "integer",
+        "title": "Пользователь"
+      },
+      "payment": {
+        "type": "integer",
+        "nullable": true
+      }
+    },
+    "required": [
+      "created_at",
+      "id",
+      "message",
+      "title",
+      "user"
+    ]
+  },
+  "NotificationTypeEnum": {
+    "enum": [
+      "lesson_reminder",
+      "lesson_canceled",
+      "lesson_completed",
+      "payment_received",
+      "payment_withdrawn",
+      "material_added",
+      "homework_assigned",
+      "feedback_received",
+      "system",
+      "homework_submitted",
+      "homework_checked"
+    ],
+    "type": "string",
+    "description": "* `lesson_reminder` - 🔔 Напоминание о занятии\n* `lesson_canceled` - ❌ Занятие отменено\n* `lesson_completed` - ✅ Занятие проведено\n* `payment_received` - 💰 Поступление средств\n* `payment_withdrawn` - 💸 Списание средств\n* `material_added` - 📚 Новый материал\n* `homework_assigned` - 📝 Новое задание\n* `feedback_received` - ⭐ Новая оценка\n* `system` - ⚙ Системное уведомление\n* `homework_submitted` - 📤 Задание сдано\n* `homework_checked` - ✅ Задание проверено"
+  },
+  "PatchedDeposit": {
+    "type": "object",
+    "description": "Сериализатор для депозитов",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "student_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "amount": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Сумма"
+      },
+      "description": {
+        "type": "string",
+        "title": "Описание",
+        "maxLength": 200
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Дата"
+      },
+      "student": {
+        "type": "integer"
+      },
+      "created_by": {
+        "type": "integer",
+        "nullable": true
+      }
+    }
+  },
+  "PatchedGroupEnrollment": {
+    "type": "object",
+    "description": "Сериализатор для записей на групповые уроки",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "student_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "cost_to_pay": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Стоимость для ученика",
+        "description": "Может отличаться от базовой (скидка, акция)"
+      },
+      "discount": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+        "title": "Скидка %"
+      },
+      "status": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Status543Enum"
+          }
+        ],
+        "title": "Статус"
+      },
+      "attendance_confirmed": {
+        "type": "boolean",
+        "title": "Посещение подтверждено"
+      },
+      "registered_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Зарегистрирован"
+      },
+      "group_lesson": {
+        "type": "integer",
+        "title": "Групповое занятие"
+      },
+      "student": {
+        "type": "integer",
+        "title": "Ученик"
+      }
+    }
+  },
+  "PatchedGroupLesson": {
+    "type": "object",
+    "description": "Сериализатор для групповых уроков",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "teacher_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "subject_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "students_count": {
+        "type": "string",
+        "readOnly": true
+      },
+      "date": {
+        "type": "string",
+        "format": "date",
+        "title": "Дата"
+      },
+      "start_time": {
+        "type": "string",
+        "format": "time",
+        "title": "Время начала"
+      },
+      "end_time": {
+        "type": "string",
+        "format": "time",
+        "title": "Время окончания"
+      },
+      "duration": {
+        "type": "integer",
+        "maximum": 9223372036854775807,
+        "minimum": -9223372036854775808,
+        "format": "int64",
+        "title": "Длительность (минут)"
+      },
+      "price_type": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/GroupLessonPriceTypeEnum"
+          }
+        ],
+        "title": "Тип оплаты"
+      },
+      "base_price": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Базовая стоимость",
+        "description": "Для per_student: цена за одного, для fixed: цена за всю группу"
+      },
+      "teacher_payment": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Начисление учителю",
+        "description": "Базовая выплата (может корректироваться в зависимости от числа учеников)"
+      },
+      "meeting_link": {
+        "type": "string",
+        "format": "uri",
+        "title": "Ссылка на занятие",
+        "maxLength": 200
+      },
+      "meeting_platform": {
+        "type": "string",
+        "title": "Платформа",
+        "maxLength": 50
+      },
+      "video_room": {
+        "type": "string",
+        "nullable": true,
+        "title": "Комната для видео",
+        "maxLength": 100
+      },
+      "status": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/StatusD86Enum"
+          }
+        ],
+        "title": "Статус"
+      },
+      "notes": {
+        "type": "string",
+        "title": "Заметки"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Создано"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Обновлено"
+      },
+      "teacher": {
+        "type": "integer",
+        "title": "Учитель"
+      },
+      "subject": {
+        "type": "integer",
+        "title": "Предмет"
+      },
+      "format": {
+        "type": "integer",
+        "nullable": true,
+        "title": "Формат"
+      }
+    }
+  },
+  "PatchedHomework": {
+    "type": "object",
+    "description": "Сериализатор для домашних заданий",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "title": {
+        "type": "string",
+        "title": "Название",
+        "maxLength": 200
+      },
+      "description": {
+        "type": "string",
+        "title": "Описание задания"
+      },
+      "attachments": {
+        "type": "string",
+        "format": "uri",
+        "nullable": true,
+        "title": "Файл с заданием"
+      },
+      "deadline": {
+        "type": "string",
+        "format": "date-time",
+        "title": "Срок сдачи"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Дата выдачи"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Дата обновления"
+      },
+      "is_active": {
+        "type": "boolean",
+        "title": "Активно"
+      },
+      "status_display": {
+        "type": "string",
+        "readOnly": true
+      },
+      "teacher": {
+        "type": "integer",
+        "title": "Учитель"
+      },
+      "teacher_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "student": {
+        "type": "integer",
+        "title": "Ученик"
+      },
+      "student_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "subject": {
+        "type": "integer",
+        "title": "Предмет"
+      },
+      "subject_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "lesson": {
+        "type": "integer",
+        "nullable": true,
+        "title": "Урок"
+      }
+    }
+  },
+  "PatchedHomeworkSubmission": {
+    "type": "object",
+    "description": "Сериализатор для сданных заданий",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "student_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "answer_text": {
+        "type": "string",
+        "title": "Текст ответа"
+      },
+      "file": {
+        "type": "string",
+        "format": "uri",
+        "nullable": true,
+        "title": "Файл с работой"
+      },
+      "status": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/HomeworkSubmissionStatusEnum"
+          }
+        ],
+        "title": "Статус"
+      },
+      "grade": {
+        "type": "integer",
+        "maximum": 9223372036854775807,
+        "minimum": -9223372036854775808,
+        "format": "int64",
+        "nullable": true,
+        "title": "Оценка"
+      },
+      "teacher_comment": {
+        "type": "string",
+        "title": "Комментарий учителя"
+      },
+      "submitted_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Дата сдачи"
+      },
+      "checked_at": {
+        "type": "string",
+        "format": "date-time",
+        "nullable": true,
+        "title": "Дата проверки"
+      },
+      "homework": {
+        "type": "integer",
+        "title": "Задание"
+      },
+      "student": {
+        "type": "integer",
+        "title": "Ученик"
+      }
+    }
+  },
+  "PatchedLesson": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "teacher": {
+        "type": "integer",
+        "title": "Учитель"
+      },
+      "teacher_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "subject": {
+        "type": "integer",
+        "title": "Предмет"
+      },
+      "subject_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "date": {
+        "type": "string",
+        "format": "date",
+        "title": "Дата"
+      },
+      "start_time": {
+        "type": "string",
+        "format": "time",
+        "title": "Время начала"
+      },
+      "end_time": {
+        "type": "string",
+        "format": "time",
+        "title": "Время окончания"
+      },
+      "duration": {
+        "type": "integer",
+        "maximum": 9223372036854775807,
+        "minimum": -9223372036854775808,
+        "format": "int64",
+        "title": "Длительность (минут)"
+      },
+      "price_type": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/LessonPriceTypeEnum"
+          }
+        ],
+        "title": "Тип оплаты"
+      },
+      "base_cost": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Базовая стоимость"
+      },
+      "base_teacher_payment": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Базовая выплата учителю"
+      },
+      "meeting_link": {
+        "type": "string",
+        "format": "uri",
+        "title": "Ссылка на занятие",
+        "maxLength": 200
+      },
+      "meeting_platform": {
+        "type": "string",
+        "title": "Платформа",
+        "maxLength": 50
+      },
+      "video_room": {
+        "type": "string",
+        "nullable": true,
+        "title": "Комната для видео",
+        "description": "Уникальный идентификатор комнаты для Jitsi Meet",
+        "maxLength": 100
+      },
+      "status": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/StatusD86Enum"
+          }
+        ],
+        "title": "Статус"
+      },
+      "notes": {
+        "type": "string",
+        "title": "Заметки"
+      },
+      "attendances": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/LessonAttendance"
+        },
+        "readOnly": true
+      },
+      "students_data": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "writeOnly": true
+      }
+    }
+  },
+  "PatchedLessonFeedback": {
+    "type": "object",
+    "description": "Сериализатор для отзывов о уроках",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "student_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "teacher_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "rating": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RatingEnum"
+          }
+        ],
+        "title": "Оценка",
+        "minimum": -9223372036854775808,
+        "maximum": 9223372036854775807
+      },
+      "comment": {
+        "type": "string",
+        "title": "Комментарий",
+        "description": "Что понравилось? Что можно улучшить?"
+      },
+      "is_public": {
+        "type": "boolean",
+        "title": "Публичный отзыв",
+        "description": "Показывать на сайте?"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Дата оценки"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Дата обновления"
+      },
+      "lesson": {
+        "type": "integer",
+        "title": "Урок"
+      },
+      "student": {
+        "type": "integer",
+        "title": "Ученик"
+      },
+      "teacher": {
+        "type": "integer",
+        "title": "Учитель"
+      }
+    }
+  },
+  "PatchedLessonReport": {
+    "type": "object",
+    "description": "Сериализатор для отчетов о уроках",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "topic": {
+        "type": "string",
+        "title": "Тема занятия",
+        "maxLength": 200
+      },
+      "covered_material": {
+        "type": "string",
+        "title": "Пройденный материал"
+      },
+      "homework": {
+        "type": "string",
+        "title": "Домашнее задание"
+      },
+      "student_progress": {
+        "type": "string",
+        "title": "Прогресс ученика"
+      },
+      "next_lesson_plan": {
+        "type": "string",
+        "title": "План следующего занятия"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Создано"
+      },
+      "lesson": {
+        "type": "integer",
+        "title": "Занятие"
+      }
+    }
+  },
+  "PatchedMaterial": {
+    "type": "object",
+    "description": "Сериализатор для методических материалов",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "created_by_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "title": {
+        "type": "string",
+        "title": "Название",
+        "maxLength": 200
+      },
+      "description": {
+        "type": "string",
+        "title": "Описание"
+      },
+      "material_type": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/MaterialTypeEnum"
+          }
+        ],
+        "title": "Тип"
+      },
+      "file": {
+        "type": "string",
+        "format": "uri",
+        "nullable": true,
+        "title": "Файл"
+      },
+      "link": {
+        "type": "string",
+        "format": "uri",
+        "title": "Ссылка",
+        "maxLength": 200
+      },
+      "is_public": {
+        "type": "boolean",
+        "title": "Публичный"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Создано"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Обновлено"
+      },
+      "created_by": {
+        "type": "integer",
+        "nullable": true
+      },
+      "teachers": {
+        "type": "array",
+        "items": {
+          "type": "integer",
+          "title": "Учителя"
+        },
+        "title": "Учителя"
+      },
+      "students": {
+        "type": "array",
+        "items": {
+          "type": "integer",
+          "title": "Ученики"
+        },
+        "title": "Ученики"
+      },
+      "subjects": {
+        "type": "array",
+        "items": {
+          "type": "integer",
+          "title": "Предметы"
+        },
+        "title": "Предметы"
+      }
+    }
+  },
+  "PatchedNotification": {
+    "type": "object",
+    "description": "Сериализатор для уведомлений",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "title": {
+        "type": "string",
+        "title": "Заголовок",
+        "maxLength": 200
+      },
+      "message": {
+        "type": "string",
+        "title": "Сообщение"
+      },
+      "notification_type": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/NotificationTypeEnum"
+          }
+        ],
+        "title": "Тип уведомления"
+      },
+      "is_read": {
+        "type": "boolean",
+        "title": "Прочитано"
+      },
+      "link": {
+        "type": "string",
+        "title": "Ссылка",
+        "maxLength": 200
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Создано"
+      },
+      "expires_at": {
+        "type": "string",
+        "format": "date-time",
+        "nullable": true,
+        "title": "Истекает"
+      },
+      "user": {
+        "type": "integer",
+        "title": "Пользователь"
+      },
+      "payment": {
+        "type": "integer",
+        "nullable": true
+      }
+    }
+  },
+  "PatchedPayment": {
+    "type": "object",
+    "description": "Сериализатор для платежей",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "user_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "amount": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Сумма"
+      },
+      "payment_type": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PaymentTypeEnum"
+          }
+        ],
+        "title": "Тип"
+      },
+      "description": {
+        "type": "string",
+        "title": "Описание",
+        "maxLength": 200
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Дата"
+      },
+      "user": {
+        "type": "integer",
+        "title": "Пользователь"
+      },
+      "lesson": {
+        "type": "integer",
+        "nullable": true,
+        "title": "Занятие"
+      }
+    }
+  },
+  "PatchedPaymentRequest": {
+    "type": "object",
+    "description": "Сериализатор для запросов на выплаты",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "teacher_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "amount": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Сумма"
+      },
+      "payment_method": {
+        "type": "string",
+        "title": "Способ выплаты",
+        "maxLength": 50
+      },
+      "payment_details": {
+        "type": "string",
+        "title": "Платёжные реквизиты"
+      },
+      "status": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PaymentRequestStatusEnum"
+          }
+        ],
+        "title": "Статус"
+      },
+      "comment": {
+        "type": "string",
+        "title": "Комментарий",
+        "description": "Комментарий администратора"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Создано"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Обновлено"
+      },
+      "teacher": {
+        "type": "integer",
+        "title": "Учитель"
+      },
+      "payment": {
+        "type": "integer",
+        "nullable": true,
+        "title": "Платеж"
+      }
+    }
+  },
+  "PatchedScheduleTemplate": {
+    "type": "object",
+    "description": "Сериализатор для шаблонов расписания",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "start_time": {
+        "type": "string",
+        "format": "time",
+        "title": "Время начала"
+      },
+      "end_time": {
+        "type": "string",
+        "format": "time",
+        "title": "Время окончания"
+      },
+      "duration": {
+        "type": "integer",
+        "readOnly": true,
+        "title": "Длительность (минут)"
+      },
+      "repeat_type": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RepeatTypeEnum"
+          }
+        ],
+        "title": "Тип повторения"
+      },
+      "monday": {
+        "type": "boolean",
+        "title": "Понедельник"
+      },
+      "tuesday": {
+        "type": "boolean",
+        "title": "Вторник"
+      },
+      "wednesday": {
+        "type": "boolean",
+        "title": "Среда"
+      },
+      "thursday": {
+        "type": "boolean",
+        "title": "Четверг"
+      },
+      "friday": {
+        "type": "boolean",
+        "title": "Пятница"
+      },
+      "saturday": {
+        "type": "boolean",
+        "title": "Суббота"
+      },
+      "sunday": {
+        "type": "boolean",
+        "title": "Воскресенье"
+      },
+      "start_date": {
+        "type": "string",
+        "format": "date",
+        "nullable": true,
+        "title": "Дата начала"
+      },
+      "end_date": {
+        "type": "string",
+        "format": "date",
+        "nullable": true,
+        "title": "Дата окончания"
+      },
+      "max_occurrences": {
+        "type": "integer",
+        "maximum": 9223372036854775807,
+        "minimum": 0,
+        "format": "int64",
+        "nullable": true,
+        "title": "Максимальное количество занятий"
+      },
+      "base_cost": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "nullable": true,
+        "title": "Базовая стоимость"
+      },
+      "base_teacher_payment": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "nullable": true,
+        "title": "Базовая выплата учителю"
+      },
+      "meeting_link": {
+        "type": "string",
+        "format": "uri",
+        "title": "Ссылка на занятие",
+        "maxLength": 200
+      },
+      "meeting_platform": {
+        "type": "string",
+        "title": "Платформа",
+        "maxLength": 50
+      },
+      "notes": {
+        "type": "string",
+        "title": "Заметки"
+      },
+      "is_active": {
+        "type": "boolean",
+        "title": "Активно"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Создано"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Обновлено"
+      },
+      "teacher": {
+        "type": "integer",
+        "title": "Учитель"
+      },
+      "subject": {
+        "type": "integer",
+        "title": "Предмет"
+      },
+      "format": {
+        "type": "integer",
+        "nullable": true,
+        "title": "Формат"
+      },
+      "students": {
+        "type": "array",
+        "items": {
+          "type": "integer",
+          "title": "Ученики"
+        },
+        "readOnly": true,
+        "title": "Ученики"
+      }
+    }
+  },
+  "PatchedStudent": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "user": {
+        "$ref": "#/components/schemas/User"
+      },
+      "teachers": {
+        "type": "array",
+        "items": {
+          "type": "integer"
+        }
+      },
+      "parent_name": {
+        "type": "string",
+        "title": "Имя родителя",
+        "maxLength": 200
+      },
+      "parent_phone": {
+        "type": "string",
+        "title": "Телефон родителя",
+        "maxLength": 20
+      },
+      "notes": {
+        "type": "string",
+        "title": "Заметки"
+      }
+    }
+  },
+  "PatchedStudentNote": {
+    "type": "object",
+    "description": "Сериализатор для заметок об учениках",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "teacher_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "student_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "text": {
+        "type": "string",
+        "title": "Заметка"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Создано"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Обновлено"
+      },
+      "teacher": {
+        "type": "integer"
+      },
+      "student": {
+        "type": "integer"
+      }
+    }
+  },
+  "PatchedStudentSubjectPrice": {
+    "type": "object",
+    "description": "Сериализатор для индивидуальных цен",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "student_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "teacher_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "subject_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "cost": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Стоимость урока",
+        "description": "Сколько платит ученик"
+      },
+      "teacher_payment": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Начисление учителю",
+        "description": "Сколько получает учитель"
+      },
+      "discount": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+        "title": "Скидка %"
+      },
+      "valid_from": {
+        "type": "string",
+        "format": "date",
+        "nullable": true,
+        "title": "Действует с"
+      },
+      "valid_to": {
+        "type": "string",
+        "format": "date",
+        "nullable": true,
+        "title": "Действует по"
+      },
+      "is_active": {
+        "type": "boolean",
+        "title": "Активно"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Создано"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Обновлено"
+      },
+      "student": {
+        "type": "integer",
+        "title": "Ученик"
+      },
+      "teacher": {
+        "type": "integer",
+        "nullable": true,
+        "title": "Учитель"
+      },
+      "subject": {
+        "type": "integer",
+        "title": "Предмет"
+      }
+    }
+  },
+  "PatchedTeacher": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "user": {
+        "$ref": "#/components/schemas/User"
+      },
+      "subjects": {
+        "type": "array",
+        "items": {
+          "type": "integer"
+        }
+      },
+      "bio": {
+        "type": "string",
+        "title": "Биография"
+      },
+      "education": {
+        "type": "string",
+        "title": "Образование"
+      },
+      "experience": {
+        "type": "integer",
+        "maximum": 9223372036854775807,
+        "minimum": -9223372036854775808,
+        "format": "int64",
+        "title": "Опыт работы (лет)"
+      },
+      "certificate": {
+        "type": "string",
+        "format": "uri",
+        "nullable": true,
+        "title": "Сертификат"
+      },
+      "payment_details": {
+        "type": "string",
+        "title": "Данные для выплат"
+      }
+    }
+  },
+  "PatchedTrialRequest": {
+    "type": "object",
+    "description": "Сериализатор для заявок на пробный урок",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "name": {
+        "type": "string",
+        "title": "Имя",
+        "maxLength": 100
+      },
+      "email": {
+        "type": "string",
+        "format": "email",
+        "maxLength": 254
+      },
+      "phone": {
+        "type": "string",
+        "title": "Телефон",
+        "maxLength": 20
+      },
+      "subject": {
+        "type": "string",
+        "title": "Предмет",
+        "maxLength": 50
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Дата заявки"
+      },
+      "is_processed": {
+        "type": "boolean",
+        "title": "Обработано"
+      }
+    }
+  },
+  "Payment": {
+    "type": "object",
+    "description": "Сериализатор для платежей",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "user_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "amount": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Сумма"
+      },
+      "payment_type": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PaymentTypeEnum"
+          }
+        ],
+        "title": "Тип"
+      },
+      "description": {
+        "type": "string",
+        "title": "Описание",
+        "maxLength": 200
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Дата"
+      },
+      "user": {
+        "type": "integer",
+        "title": "Пользователь"
+      },
+      "lesson": {
+        "type": "integer",
+        "nullable": true,
+        "title": "Занятие"
+      }
+    },
+    "required": [
+      "amount",
+      "created_at",
+      "description",
+      "id",
+      "payment_type",
+      "user",
+      "user_name"
+    ]
+  },
+  "PaymentRequest": {
+    "type": "object",
+    "description": "Сериализатор для запросов на выплаты",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "teacher_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "amount": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Сумма"
+      },
+      "payment_method": {
+        "type": "string",
+        "title": "Способ выплаты",
+        "maxLength": 50
+      },
+      "payment_details": {
+        "type": "string",
+        "title": "Платёжные реквизиты"
+      },
+      "status": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PaymentRequestStatusEnum"
+          }
+        ],
+        "title": "Статус"
+      },
+      "comment": {
+        "type": "string",
+        "title": "Комментарий",
+        "description": "Комментарий администратора"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Создано"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Обновлено"
+      },
+      "teacher": {
+        "type": "integer",
+        "title": "Учитель"
+      },
+      "payment": {
+        "type": "integer",
+        "nullable": true,
+        "title": "Платеж"
+      }
+    },
+    "required": [
+      "amount",
+      "created_at",
+      "id",
+      "payment_details",
+      "payment_method",
+      "teacher",
+      "teacher_name",
+      "updated_at"
+    ]
+  },
+  "PaymentRequestStatusEnum": {
+    "enum": [
+      "pending",
+      "approved",
+      "rejected",
+      "paid"
+    ],
+    "type": "string",
+    "description": "* `pending` - ⏳ Ожидает\n* `approved` - ✅ Одобрено\n* `rejected` - ❌ Отклонено\n* `paid` - 💰 Выплачено"
+  },
+  "PaymentTypeEnum": {
+    "enum": [
+      "income",
+      "expense",
+      "teacher_salary"
+    ],
+    "type": "string",
+    "description": "* `income` - Пополнение\n* `expense` - Списание\n* `teacher_salary` - Зарплата учителя"
+  },
+  "RatingEnum": {
+    "enum": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "type": "integer",
+    "description": "* `1` - ⭐ Ужасно\n* `2` - ⭐⭐ Плохо\n* `3` - ⭐⭐⭐ Нормально\n* `4` - ⭐⭐⭐⭐ Хорошо\n* `5` - ⭐⭐⭐⭐⭐ Отлично"
+  },
+  "Register": {
+    "type": "object",
+    "properties": {
+      "username": {
+        "type": "string",
+        "title": "Имя пользователя",
+        "description": "Обязательное поле. Не более 150 символов. Только буквы, цифры и символы @/./+/-/_.",
+        "pattern": "^[\\w.@+-]+$",
+        "maxLength": 150
+      },
+      "password": {
+        "type": "string",
+        "writeOnly": true,
+        "minLength": 8
+      },
+      "password2": {
+        "type": "string",
+        "writeOnly": true,
+        "title": "Подтверждение пароля",
+        "minLength": 8
+      },
+      "email": {
+        "type": "string",
+        "format": "email",
+        "title": "Адрес электронной почты",
+        "maxLength": 254
+      },
+      "first_name": {
+        "type": "string",
+        "title": "Имя",
+        "maxLength": 150
+      },
+      "last_name": {
+        "type": "string",
+        "title": "Фамилия",
+        "maxLength": 150
+      },
+      "phone": {
+        "type": "string",
+        "nullable": true,
+        "title": "Телефон",
+        "maxLength": 20
+      }
+    },
+    "required": [
+      "password",
+      "password2",
+      "username"
+    ]
+  },
+  "RepeatTypeEnum": {
+    "enum": [
+      "single",
+      "daily",
+      "weekly",
+      "biweekly",
+      "monthly"
+    ],
+    "type": "string",
+    "description": "* `single` - Разовый урок\n* `daily` - Каждый день\n* `weekly` - Каждую неделю\n* `biweekly` - Раз в две недели\n* `monthly` - Каждый месяц"
+  },
+  "RoleEnum": {
+    "enum": [
+      "student",
+      "teacher",
+      "admin"
+    ],
+    "type": "string",
+    "description": "* `student` - Ученик\n* `teacher` - Учитель\n* `admin` - Администратор"
+  },
+  "ScheduleTemplate": {
+    "type": "object",
+    "description": "Сериализатор для шаблонов расписания",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "start_time": {
+        "type": "string",
+        "format": "time",
+        "title": "Время начала"
+      },
+      "end_time": {
+        "type": "string",
+        "format": "time",
+        "title": "Время окончания"
+      },
+      "duration": {
+        "type": "integer",
+        "readOnly": true,
+        "title": "Длительность (минут)"
+      },
+      "repeat_type": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RepeatTypeEnum"
+          }
+        ],
+        "title": "Тип повторения"
+      },
+      "monday": {
+        "type": "boolean",
+        "title": "Понедельник"
+      },
+      "tuesday": {
+        "type": "boolean",
+        "title": "Вторник"
+      },
+      "wednesday": {
+        "type": "boolean",
+        "title": "Среда"
+      },
+      "thursday": {
+        "type": "boolean",
+        "title": "Четверг"
+      },
+      "friday": {
+        "type": "boolean",
+        "title": "Пятница"
+      },
+      "saturday": {
+        "type": "boolean",
+        "title": "Суббота"
+      },
+      "sunday": {
+        "type": "boolean",
+        "title": "Воскресенье"
+      },
+      "start_date": {
+        "type": "string",
+        "format": "date",
+        "nullable": true,
+        "title": "Дата начала"
+      },
+      "end_date": {
+        "type": "string",
+        "format": "date",
+        "nullable": true,
+        "title": "Дата окончания"
+      },
+      "max_occurrences": {
+        "type": "integer",
+        "maximum": 9223372036854775807,
+        "minimum": 0,
+        "format": "int64",
+        "nullable": true,
+        "title": "Максимальное количество занятий"
+      },
+      "base_cost": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "nullable": true,
+        "title": "Базовая стоимость"
+      },
+      "base_teacher_payment": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "nullable": true,
+        "title": "Базовая выплата учителю"
+      },
+      "meeting_link": {
+        "type": "string",
+        "format": "uri",
+        "title": "Ссылка на занятие",
+        "maxLength": 200
+      },
+      "meeting_platform": {
+        "type": "string",
+        "title": "Платформа",
+        "maxLength": 50
+      },
+      "notes": {
+        "type": "string",
+        "title": "Заметки"
+      },
+      "is_active": {
+        "type": "boolean",
+        "title": "Активно"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Создано"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Обновлено"
+      },
+      "teacher": {
+        "type": "integer",
+        "title": "Учитель"
+      },
+      "subject": {
+        "type": "integer",
+        "title": "Предмет"
+      },
+      "format": {
+        "type": "integer",
+        "nullable": true,
+        "title": "Формат"
+      },
+      "students": {
+        "type": "array",
+        "items": {
+          "type": "integer",
+          "title": "Ученики"
+        },
+        "readOnly": true,
+        "title": "Ученики"
+      }
+    },
+    "required": [
+      "created_at",
+      "duration",
+      "end_time",
+      "id",
+      "start_time",
+      "students",
+      "subject",
+      "teacher",
+      "updated_at"
+    ]
+  },
+  "SimpleLesson": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "date": {
+        "type": "string",
+        "format": "date",
+        "title": "Дата"
+      },
+      "start_time": {
+        "type": "string",
+        "format": "time",
+        "title": "Время начала"
+      },
+      "end_time": {
+        "type": "string",
+        "format": "time",
+        "title": "Время окончания"
+      },
+      "subject_name": {
+        "type": "string"
+      },
+      "teacher_name": {
+        "type": "string"
+      },
+      "status": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/StatusD86Enum"
+          }
+        ],
+        "title": "Статус"
+      },
+      "students_count": {
+        "type": "string",
+        "readOnly": true
+      },
+      "students_names": {
+        "type": "string",
+        "readOnly": true
+      }
+    },
+    "required": [
+      "date",
+      "end_time",
+      "id",
+      "start_time",
+      "students_count",
+      "students_names",
+      "subject_name",
+      "teacher_name"
+    ]
+  },
+  "Status543Enum": {
+    "enum": [
+      "registered",
+      "attended",
+      "absent",
+      "debt"
+    ],
+    "type": "string",
+    "description": "* `registered` - Зарегистрирован\n* `attended` - Присутствовал\n* `absent` - Отсутствовал\n* `debt` - Задолженность"
+  },
+  "StatusD86Enum": {
+    "enum": [
+      "scheduled",
+      "completed",
+      "cancelled",
+      "no_show",
+      "overdue",
+      "rescheduled"
+    ],
+    "type": "string",
+    "description": "* `scheduled` - Запланировано\n* `completed` - Проведено\n* `cancelled` - Отменено\n* `no_show` - Ученик не явился\n* `overdue` - Просрочено\n* `rescheduled` - Перенесено"
+  },
+  "Student": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "user": {
+        "$ref": "#/components/schemas/User"
+      },
+      "teachers": {
+        "type": "array",
+        "items": {
+          "type": "integer"
+        }
+      },
+      "parent_name": {
+        "type": "string",
+        "title": "Имя родителя",
+        "maxLength": 200
+      },
+      "parent_phone": {
+        "type": "string",
+        "title": "Телефон родителя",
+        "maxLength": 20
+      },
+      "notes": {
+        "type": "string",
+        "title": "Заметки"
+      }
+    },
+    "required": [
+      "id",
+      "teachers",
+      "user"
+    ]
+  },
+  "StudentNote": {
+    "type": "object",
+    "description": "Сериализатор для заметок об учениках",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "teacher_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "student_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "text": {
+        "type": "string",
+        "title": "Заметка"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Создано"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Обновлено"
+      },
+      "teacher": {
+        "type": "integer"
+      },
+      "student": {
+        "type": "integer"
+      }
+    },
+    "required": [
+      "created_at",
+      "id",
+      "student",
+      "student_name",
+      "teacher",
+      "teacher_name",
+      "text",
+      "updated_at"
+    ]
+  },
+  "StudentSubjectPrice": {
+    "type": "object",
+    "description": "Сериализатор для индивидуальных цен",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "student_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "teacher_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "subject_name": {
+        "type": "string",
+        "readOnly": true
+      },
+      "cost": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Стоимость урока",
+        "description": "Сколько платит ученик"
+      },
+      "teacher_payment": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+        "title": "Начисление учителю",
+        "description": "Сколько получает учитель"
+      },
+      "discount": {
+        "type": "string",
+        "format": "decimal",
+        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+        "title": "Скидка %"
+      },
+      "valid_from": {
+        "type": "string",
+        "format": "date",
+        "nullable": true,
+        "title": "Действует с"
+      },
+      "valid_to": {
+        "type": "string",
+        "format": "date",
+        "nullable": true,
+        "title": "Действует по"
+      },
+      "is_active": {
+        "type": "boolean",
+        "title": "Активно"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Создано"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Обновлено"
+      },
+      "student": {
+        "type": "integer",
+        "title": "Ученик"
+      },
+      "teacher": {
+        "type": "integer",
+        "nullable": true,
+        "title": "Учитель"
+      },
+      "subject": {
+        "type": "integer",
+        "title": "Предмет"
+      }
+    },
+    "required": [
+      "cost",
+      "created_at",
+      "id",
+      "student",
+      "student_name",
+      "subject",
+      "subject_name",
+      "teacher_name",
+      "teacher_payment",
+      "updated_at"
+    ]
+  },
+  "Teacher": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "user": {
+        "$ref": "#/components/schemas/User"
+      },
+      "subjects": {
+        "type": "array",
+        "items": {
+          "type": "integer"
+        }
+      },
+      "bio": {
+        "type": "string",
+        "title": "Биография"
+      },
+      "education": {
+        "type": "string",
+        "title": "Образование"
+      },
+      "experience": {
+        "type": "integer",
+        "maximum": 9223372036854775807,
+        "minimum": -9223372036854775808,
+        "format": "int64",
+        "title": "Опыт работы (лет)"
+      },
+      "certificate": {
+        "type": "string",
+        "format": "uri",
+        "nullable": true,
+        "title": "Сертификат"
+      },
+      "payment_details": {
+        "type": "string",
+        "title": "Данные для выплат"
+      }
+    },
+    "required": [
+      "id",
+      "subjects",
+      "user"
+    ]
+  },
+  "TrialRequest": {
+    "type": "object",
+    "description": "Сериализатор для заявок на пробный урок",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "name": {
+        "type": "string",
+        "title": "Имя",
+        "maxLength": 100
+      },
+      "email": {
+        "type": "string",
+        "format": "email",
+        "maxLength": 254
+      },
+      "phone": {
+        "type": "string",
+        "title": "Телефон",
+        "maxLength": 20
+      },
+      "subject": {
+        "type": "string",
+        "title": "Предмет",
+        "maxLength": 50
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "readOnly": true,
+        "title": "Дата заявки"
+      },
+      "is_processed": {
+        "type": "boolean",
+        "title": "Обработано"
+      }
+    },
+    "required": [
+      "created_at",
+      "email",
+      "id",
+      "name",
+      "phone",
+      "subject"
+    ]
+  },
+  "User": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "readOnly": true
+      },
+      "username": {
+        "type": "string",
+        "title": "Имя пользователя",
+        "description": "Обязательное поле. Не более 150 символов. Только буквы, цифры и символы @/./+/-/_.",
+        "pattern": "^[\\w.@+-]+$",
+        "maxLength": 150
+      },
+      "password": {
+        "type": "string",
+        "writeOnly": true,
+        "title": "Пароль",
+        "maxLength": 128
+      },
+      "first_name": {
+        "type": "string",
+        "title": "Имя",
+        "maxLength": 150
+      },
+      "last_name": {
+        "type": "string",
+        "title": "Фамилия",
+        "maxLength": 150
+      },
+      "patronymic": {
+        "type": "string",
+        "title": "Отчество",
+        "maxLength": 50
+      },
+      "email": {
+        "type": "string",
+        "format": "email",
+        "title": "Адрес электронной почты",
+        "maxLength": 254
+      },
+      "phone": {
+        "type": "string",
+        "nullable": true,
+        "title": "Телефон",
+        "maxLength": 20
+      },
+      "photo": {
+        "type": "string",
+        "format": "uri",
+        "nullable": true,
+        "title": "Фото"
+      },
+      "role": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RoleEnum"
+          }
+        ],
+        "title": "Роль"
+      }
+    },
+    "required": [
+      "id",
+      "password",
+      "username"
+    ]
+  }
+}

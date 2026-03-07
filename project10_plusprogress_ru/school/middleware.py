@@ -105,9 +105,6 @@ class OverdueLessonsMiddleware:
         return self.get_response(request)
 
 
-
-
-# school/middleware.py - добавьте новый класс
 import threading
 from .models import UserActionLog
 

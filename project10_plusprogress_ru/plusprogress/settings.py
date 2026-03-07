@@ -14,9 +14,9 @@ import os
 from pathlib import Path
 from decouple import config
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here')
+
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 DEBUG = True
 
@@ -35,7 +35,10 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'school.apps.SchoolConfig',
     'drf_spectacular',
+    'django_mkdocs',
 ]
+
+MKDOCS_CONFIG = BASE_DIR / 'docs' / 'mkdocs.yml'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

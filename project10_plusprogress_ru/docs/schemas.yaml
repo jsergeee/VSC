@@ -1,0 +1,2325 @@
+Deposit:
+  description: Сериализатор для депозитов
+  properties:
+    amount:
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Сумма
+      type: string
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Дата
+      type: string
+    created_by:
+      nullable: true
+      type: integer
+    description:
+      maxLength: 200
+      title: Описание
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    student:
+      type: integer
+    student_name:
+      readOnly: true
+      type: string
+  required:
+  - amount
+  - created_at
+  - id
+  - student
+  - student_name
+  type: object
+GroupEnrollment:
+  description: Сериализатор для записей на групповые уроки
+  properties:
+    attendance_confirmed:
+      title: Посещение подтверждено
+      type: boolean
+    cost_to_pay:
+      description: Может отличаться от базовой (скидка, акция)
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Стоимость для ученика
+      type: string
+    discount:
+      format: decimal
+      pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+      title: Скидка %
+      type: string
+    group_lesson:
+      title: Групповое занятие
+      type: integer
+    id:
+      readOnly: true
+      type: integer
+    registered_at:
+      format: date-time
+      readOnly: true
+      title: Зарегистрирован
+      type: string
+    status:
+      allOf:
+      - $ref: '#/components/schemas/Status543Enum'
+      title: Статус
+    student:
+      title: Ученик
+      type: integer
+    student_name:
+      readOnly: true
+      type: string
+  required:
+  - cost_to_pay
+  - group_lesson
+  - id
+  - registered_at
+  - student
+  - student_name
+  type: object
+GroupLesson:
+  description: Сериализатор для групповых уроков
+  properties:
+    base_price:
+      description: 'Для per_student: цена за одного, для fixed: цена за всю группу'
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Базовая стоимость
+      type: string
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Создано
+      type: string
+    date:
+      format: date
+      title: Дата
+      type: string
+    duration:
+      format: int64
+      maximum: 9223372036854775807
+      minimum: -9223372036854775808
+      title: Длительность (минут)
+      type: integer
+    end_time:
+      format: time
+      title: Время окончания
+      type: string
+    format:
+      nullable: true
+      title: Формат
+      type: integer
+    id:
+      readOnly: true
+      type: integer
+    meeting_link:
+      format: uri
+      maxLength: 200
+      title: Ссылка на занятие
+      type: string
+    meeting_platform:
+      maxLength: 50
+      title: Платформа
+      type: string
+    notes:
+      title: Заметки
+      type: string
+    price_type:
+      allOf:
+      - $ref: '#/components/schemas/GroupLessonPriceTypeEnum'
+      title: Тип оплаты
+    start_time:
+      format: time
+      title: Время начала
+      type: string
+    status:
+      allOf:
+      - $ref: '#/components/schemas/StatusD86Enum'
+      title: Статус
+    students_count:
+      readOnly: true
+      type: string
+    subject:
+      title: Предмет
+      type: integer
+    subject_name:
+      readOnly: true
+      type: string
+    teacher:
+      title: Учитель
+      type: integer
+    teacher_name:
+      readOnly: true
+      type: string
+    teacher_payment:
+      description: Базовая выплата (может корректироваться в зависимости от числа
+        учеников)
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Начисление учителю
+      type: string
+    updated_at:
+      format: date-time
+      readOnly: true
+      title: Обновлено
+      type: string
+    video_room:
+      maxLength: 100
+      nullable: true
+      title: Комната для видео
+      type: string
+  required:
+  - base_price
+  - created_at
+  - date
+  - end_time
+  - id
+  - start_time
+  - students_count
+  - subject
+  - subject_name
+  - teacher
+  - teacher_name
+  - teacher_payment
+  - updated_at
+  type: object
+GroupLessonPriceTypeEnum:
+  description: '* `fixed` - Фиксированная за группу
+
+    * `per_student` - За каждого ученика'
+  enum:
+  - fixed
+  - per_student
+  type: string
+Homework:
+  description: Сериализатор для домашних заданий
+  properties:
+    attachments:
+      format: uri
+      nullable: true
+      title: Файл с заданием
+      type: string
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Дата выдачи
+      type: string
+    deadline:
+      format: date-time
+      title: Срок сдачи
+      type: string
+    description:
+      title: Описание задания
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    is_active:
+      title: Активно
+      type: boolean
+    lesson:
+      nullable: true
+      title: Урок
+      type: integer
+    status_display:
+      readOnly: true
+      type: string
+    student:
+      title: Ученик
+      type: integer
+    student_name:
+      readOnly: true
+      type: string
+    subject:
+      title: Предмет
+      type: integer
+    subject_name:
+      readOnly: true
+      type: string
+    teacher:
+      title: Учитель
+      type: integer
+    teacher_name:
+      readOnly: true
+      type: string
+    title:
+      maxLength: 200
+      title: Название
+      type: string
+    updated_at:
+      format: date-time
+      readOnly: true
+      title: Дата обновления
+      type: string
+  required:
+  - created_at
+  - deadline
+  - description
+  - id
+  - status_display
+  - student
+  - student_name
+  - subject
+  - subject_name
+  - teacher
+  - teacher_name
+  - title
+  - updated_at
+  type: object
+HomeworkSubmission:
+  description: Сериализатор для сданных заданий
+  properties:
+    answer_text:
+      title: Текст ответа
+      type: string
+    checked_at:
+      format: date-time
+      nullable: true
+      title: Дата проверки
+      type: string
+    file:
+      format: uri
+      nullable: true
+      title: Файл с работой
+      type: string
+    grade:
+      format: int64
+      maximum: 9223372036854775807
+      minimum: -9223372036854775808
+      nullable: true
+      title: Оценка
+      type: integer
+    homework:
+      title: Задание
+      type: integer
+    id:
+      readOnly: true
+      type: integer
+    status:
+      allOf:
+      - $ref: '#/components/schemas/HomeworkSubmissionStatusEnum'
+      title: Статус
+    student:
+      title: Ученик
+      type: integer
+    student_name:
+      readOnly: true
+      type: string
+    submitted_at:
+      format: date-time
+      readOnly: true
+      title: Дата сдачи
+      type: string
+    teacher_comment:
+      title: Комментарий учителя
+      type: string
+  required:
+  - homework
+  - id
+  - student
+  - student_name
+  - submitted_at
+  type: object
+HomeworkSubmissionStatusEnum:
+  description: '* `submitted` - Отправлено на проверку
+
+    * `checked` - Проверено'
+  enum:
+  - submitted
+  - checked
+  type: string
+Lesson:
+  properties:
+    attendances:
+      items:
+        $ref: '#/components/schemas/LessonAttendance'
+      readOnly: true
+      type: array
+    base_cost:
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Базовая стоимость
+      type: string
+    base_teacher_payment:
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Базовая выплата учителю
+      type: string
+    date:
+      format: date
+      title: Дата
+      type: string
+    duration:
+      format: int64
+      maximum: 9223372036854775807
+      minimum: -9223372036854775808
+      title: Длительность (минут)
+      type: integer
+    end_time:
+      format: time
+      title: Время окончания
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    meeting_link:
+      format: uri
+      maxLength: 200
+      title: Ссылка на занятие
+      type: string
+    meeting_platform:
+      maxLength: 50
+      title: Платформа
+      type: string
+    notes:
+      title: Заметки
+      type: string
+    price_type:
+      allOf:
+      - $ref: '#/components/schemas/LessonPriceTypeEnum'
+      title: Тип оплаты
+    start_time:
+      format: time
+      title: Время начала
+      type: string
+    status:
+      allOf:
+      - $ref: '#/components/schemas/StatusD86Enum'
+      title: Статус
+    students_data:
+      items:
+        additionalProperties: {}
+        type: object
+      type: array
+      writeOnly: true
+    subject:
+      title: Предмет
+      type: integer
+    subject_name:
+      readOnly: true
+      type: string
+    teacher:
+      title: Учитель
+      type: integer
+    teacher_name:
+      readOnly: true
+      type: string
+    video_room:
+      description: Уникальный идентификатор комнаты для Jitsi Meet
+      maxLength: 100
+      nullable: true
+      title: Комната для видео
+      type: string
+  required:
+  - attendances
+  - date
+  - end_time
+  - id
+  - start_time
+  - students_data
+  - subject
+  - subject_name
+  - teacher
+  - teacher_name
+  type: object
+LessonAttendance:
+  properties:
+    cost:
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Стоимость для ученика
+      type: string
+    discount:
+      format: decimal
+      pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+      title: Скидка %
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    status:
+      allOf:
+      - $ref: '#/components/schemas/Status543Enum'
+      title: Статус
+    student:
+      title: Ученик
+      type: integer
+    student_name:
+      readOnly: true
+      type: string
+    teacher_payment_share:
+      description: Сколько учитель получает за этого ученика
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Доля выплаты учителю
+      type: string
+  required:
+  - cost
+  - id
+  - student
+  - student_name
+  - teacher_payment_share
+  type: object
+LessonFeedback:
+  description: Сериализатор для отзывов о уроках
+  properties:
+    comment:
+      description: Что понравилось? Что можно улучшить?
+      title: Комментарий
+      type: string
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Дата оценки
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    is_public:
+      description: Показывать на сайте?
+      title: Публичный отзыв
+      type: boolean
+    lesson:
+      title: Урок
+      type: integer
+    rating:
+      allOf:
+      - $ref: '#/components/schemas/RatingEnum'
+      maximum: 9223372036854775807
+      minimum: -9223372036854775808
+      title: Оценка
+    student:
+      title: Ученик
+      type: integer
+    student_name:
+      readOnly: true
+      type: string
+    teacher:
+      title: Учитель
+      type: integer
+    teacher_name:
+      readOnly: true
+      type: string
+    updated_at:
+      format: date-time
+      readOnly: true
+      title: Дата обновления
+      type: string
+  required:
+  - created_at
+  - id
+  - lesson
+  - rating
+  - student
+  - student_name
+  - teacher
+  - teacher_name
+  - updated_at
+  type: object
+LessonPriceTypeEnum:
+  description: '* `fixed` - Фиксированная за всех
+
+    * `per_student` - За каждого ученика
+
+    * `individual` - Индивидуальная для каждого'
+  enum:
+  - fixed
+  - per_student
+  - individual
+  type: string
+LessonReport:
+  description: Сериализатор для отчетов о уроках
+  properties:
+    covered_material:
+      title: Пройденный материал
+      type: string
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Создано
+      type: string
+    homework:
+      title: Домашнее задание
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    lesson:
+      title: Занятие
+      type: integer
+    next_lesson_plan:
+      title: План следующего занятия
+      type: string
+    student_progress:
+      title: Прогресс ученика
+      type: string
+    topic:
+      maxLength: 200
+      title: Тема занятия
+      type: string
+  required:
+  - covered_material
+  - created_at
+  - homework
+  - id
+  - lesson
+  - student_progress
+  - topic
+  type: object
+Material:
+  description: Сериализатор для методических материалов
+  properties:
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Создано
+      type: string
+    created_by:
+      nullable: true
+      type: integer
+    created_by_name:
+      readOnly: true
+      type: string
+    description:
+      title: Описание
+      type: string
+    file:
+      format: uri
+      nullable: true
+      title: Файл
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    is_public:
+      title: Публичный
+      type: boolean
+    link:
+      format: uri
+      maxLength: 200
+      title: Ссылка
+      type: string
+    material_type:
+      allOf:
+      - $ref: '#/components/schemas/MaterialTypeEnum'
+      title: Тип
+    students:
+      items:
+        title: Ученики
+        type: integer
+      title: Ученики
+      type: array
+    subjects:
+      items:
+        title: Предметы
+        type: integer
+      title: Предметы
+      type: array
+    teachers:
+      items:
+        title: Учителя
+        type: integer
+      title: Учителя
+      type: array
+    title:
+      maxLength: 200
+      title: Название
+      type: string
+    updated_at:
+      format: date-time
+      readOnly: true
+      title: Обновлено
+      type: string
+  required:
+  - created_at
+  - created_by_name
+  - id
+  - title
+  - updated_at
+  type: object
+MaterialTypeEnum:
+  description: '* `file` - Файл
+
+    * `link` - Ссылка'
+  enum:
+  - file
+  - link
+  type: string
+Notification:
+  description: Сериализатор для уведомлений
+  properties:
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Создано
+      type: string
+    expires_at:
+      format: date-time
+      nullable: true
+      title: Истекает
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    is_read:
+      title: Прочитано
+      type: boolean
+    link:
+      maxLength: 200
+      title: Ссылка
+      type: string
+    message:
+      title: Сообщение
+      type: string
+    notification_type:
+      allOf:
+      - $ref: '#/components/schemas/NotificationTypeEnum'
+      title: Тип уведомления
+    payment:
+      nullable: true
+      type: integer
+    title:
+      maxLength: 200
+      title: Заголовок
+      type: string
+    user:
+      title: Пользователь
+      type: integer
+  required:
+  - created_at
+  - id
+  - message
+  - title
+  - user
+  type: object
+NotificationTypeEnum:
+  description: '* `lesson_reminder` - 🔔 Напоминание о занятии
+
+    * `lesson_canceled` - ❌ Занятие отменено
+
+    * `lesson_completed` - ✅ Занятие проведено
+
+    * `payment_received` - 💰 Поступление средств
+
+    * `payment_withdrawn` - 💸 Списание средств
+
+    * `material_added` - 📚 Новый материал
+
+    * `homework_assigned` - 📝 Новое задание
+
+    * `feedback_received` - ⭐ Новая оценка
+
+    * `system` - ⚙ Системное уведомление
+
+    * `homework_submitted` - 📤 Задание сдано
+
+    * `homework_checked` - ✅ Задание проверено'
+  enum:
+  - lesson_reminder
+  - lesson_canceled
+  - lesson_completed
+  - payment_received
+  - payment_withdrawn
+  - material_added
+  - homework_assigned
+  - feedback_received
+  - system
+  - homework_submitted
+  - homework_checked
+  type: string
+PatchedDeposit:
+  description: Сериализатор для депозитов
+  properties:
+    amount:
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Сумма
+      type: string
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Дата
+      type: string
+    created_by:
+      nullable: true
+      type: integer
+    description:
+      maxLength: 200
+      title: Описание
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    student:
+      type: integer
+    student_name:
+      readOnly: true
+      type: string
+  type: object
+PatchedGroupEnrollment:
+  description: Сериализатор для записей на групповые уроки
+  properties:
+    attendance_confirmed:
+      title: Посещение подтверждено
+      type: boolean
+    cost_to_pay:
+      description: Может отличаться от базовой (скидка, акция)
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Стоимость для ученика
+      type: string
+    discount:
+      format: decimal
+      pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+      title: Скидка %
+      type: string
+    group_lesson:
+      title: Групповое занятие
+      type: integer
+    id:
+      readOnly: true
+      type: integer
+    registered_at:
+      format: date-time
+      readOnly: true
+      title: Зарегистрирован
+      type: string
+    status:
+      allOf:
+      - $ref: '#/components/schemas/Status543Enum'
+      title: Статус
+    student:
+      title: Ученик
+      type: integer
+    student_name:
+      readOnly: true
+      type: string
+  type: object
+PatchedGroupLesson:
+  description: Сериализатор для групповых уроков
+  properties:
+    base_price:
+      description: 'Для per_student: цена за одного, для fixed: цена за всю группу'
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Базовая стоимость
+      type: string
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Создано
+      type: string
+    date:
+      format: date
+      title: Дата
+      type: string
+    duration:
+      format: int64
+      maximum: 9223372036854775807
+      minimum: -9223372036854775808
+      title: Длительность (минут)
+      type: integer
+    end_time:
+      format: time
+      title: Время окончания
+      type: string
+    format:
+      nullable: true
+      title: Формат
+      type: integer
+    id:
+      readOnly: true
+      type: integer
+    meeting_link:
+      format: uri
+      maxLength: 200
+      title: Ссылка на занятие
+      type: string
+    meeting_platform:
+      maxLength: 50
+      title: Платформа
+      type: string
+    notes:
+      title: Заметки
+      type: string
+    price_type:
+      allOf:
+      - $ref: '#/components/schemas/GroupLessonPriceTypeEnum'
+      title: Тип оплаты
+    start_time:
+      format: time
+      title: Время начала
+      type: string
+    status:
+      allOf:
+      - $ref: '#/components/schemas/StatusD86Enum'
+      title: Статус
+    students_count:
+      readOnly: true
+      type: string
+    subject:
+      title: Предмет
+      type: integer
+    subject_name:
+      readOnly: true
+      type: string
+    teacher:
+      title: Учитель
+      type: integer
+    teacher_name:
+      readOnly: true
+      type: string
+    teacher_payment:
+      description: Базовая выплата (может корректироваться в зависимости от числа
+        учеников)
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Начисление учителю
+      type: string
+    updated_at:
+      format: date-time
+      readOnly: true
+      title: Обновлено
+      type: string
+    video_room:
+      maxLength: 100
+      nullable: true
+      title: Комната для видео
+      type: string
+  type: object
+PatchedHomework:
+  description: Сериализатор для домашних заданий
+  properties:
+    attachments:
+      format: uri
+      nullable: true
+      title: Файл с заданием
+      type: string
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Дата выдачи
+      type: string
+    deadline:
+      format: date-time
+      title: Срок сдачи
+      type: string
+    description:
+      title: Описание задания
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    is_active:
+      title: Активно
+      type: boolean
+    lesson:
+      nullable: true
+      title: Урок
+      type: integer
+    status_display:
+      readOnly: true
+      type: string
+    student:
+      title: Ученик
+      type: integer
+    student_name:
+      readOnly: true
+      type: string
+    subject:
+      title: Предмет
+      type: integer
+    subject_name:
+      readOnly: true
+      type: string
+    teacher:
+      title: Учитель
+      type: integer
+    teacher_name:
+      readOnly: true
+      type: string
+    title:
+      maxLength: 200
+      title: Название
+      type: string
+    updated_at:
+      format: date-time
+      readOnly: true
+      title: Дата обновления
+      type: string
+  type: object
+PatchedHomeworkSubmission:
+  description: Сериализатор для сданных заданий
+  properties:
+    answer_text:
+      title: Текст ответа
+      type: string
+    checked_at:
+      format: date-time
+      nullable: true
+      title: Дата проверки
+      type: string
+    file:
+      format: uri
+      nullable: true
+      title: Файл с работой
+      type: string
+    grade:
+      format: int64
+      maximum: 9223372036854775807
+      minimum: -9223372036854775808
+      nullable: true
+      title: Оценка
+      type: integer
+    homework:
+      title: Задание
+      type: integer
+    id:
+      readOnly: true
+      type: integer
+    status:
+      allOf:
+      - $ref: '#/components/schemas/HomeworkSubmissionStatusEnum'
+      title: Статус
+    student:
+      title: Ученик
+      type: integer
+    student_name:
+      readOnly: true
+      type: string
+    submitted_at:
+      format: date-time
+      readOnly: true
+      title: Дата сдачи
+      type: string
+    teacher_comment:
+      title: Комментарий учителя
+      type: string
+  type: object
+PatchedLesson:
+  properties:
+    attendances:
+      items:
+        $ref: '#/components/schemas/LessonAttendance'
+      readOnly: true
+      type: array
+    base_cost:
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Базовая стоимость
+      type: string
+    base_teacher_payment:
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Базовая выплата учителю
+      type: string
+    date:
+      format: date
+      title: Дата
+      type: string
+    duration:
+      format: int64
+      maximum: 9223372036854775807
+      minimum: -9223372036854775808
+      title: Длительность (минут)
+      type: integer
+    end_time:
+      format: time
+      title: Время окончания
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    meeting_link:
+      format: uri
+      maxLength: 200
+      title: Ссылка на занятие
+      type: string
+    meeting_platform:
+      maxLength: 50
+      title: Платформа
+      type: string
+    notes:
+      title: Заметки
+      type: string
+    price_type:
+      allOf:
+      - $ref: '#/components/schemas/LessonPriceTypeEnum'
+      title: Тип оплаты
+    start_time:
+      format: time
+      title: Время начала
+      type: string
+    status:
+      allOf:
+      - $ref: '#/components/schemas/StatusD86Enum'
+      title: Статус
+    students_data:
+      items:
+        additionalProperties: {}
+        type: object
+      type: array
+      writeOnly: true
+    subject:
+      title: Предмет
+      type: integer
+    subject_name:
+      readOnly: true
+      type: string
+    teacher:
+      title: Учитель
+      type: integer
+    teacher_name:
+      readOnly: true
+      type: string
+    video_room:
+      description: Уникальный идентификатор комнаты для Jitsi Meet
+      maxLength: 100
+      nullable: true
+      title: Комната для видео
+      type: string
+  type: object
+PatchedLessonFeedback:
+  description: Сериализатор для отзывов о уроках
+  properties:
+    comment:
+      description: Что понравилось? Что можно улучшить?
+      title: Комментарий
+      type: string
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Дата оценки
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    is_public:
+      description: Показывать на сайте?
+      title: Публичный отзыв
+      type: boolean
+    lesson:
+      title: Урок
+      type: integer
+    rating:
+      allOf:
+      - $ref: '#/components/schemas/RatingEnum'
+      maximum: 9223372036854775807
+      minimum: -9223372036854775808
+      title: Оценка
+    student:
+      title: Ученик
+      type: integer
+    student_name:
+      readOnly: true
+      type: string
+    teacher:
+      title: Учитель
+      type: integer
+    teacher_name:
+      readOnly: true
+      type: string
+    updated_at:
+      format: date-time
+      readOnly: true
+      title: Дата обновления
+      type: string
+  type: object
+PatchedLessonReport:
+  description: Сериализатор для отчетов о уроках
+  properties:
+    covered_material:
+      title: Пройденный материал
+      type: string
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Создано
+      type: string
+    homework:
+      title: Домашнее задание
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    lesson:
+      title: Занятие
+      type: integer
+    next_lesson_plan:
+      title: План следующего занятия
+      type: string
+    student_progress:
+      title: Прогресс ученика
+      type: string
+    topic:
+      maxLength: 200
+      title: Тема занятия
+      type: string
+  type: object
+PatchedMaterial:
+  description: Сериализатор для методических материалов
+  properties:
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Создано
+      type: string
+    created_by:
+      nullable: true
+      type: integer
+    created_by_name:
+      readOnly: true
+      type: string
+    description:
+      title: Описание
+      type: string
+    file:
+      format: uri
+      nullable: true
+      title: Файл
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    is_public:
+      title: Публичный
+      type: boolean
+    link:
+      format: uri
+      maxLength: 200
+      title: Ссылка
+      type: string
+    material_type:
+      allOf:
+      - $ref: '#/components/schemas/MaterialTypeEnum'
+      title: Тип
+    students:
+      items:
+        title: Ученики
+        type: integer
+      title: Ученики
+      type: array
+    subjects:
+      items:
+        title: Предметы
+        type: integer
+      title: Предметы
+      type: array
+    teachers:
+      items:
+        title: Учителя
+        type: integer
+      title: Учителя
+      type: array
+    title:
+      maxLength: 200
+      title: Название
+      type: string
+    updated_at:
+      format: date-time
+      readOnly: true
+      title: Обновлено
+      type: string
+  type: object
+PatchedNotification:
+  description: Сериализатор для уведомлений
+  properties:
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Создано
+      type: string
+    expires_at:
+      format: date-time
+      nullable: true
+      title: Истекает
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    is_read:
+      title: Прочитано
+      type: boolean
+    link:
+      maxLength: 200
+      title: Ссылка
+      type: string
+    message:
+      title: Сообщение
+      type: string
+    notification_type:
+      allOf:
+      - $ref: '#/components/schemas/NotificationTypeEnum'
+      title: Тип уведомления
+    payment:
+      nullable: true
+      type: integer
+    title:
+      maxLength: 200
+      title: Заголовок
+      type: string
+    user:
+      title: Пользователь
+      type: integer
+  type: object
+PatchedPayment:
+  description: Сериализатор для платежей
+  properties:
+    amount:
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Сумма
+      type: string
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Дата
+      type: string
+    description:
+      maxLength: 200
+      title: Описание
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    lesson:
+      nullable: true
+      title: Занятие
+      type: integer
+    payment_type:
+      allOf:
+      - $ref: '#/components/schemas/PaymentTypeEnum'
+      title: Тип
+    user:
+      title: Пользователь
+      type: integer
+    user_name:
+      readOnly: true
+      type: string
+  type: object
+PatchedPaymentRequest:
+  description: Сериализатор для запросов на выплаты
+  properties:
+    amount:
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Сумма
+      type: string
+    comment:
+      description: Комментарий администратора
+      title: Комментарий
+      type: string
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Создано
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    payment:
+      nullable: true
+      title: Платеж
+      type: integer
+    payment_details:
+      title: Платёжные реквизиты
+      type: string
+    payment_method:
+      maxLength: 50
+      title: Способ выплаты
+      type: string
+    status:
+      allOf:
+      - $ref: '#/components/schemas/PaymentRequestStatusEnum'
+      title: Статус
+    teacher:
+      title: Учитель
+      type: integer
+    teacher_name:
+      readOnly: true
+      type: string
+    updated_at:
+      format: date-time
+      readOnly: true
+      title: Обновлено
+      type: string
+  type: object
+PatchedScheduleTemplate:
+  description: Сериализатор для шаблонов расписания
+  properties:
+    base_cost:
+      format: decimal
+      nullable: true
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Базовая стоимость
+      type: string
+    base_teacher_payment:
+      format: decimal
+      nullable: true
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Базовая выплата учителю
+      type: string
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Создано
+      type: string
+    duration:
+      readOnly: true
+      title: Длительность (минут)
+      type: integer
+    end_date:
+      format: date
+      nullable: true
+      title: Дата окончания
+      type: string
+    end_time:
+      format: time
+      title: Время окончания
+      type: string
+    format:
+      nullable: true
+      title: Формат
+      type: integer
+    friday:
+      title: Пятница
+      type: boolean
+    id:
+      readOnly: true
+      type: integer
+    is_active:
+      title: Активно
+      type: boolean
+    max_occurrences:
+      format: int64
+      maximum: 9223372036854775807
+      minimum: 0
+      nullable: true
+      title: Максимальное количество занятий
+      type: integer
+    meeting_link:
+      format: uri
+      maxLength: 200
+      title: Ссылка на занятие
+      type: string
+    meeting_platform:
+      maxLength: 50
+      title: Платформа
+      type: string
+    monday:
+      title: Понедельник
+      type: boolean
+    notes:
+      title: Заметки
+      type: string
+    repeat_type:
+      allOf:
+      - $ref: '#/components/schemas/RepeatTypeEnum'
+      title: Тип повторения
+    saturday:
+      title: Суббота
+      type: boolean
+    start_date:
+      format: date
+      nullable: true
+      title: Дата начала
+      type: string
+    start_time:
+      format: time
+      title: Время начала
+      type: string
+    students:
+      items:
+        title: Ученики
+        type: integer
+      readOnly: true
+      title: Ученики
+      type: array
+    subject:
+      title: Предмет
+      type: integer
+    sunday:
+      title: Воскресенье
+      type: boolean
+    teacher:
+      title: Учитель
+      type: integer
+    thursday:
+      title: Четверг
+      type: boolean
+    tuesday:
+      title: Вторник
+      type: boolean
+    updated_at:
+      format: date-time
+      readOnly: true
+      title: Обновлено
+      type: string
+    wednesday:
+      title: Среда
+      type: boolean
+  type: object
+PatchedStudent:
+  properties:
+    id:
+      readOnly: true
+      type: integer
+    notes:
+      title: Заметки
+      type: string
+    parent_name:
+      maxLength: 200
+      title: Имя родителя
+      type: string
+    parent_phone:
+      maxLength: 20
+      title: Телефон родителя
+      type: string
+    teachers:
+      items:
+        type: integer
+      type: array
+    user:
+      $ref: '#/components/schemas/User'
+  type: object
+PatchedStudentNote:
+  description: Сериализатор для заметок об учениках
+  properties:
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Создано
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    student:
+      type: integer
+    student_name:
+      readOnly: true
+      type: string
+    teacher:
+      type: integer
+    teacher_name:
+      readOnly: true
+      type: string
+    text:
+      title: Заметка
+      type: string
+    updated_at:
+      format: date-time
+      readOnly: true
+      title: Обновлено
+      type: string
+  type: object
+PatchedStudentSubjectPrice:
+  description: Сериализатор для индивидуальных цен
+  properties:
+    cost:
+      description: Сколько платит ученик
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Стоимость урока
+      type: string
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Создано
+      type: string
+    discount:
+      format: decimal
+      pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+      title: Скидка %
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    is_active:
+      title: Активно
+      type: boolean
+    student:
+      title: Ученик
+      type: integer
+    student_name:
+      readOnly: true
+      type: string
+    subject:
+      title: Предмет
+      type: integer
+    subject_name:
+      readOnly: true
+      type: string
+    teacher:
+      nullable: true
+      title: Учитель
+      type: integer
+    teacher_name:
+      readOnly: true
+      type: string
+    teacher_payment:
+      description: Сколько получает учитель
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Начисление учителю
+      type: string
+    updated_at:
+      format: date-time
+      readOnly: true
+      title: Обновлено
+      type: string
+    valid_from:
+      format: date
+      nullable: true
+      title: Действует с
+      type: string
+    valid_to:
+      format: date
+      nullable: true
+      title: Действует по
+      type: string
+  type: object
+PatchedTeacher:
+  properties:
+    bio:
+      title: Биография
+      type: string
+    certificate:
+      format: uri
+      nullable: true
+      title: Сертификат
+      type: string
+    education:
+      title: Образование
+      type: string
+    experience:
+      format: int64
+      maximum: 9223372036854775807
+      minimum: -9223372036854775808
+      title: Опыт работы (лет)
+      type: integer
+    id:
+      readOnly: true
+      type: integer
+    payment_details:
+      title: Данные для выплат
+      type: string
+    subjects:
+      items:
+        type: integer
+      type: array
+    user:
+      $ref: '#/components/schemas/User'
+  type: object
+PatchedTrialRequest:
+  description: Сериализатор для заявок на пробный урок
+  properties:
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Дата заявки
+      type: string
+    email:
+      format: email
+      maxLength: 254
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    is_processed:
+      title: Обработано
+      type: boolean
+    name:
+      maxLength: 100
+      title: Имя
+      type: string
+    phone:
+      maxLength: 20
+      title: Телефон
+      type: string
+    subject:
+      maxLength: 50
+      title: Предмет
+      type: string
+  type: object
+Payment:
+  description: Сериализатор для платежей
+  properties:
+    amount:
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Сумма
+      type: string
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Дата
+      type: string
+    description:
+      maxLength: 200
+      title: Описание
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    lesson:
+      nullable: true
+      title: Занятие
+      type: integer
+    payment_type:
+      allOf:
+      - $ref: '#/components/schemas/PaymentTypeEnum'
+      title: Тип
+    user:
+      title: Пользователь
+      type: integer
+    user_name:
+      readOnly: true
+      type: string
+  required:
+  - amount
+  - created_at
+  - description
+  - id
+  - payment_type
+  - user
+  - user_name
+  type: object
+PaymentRequest:
+  description: Сериализатор для запросов на выплаты
+  properties:
+    amount:
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Сумма
+      type: string
+    comment:
+      description: Комментарий администратора
+      title: Комментарий
+      type: string
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Создано
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    payment:
+      nullable: true
+      title: Платеж
+      type: integer
+    payment_details:
+      title: Платёжные реквизиты
+      type: string
+    payment_method:
+      maxLength: 50
+      title: Способ выплаты
+      type: string
+    status:
+      allOf:
+      - $ref: '#/components/schemas/PaymentRequestStatusEnum'
+      title: Статус
+    teacher:
+      title: Учитель
+      type: integer
+    teacher_name:
+      readOnly: true
+      type: string
+    updated_at:
+      format: date-time
+      readOnly: true
+      title: Обновлено
+      type: string
+  required:
+  - amount
+  - created_at
+  - id
+  - payment_details
+  - payment_method
+  - teacher
+  - teacher_name
+  - updated_at
+  type: object
+PaymentRequestStatusEnum:
+  description: '* `pending` - ⏳ Ожидает
+
+    * `approved` - ✅ Одобрено
+
+    * `rejected` - ❌ Отклонено
+
+    * `paid` - 💰 Выплачено'
+  enum:
+  - pending
+  - approved
+  - rejected
+  - paid
+  type: string
+PaymentTypeEnum:
+  description: '* `income` - Пополнение
+
+    * `expense` - Списание
+
+    * `teacher_salary` - Зарплата учителя'
+  enum:
+  - income
+  - expense
+  - teacher_salary
+  type: string
+RatingEnum:
+  description: '* `1` - ⭐ Ужасно
+
+    * `2` - ⭐⭐ Плохо
+
+    * `3` - ⭐⭐⭐ Нормально
+
+    * `4` - ⭐⭐⭐⭐ Хорошо
+
+    * `5` - ⭐⭐⭐⭐⭐ Отлично'
+  enum:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  type: integer
+Register:
+  properties:
+    email:
+      format: email
+      maxLength: 254
+      title: Адрес электронной почты
+      type: string
+    first_name:
+      maxLength: 150
+      title: Имя
+      type: string
+    last_name:
+      maxLength: 150
+      title: Фамилия
+      type: string
+    password:
+      minLength: 8
+      type: string
+      writeOnly: true
+    password2:
+      minLength: 8
+      title: Подтверждение пароля
+      type: string
+      writeOnly: true
+    phone:
+      maxLength: 20
+      nullable: true
+      title: Телефон
+      type: string
+    username:
+      description: Обязательное поле. Не более 150 символов. Только буквы, цифры и
+        символы @/./+/-/_.
+      maxLength: 150
+      pattern: ^[\w.@+-]+$
+      title: Имя пользователя
+      type: string
+  required:
+  - password
+  - password2
+  - username
+  type: object
+RepeatTypeEnum:
+  description: '* `single` - Разовый урок
+
+    * `daily` - Каждый день
+
+    * `weekly` - Каждую неделю
+
+    * `biweekly` - Раз в две недели
+
+    * `monthly` - Каждый месяц'
+  enum:
+  - single
+  - daily
+  - weekly
+  - biweekly
+  - monthly
+  type: string
+RoleEnum:
+  description: '* `student` - Ученик
+
+    * `teacher` - Учитель
+
+    * `admin` - Администратор'
+  enum:
+  - student
+  - teacher
+  - admin
+  type: string
+ScheduleTemplate:
+  description: Сериализатор для шаблонов расписания
+  properties:
+    base_cost:
+      format: decimal
+      nullable: true
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Базовая стоимость
+      type: string
+    base_teacher_payment:
+      format: decimal
+      nullable: true
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Базовая выплата учителю
+      type: string
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Создано
+      type: string
+    duration:
+      readOnly: true
+      title: Длительность (минут)
+      type: integer
+    end_date:
+      format: date
+      nullable: true
+      title: Дата окончания
+      type: string
+    end_time:
+      format: time
+      title: Время окончания
+      type: string
+    format:
+      nullable: true
+      title: Формат
+      type: integer
+    friday:
+      title: Пятница
+      type: boolean
+    id:
+      readOnly: true
+      type: integer
+    is_active:
+      title: Активно
+      type: boolean
+    max_occurrences:
+      format: int64
+      maximum: 9223372036854775807
+      minimum: 0
+      nullable: true
+      title: Максимальное количество занятий
+      type: integer
+    meeting_link:
+      format: uri
+      maxLength: 200
+      title: Ссылка на занятие
+      type: string
+    meeting_platform:
+      maxLength: 50
+      title: Платформа
+      type: string
+    monday:
+      title: Понедельник
+      type: boolean
+    notes:
+      title: Заметки
+      type: string
+    repeat_type:
+      allOf:
+      - $ref: '#/components/schemas/RepeatTypeEnum'
+      title: Тип повторения
+    saturday:
+      title: Суббота
+      type: boolean
+    start_date:
+      format: date
+      nullable: true
+      title: Дата начала
+      type: string
+    start_time:
+      format: time
+      title: Время начала
+      type: string
+    students:
+      items:
+        title: Ученики
+        type: integer
+      readOnly: true
+      title: Ученики
+      type: array
+    subject:
+      title: Предмет
+      type: integer
+    sunday:
+      title: Воскресенье
+      type: boolean
+    teacher:
+      title: Учитель
+      type: integer
+    thursday:
+      title: Четверг
+      type: boolean
+    tuesday:
+      title: Вторник
+      type: boolean
+    updated_at:
+      format: date-time
+      readOnly: true
+      title: Обновлено
+      type: string
+    wednesday:
+      title: Среда
+      type: boolean
+  required:
+  - created_at
+  - duration
+  - end_time
+  - id
+  - start_time
+  - students
+  - subject
+  - teacher
+  - updated_at
+  type: object
+SimpleLesson:
+  properties:
+    date:
+      format: date
+      title: Дата
+      type: string
+    end_time:
+      format: time
+      title: Время окончания
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    start_time:
+      format: time
+      title: Время начала
+      type: string
+    status:
+      allOf:
+      - $ref: '#/components/schemas/StatusD86Enum'
+      title: Статус
+    students_count:
+      readOnly: true
+      type: string
+    students_names:
+      readOnly: true
+      type: string
+    subject_name:
+      type: string
+    teacher_name:
+      type: string
+  required:
+  - date
+  - end_time
+  - id
+  - start_time
+  - students_count
+  - students_names
+  - subject_name
+  - teacher_name
+  type: object
+Status543Enum:
+  description: '* `registered` - Зарегистрирован
+
+    * `attended` - Присутствовал
+
+    * `absent` - Отсутствовал
+
+    * `debt` - Задолженность'
+  enum:
+  - registered
+  - attended
+  - absent
+  - debt
+  type: string
+StatusD86Enum:
+  description: '* `scheduled` - Запланировано
+
+    * `completed` - Проведено
+
+    * `cancelled` - Отменено
+
+    * `no_show` - Ученик не явился
+
+    * `overdue` - Просрочено
+
+    * `rescheduled` - Перенесено'
+  enum:
+  - scheduled
+  - completed
+  - cancelled
+  - no_show
+  - overdue
+  - rescheduled
+  type: string
+Student:
+  properties:
+    id:
+      readOnly: true
+      type: integer
+    notes:
+      title: Заметки
+      type: string
+    parent_name:
+      maxLength: 200
+      title: Имя родителя
+      type: string
+    parent_phone:
+      maxLength: 20
+      title: Телефон родителя
+      type: string
+    teachers:
+      items:
+        type: integer
+      type: array
+    user:
+      $ref: '#/components/schemas/User'
+  required:
+  - id
+  - teachers
+  - user
+  type: object
+StudentNote:
+  description: Сериализатор для заметок об учениках
+  properties:
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Создано
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    student:
+      type: integer
+    student_name:
+      readOnly: true
+      type: string
+    teacher:
+      type: integer
+    teacher_name:
+      readOnly: true
+      type: string
+    text:
+      title: Заметка
+      type: string
+    updated_at:
+      format: date-time
+      readOnly: true
+      title: Обновлено
+      type: string
+  required:
+  - created_at
+  - id
+  - student
+  - student_name
+  - teacher
+  - teacher_name
+  - text
+  - updated_at
+  type: object
+StudentSubjectPrice:
+  description: Сериализатор для индивидуальных цен
+  properties:
+    cost:
+      description: Сколько платит ученик
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Стоимость урока
+      type: string
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Создано
+      type: string
+    discount:
+      format: decimal
+      pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+      title: Скидка %
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    is_active:
+      title: Активно
+      type: boolean
+    student:
+      title: Ученик
+      type: integer
+    student_name:
+      readOnly: true
+      type: string
+    subject:
+      title: Предмет
+      type: integer
+    subject_name:
+      readOnly: true
+      type: string
+    teacher:
+      nullable: true
+      title: Учитель
+      type: integer
+    teacher_name:
+      readOnly: true
+      type: string
+    teacher_payment:
+      description: Сколько получает учитель
+      format: decimal
+      pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      title: Начисление учителю
+      type: string
+    updated_at:
+      format: date-time
+      readOnly: true
+      title: Обновлено
+      type: string
+    valid_from:
+      format: date
+      nullable: true
+      title: Действует с
+      type: string
+    valid_to:
+      format: date
+      nullable: true
+      title: Действует по
+      type: string
+  required:
+  - cost
+  - created_at
+  - id
+  - student
+  - student_name
+  - subject
+  - subject_name
+  - teacher_name
+  - teacher_payment
+  - updated_at
+  type: object
+Teacher:
+  properties:
+    bio:
+      title: Биография
+      type: string
+    certificate:
+      format: uri
+      nullable: true
+      title: Сертификат
+      type: string
+    education:
+      title: Образование
+      type: string
+    experience:
+      format: int64
+      maximum: 9223372036854775807
+      minimum: -9223372036854775808
+      title: Опыт работы (лет)
+      type: integer
+    id:
+      readOnly: true
+      type: integer
+    payment_details:
+      title: Данные для выплат
+      type: string
+    subjects:
+      items:
+        type: integer
+      type: array
+    user:
+      $ref: '#/components/schemas/User'
+  required:
+  - id
+  - subjects
+  - user
+  type: object
+TrialRequest:
+  description: Сериализатор для заявок на пробный урок
+  properties:
+    created_at:
+      format: date-time
+      readOnly: true
+      title: Дата заявки
+      type: string
+    email:
+      format: email
+      maxLength: 254
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    is_processed:
+      title: Обработано
+      type: boolean
+    name:
+      maxLength: 100
+      title: Имя
+      type: string
+    phone:
+      maxLength: 20
+      title: Телефон
+      type: string
+    subject:
+      maxLength: 50
+      title: Предмет
+      type: string
+  required:
+  - created_at
+  - email
+  - id
+  - name
+  - phone
+  - subject
+  type: object
+User:
+  properties:
+    email:
+      format: email
+      maxLength: 254
+      title: Адрес электронной почты
+      type: string
+    first_name:
+      maxLength: 150
+      title: Имя
+      type: string
+    id:
+      readOnly: true
+      type: integer
+    last_name:
+      maxLength: 150
+      title: Фамилия
+      type: string
+    password:
+      maxLength: 128
+      title: Пароль
+      type: string
+      writeOnly: true
+    patronymic:
+      maxLength: 50
+      title: Отчество
+      type: string
+    phone:
+      maxLength: 20
+      nullable: true
+      title: Телефон
+      type: string
+    photo:
+      format: uri
+      nullable: true
+      title: Фото
+      type: string
+    role:
+      allOf:
+      - $ref: '#/components/schemas/RoleEnum'
+      title: Роль
+    username:
+      description: Обязательное поле. Не более 150 символов. Только буквы, цифры и
+        символы @/./+/-/_.
+      maxLength: 150
+      pattern: ^[\w.@+-]+$
+      title: Имя пользователя
+      type: string
+  required:
+  - id
+  - password
+  - username
+  type: object

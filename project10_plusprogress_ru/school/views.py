@@ -5522,7 +5522,7 @@ def trial_request_ajax(request):
 # ============================================
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from django.db.models import Q  # 👈 ЭТОТ ИМПОРТ НУЖЕН ДЛЯ MaterialViewSet
+from django.db.models import Q
 from rest_framework import viewsets, permissions, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -5541,8 +5541,7 @@ from .serializers import (
     StudentNoteSerializer, PaymentRequestSerializer, LessonReportSerializer
 )
 
-# 👇 ДОБАВЛЯЕМ НЕДОСТАЮЩИЙ ИМПОРТ IsTeacherUser
-# Создайте файл permissions.py или добавьте класс здесь
+
 class IsTeacherUser(permissions.BasePermission):
     """Права для учителей"""
     def has_permission(self, request, view):

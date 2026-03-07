@@ -11,6 +11,7 @@ urlpatterns = [
     path('', include('school.urls')),
     path('admin/', admin.site.urls),
     path('api/', include('school.api_urls')),
+    path('docs/', include('django_mkdocs.urls')),
 ]
 
 # ВСЕ добавления статических и медиа файлов ТОЛЬКО внутри DEBUG

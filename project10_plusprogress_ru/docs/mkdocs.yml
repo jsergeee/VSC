@@ -1,0 +1,51 @@
+docs_dir: '.'
+site_name: PlusProgress Documentation
+site_description: Документация проекта онлайн школы PlusProgress
+site_author: Ваше Имя
+repo_url: https://github.com/ваш-репозиторий  # если есть
+
+theme:
+  name: material  # красивая тема
+  language: ru
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+
+plugins:
+  - search
+  - mkdocstrings  # для автодокументации из кода (опционально)
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - admonition
+  - footnotes
+  - tables
+  - attr_list
+
+nav:
+  - Главная: index.md
+  - Установка и запуск:
+    - Быстрый старт: setup/quickstart.md
+    - Настройка окружения: setup/environment.md
+    - Запуск проекта: setup/running.md
+  - Архитектура:
+    - Обзор: architecture/overview.md
+    - Модели данных: architecture/models.md
+    - API структура: architecture/api.md
+  - Руководство пользователя:
+    - Админка: guide/admin.md
+    - Личный кабинет учителя: guide/teacher.md
+    - Личный кабинет ученика: guide/student.md
+  - API Reference: api/  # ссылка на Swagger (если нужно)
+  - Разработка:
+    - Как добавить новый эндпоинт: dev/add_endpoint.md
+    - Тестирование: dev/testing.md
+    - Деплой: dev/deploy.md
