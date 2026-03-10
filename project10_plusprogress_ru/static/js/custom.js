@@ -7,9 +7,9 @@ $(window).on('load', function () {
 
   $(window).on('scroll', function () {
     if ($(this).scrollTop() > 230) {
-      $('.navbar-fixed-top').addClass('opaque')
+      $('.site-header').addClass('opaque')
     } else {
-      $('.navbar-fixed-top').removeClass('opaque')
+      $('.site-header').removeClass('opaque')
     }
     if ($(this).scrollTop() > 500) {
       $('#blink').removeClass('d-none')

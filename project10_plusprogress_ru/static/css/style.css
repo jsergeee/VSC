@@ -183,6 +183,9 @@ iframe {
     max-width: 900px;
     margin-left: auto;
     margin-right: auto;
+    h1 {
+    margin-top: 20px;
+    }
 }
 
 /* Подзаголовки секций */
@@ -847,6 +850,47 @@ iframe {
 	background: transparent;
 }
 
+/* Обычное состояние header */
+.site-header {
+    position: absolute;
+    z-index: 1000;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    height: auto;
+    box-shadow: 0px 0px 25px 0px rgba(0, 0, 0, 0.04)
+    transition: all 0.25s ease-in-out 0s;top: 0;
+    background: white;
+    border-bottom: 1px solid var(--border-light);
+
+}
+
+/* Состояние после прокрутки */
+.site-header.opaque {
+    position: fixed;
+    z-index: 1000;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    height: auto;
+    box-shadow: 0px 0px 25px 0px rgba(0, 0, 0, 0.04)
+    transition: all 0.25s ease-in-out 0s;top: 0;
+    background: white;
+    border-bottom: 1px solid var(--border-light);
+}
+
+
+.max-link::before {
+    content: "";
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin-right: 5px;
+    background-size: contain;
+    vertical-align: middle;
+}
 /* ========================================================== */
 /* 			                03. FOOTER                        */
 /* ========================================================== */
@@ -972,7 +1016,7 @@ ul.footer_social li a i:hover {
 .home-section {
 	position: relative;
 	z-index: 999;
-  	padding-top: 10px;
+  	/*padding-top: 10px;*/
   /*	padding-bottom: 110px;*/
   	background: url(../images/bg10.jpg) top center no-repeat;
 	background-size: cover;
@@ -997,7 +1041,7 @@ ul.footer_social li a i:hover {
 }
 
 .home-section h1{
-	margin-bottom: 20px;
+	margin: 20px auto 20px auto;
 	line-height: 1.2;
     color: #071e55;
 }
@@ -2233,6 +2277,7 @@ ul.benefits.white li i {
 
 /* От 1216px до 1440px */
 @media (min-width: 1216px) and (max-width: 1440px) {
+
         #HeadNavbarAuth {
         display: flex !important;
         flex-direction: row !important;
@@ -2242,12 +2287,7 @@ ul.benefits.white li i {
     .add_palitra #blink-wa {
             top: 92vh;
     }
-        #navbarAuth {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        height: auto !important;
-    }
+
 
     #navbarAuth.collapse {
         display: block !important;
@@ -2264,30 +2304,28 @@ ul.benefits.white li i {
 
     }
 
+/*
     #navbarAuth .dropdown-menu {
         position: static !important;
         float: none !important;
         width: 100% !important;
         box-shadow: none !important;
     }
+*/
 
 
 }
 
 /* От 991px до 1216px */
 @media (min-width: 991px) and (max-width: 1216px) {
+
+
      #HeadNavbarAuth {
         display: flex !important;
         flex-direction: row !important;
      }
 
 
-        #navbarAuth {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        height: auto !important;
-    }
 
     #navbarAuth.collapse {
         display: block !important;
@@ -2302,12 +2340,12 @@ ul.benefits.white li i {
        text-align: left !important;
     }
 
-    #navbarAuth .dropdown-menu {
+/*    #navbarAuth .dropdown-menu {
         position: static !important;
         float: none !important;
         width: 100% !important;
         box-shadow: none !important;
-    }
+    }*/
     .navbar-brand {
         width: 60px;
     }
@@ -2322,17 +2360,17 @@ ul.benefits.white li i {
 /* От 768px до 991px */
 @media (min-width: 768px) and (max-width: 991px) {
 
+    .main-content {
+    margin-top: 109px;
+}
+    .navbar-brand {
+        display: none !important;
+    }
      #HeadNavbarAuth {
         display: flex !important;
         flex-direction: row !important;
      }
 
-     #navbarAuth {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        height: auto !important;
-    }
 
     #navbarAuth.collapse {
         display: block !important;
@@ -2436,6 +2474,12 @@ ul.benefits.white li i {
 
 /* От 426px до 768px */
 @media (min-width: 426px) and (max-width: 768px) {
+    .main-content {
+    margin-top: 109px;
+}
+     .navbar-brand {
+        display: none !important;
+    }
 
      #HeadNavbarAuth {
         display: flex;
@@ -2549,7 +2593,15 @@ ul.benefits.white li i {
 
 /* От 376px до 425px */
 @media (min-width: 376px) and (max-width: 425px) {
-        #navbarAuth .navbar-nav {
+    .main-content {
+    margin-top: 109px;
+}
+     .navbar-brand {
+        display: none !important;
+    }
+
+
+     #navbarAuth .navbar-nav {
         padding: 10px !important;
     }
 
@@ -2666,7 +2718,12 @@ ul.benefits.white li i {
 
 /* До 375px */
 @media (max-width: 375px) {
-
+.main-content {
+    margin-top: 109px;
+}
+     .navbar-brand {
+        display: none !important;
+    }
         #navbarAuth .navbar-nav {
         padding: 10px !important;
     }
@@ -4332,6 +4389,7 @@ textarea.form-control {
     margin: 0px auto 0 auto;
     padding: 0px 20px 0 20px;
     max-height: 30px;
+
 }
 
 #HeadNavbarAuth .navbar-nav {
@@ -4357,6 +4415,7 @@ textarea.form-control {
     display: flex !important;
     flex-direction: row !important;
     width: auto;
+    max-height: 30px;
 }
 
 /*
@@ -4383,10 +4442,6 @@ textarea.form-control {
 }
 
 /* УБИРАЕМ КОНФЛИКТУЮЩИЕ СТИЛИ */
-.main-content {
-    z-index: auto !important;
-    position: static !important;
-}
 
 
 .col-md-7 {
@@ -4394,3 +4449,217 @@ margin: auto auto auto auto;
 /* background-color: rgba(255, 255, 255, 0.3); */
 
 }
+
+/* ===== СТИЛИ ДЛЯ БЛОКА АВТОРИЗАЦИИ ===== */
+
+/* Контейнер для блока авторизации */
+#HeadNavbarAuth {
+    margin-left: auto;
+}
+
+/* Ссылки в навигации (Войти/Регистрация) */
+#navbarAuth .nav-link {
+    color: #071e55 !important;
+    font-family: 'Roboto', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    padding: 0.5rem 1rem !important;
+    transition: color 0.3s ease;
+}
+
+#navbarAuth .nav-link:hover {
+    color: #c52d2f !important;
+}
+
+/* Иконка уведомлений */
+#navbarAuth .fa-bell {
+    color: #071e55;
+    transition: color 0.3s ease;
+}
+
+#navbarAuth .fa-bell:hover {
+    color: #c52d2f;
+}
+
+/* Бейдж уведомлений */
+#notificationBadge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 10px;
+    padding: 0.25rem 0.4rem;
+}
+
+/* Выпадающее меню (Dropdown) - ИСПРАВЛЕНО */
+#navbarAuth .dropdown-menu {
+    border: none;
+    border-radius: 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 0;
+    margin: 0.125rem 0 0;  /* ← добавил небольшой отступ сверху */
+    min-width: 200px;
+    /* Добавляем правильное позиционирование */
+    transform: translate3d(0, 0, 0) !important;
+    will-change: transform;
+}
+
+/* Для меню уведомлений - фикс позиции */
+.notifications-dropdown {
+    width: 300px !important;
+    /* Смещаем влево, чтобы не уходило за край */
+    right: 0 !important;
+    left: auto !important;
+}
+
+/* Для меню пользователя - фикс позиции */
+#userDropdown + .dropdown-menu {
+    right: 0 !important;
+    left: auto !important;
+}
+
+#navbarAuth .dropdown-item {
+    color: #333;
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid #f5f5f5;
+    transition: all 0.3s ease;
+}
+
+#navbarAuth .dropdown-item:last-child {
+    border-bottom: none;
+}
+
+#navbarAuth .dropdown-item:hover {
+    background-color: #f8f9fa;
+    color: #c52d2f;
+}
+
+#navbarAuth .dropdown-divider {
+    margin: 0;
+    border-top-color: #f5f5f5;
+}
+
+/* Специальные стили для меню уведомлений */
+.notifications-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.notifications-header h6 {
+    color: #071e55;
+    font-weight: 600;
+    margin: 0;
+}
+
+.notifications-header .btn-link {
+    color: #c52d2f;
+    font-size: 12px;
+    padding: 0;
+    text-decoration: none;
+}
+
+.notifications-header .btn-link:hover {
+    text-decoration: underline;
+}
+
+.notifications-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.notification-item {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f5f5f5;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.notification-item:hover {
+    background-color: #f8f9fa;
+}
+
+.notification-item.unread {
+    background-color: #fff3e0;
+}
+
+.notification-title {
+    font-weight: 600;
+    color: #071e55;
+    font-size: 13px;
+    margin-bottom: 0.25rem;
+}
+
+.notification-message {
+    color: #666;
+    font-size: 12px;
+    margin-bottom: 0.25rem;
+}
+
+.notification-time {
+    color: #999;
+    font-size: 11px;
+}
+
+.notifications-footer {
+    border-top: 1px solid #dee2e6;
+}
+
+.notifications-footer .dropdown-item {
+    color: #071e55;
+    font-size: 12px;
+    padding: 0.75rem !important;
+}
+
+.notifications-footer .dropdown-item:hover {
+    background-color: #f8f9fa;
+    color: #c52d2f;
+}
+#navbarAuth {
+    background: white;
+    padding: 1rem;
+}
+
+/* Адаптация для мобильных устройств */
+@media (max-width: 991px) {
+    .main-content {
+    margin-top: 109px;
+}
+
+
+    #HeadNavbarAuth {
+        margin-left: 0;
+        width: 100%;
+    }
+
+
+
+    #navbarAuth .nav-link {
+        padding: 0.5rem 0 !important;
+    }
+
+    #navbarAuth .dropdown-menu {
+        position: static !important;
+        transform: none !important;
+        box-shadow: none;
+        border: 1px solid #dee2e6;
+        margin-top: 0.5rem;
+        right: auto !important;
+        left: auto !important;
+    }
+
+    .notifications-dropdown {
+        width: 100% !important;
+    }
+}
+
+
+    .navbar-expand-lg .navbar-collapse {
+    border-bottom: 1px solid #dee2e6;
+
+    }
+

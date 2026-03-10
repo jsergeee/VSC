@@ -550,6 +550,23 @@ document.addEventListener('DOMContentLoaded', function() {
             week: 'Неделя',
             day: 'День'
         },
+                        slotMinTime: '08:00:00',
+                slotMaxTime: '22:00:00',
+                allDaySlot: false,
+                slotDuration: '00:30:00',
+                events: {{ calendar_events|safe }},
+                eventDisplay: 'block',
+                displayEventTime: false,
+                eventClick: function(info) {
+                    if (info.event.url) {
+                        window.location.href = info.event.url;
+                        info.jsEvent.preventDefault();
+                    }
+                },
+                selectConstraint: {
+                    start: '08:00',
+                    end: '22:00',
+                },
         events: {{ calendar_events|safe }},
         
         // Обновляем ссылку после полной загрузки

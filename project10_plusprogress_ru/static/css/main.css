@@ -889,26 +889,20 @@ img {
 .object-tools {
   display: none;
 }
+
 .main-content {
     grid-row: 2;
     background: #f8f9fa;
     position: relative;
     width: 100%;
+    margin-top: 170px;
 }
 
-
 .header {
-    position: sticky !important;
-    top: 0;
-    left: 0;
-    right: 0;
-    background: white;
-    border-bottom: 1px solid var(--border-light);
-    z-index: 9999;
-    height: auto;
     grid-row: 1;
-    box-shadow: 0px 0px 25px 0px rgba(0, 0, 0, 0.04)
-    transition: all 0.25s ease-in-out 0s;
+
+
+
 }
 
 .header .container {
