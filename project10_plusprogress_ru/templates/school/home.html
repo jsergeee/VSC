@@ -1,125 +1,100 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}Плюс Прогресс - английский, русский, математика, биология онлайн. Подготовка к ОГЭ, ЕГЭ.{% endblock %}
-
 {% block content %}
 <!--begin home section -->
 <section class="home-section" id="home">
-    <div class="home-section-overlay"></div>
-    <div class="container">
-        <div class="row">
-            <div class="col-md-6 margin-top-20">
-                <h1>Английский онлайн</h1>
+    <!-- КНОПКА ЗАЯВКИ -->
+    <div style="text-align: right; margin-bottom: 20px; position: sticky;">
 
-                <div style="display: inline-flex; margin-top: 10px">
-                    <div style="width: 50%">
-                        <p class="hero-text">Взрослым:</p>
-                        <ul style="margin-top: -20px; margin-left: 2px; color: black">
-                            <li>бизнес английский</li>
-                            <li>подготовка к экзаменам (IELTS, TOEFL и др.)</li>
-                            <li>подготовка к собеседованию</li>
-                            <li>английский для путешествий</li>
-                            <li>общий английский</li>
-                            <li>разговорный английский</li>
-                        </ul>
-                    </div>
-                    <div style="margin-left: 40px; width: 50%">
-                        <p class="hero-text">Детям и подросткам:</p>
-                        <ul style="margin-top: -20px; margin-left: 2px; color: black">
-                            <li>курс чтения</li>
-                            <li>школьный английский</li>
-                            <li>подготовка к экзаменам (ОГЭ, ЕГЭ и др.)</li>
-                            <li>разговорный английский</li>
-                            <li>углубленное изучение английского</li>
-                            <li>английский для путешествий</li>
-                            <li>разбор трудных тем</li>
-                            <li>помощь в выполнении домашнего задания</li>
-                        </ul>
-                    </div>
-                </div>
+    </div>
 
-                <h4>Русский, математика, биология онлайн</h4>
 
-                <div style="display: inline-flex; margin-top: 10px">
-                    <div style="width: 50%">
-                        <p class="hero-text">Математика онлайн:</p>
-                        <ul style="margin-top: -20px; margin-left: 2px; color: black">
-                            <li>помощь в освоении школьной программы</li>
-                            <li>углубленное изучение математики</li>
-                            <li>разбор трудных тем</li>
-                            <li>подготовка к ОГЭ, ЕГЭ</li>
-                        </ul>
-                    </div>
-                    <div style="margin-left: 40px; width: 50%">
-                        <p class="hero-text">Русский язык онлайн:</p>
-                        <ul style="margin-top: -20px; margin-left: 2px; color: black">
-                            <li>помощь в освоении школьной программы</li>
-                            <li>углубленное изучение русского языка</li>
-                            <li>разбор трудных тем</li>
-                            <li>подготовка к ОГЭ, ЕГЭ</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div style="display: inline-flex; margin-top: 10px">
-                    <div style="width: 50%">
-                        <p class="hero-text">Биология онлайн:</p>
-                        <ul style="margin-top: -20px; margin-left: 2px; color: black">
-                            <li>помощь в освоении школьной программы</li>
-                            <li>углубленное изучение биологии</li>
-                            <li>разбор трудных тем</li>
-                            <li>подготовка к ОГЭ, ЕГЭ</li>
-                        </ul>
-                    </div>
-                    <div style="margin-left: 40px; width: 50%">
-                        <p class="hero-text">Предметы начальной школы:</p>
-                        <ul style="margin-top: -20px; margin-left: 2px; color: black">
-                            <li>помощь в освоении школьной программы</li>
-                            <li>углубленное изучение предметов начальной школы</li>
-                            <li>разбор трудных тем</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <a href="#about" class="btn-red scrool">Узнать больше</a>
-            </div>
-
-            <!-- ФОРМА ПРЯМО НА СТРАНИЦЕ (без модального окна) -->
-            <div class="col-md-5 offset-md-1">
-                <div class="h3 register-form-home-wrapper" style="font-family: 'Roboto Slab'; color: #071e55">Оставить заявку</div>
-
-                <div class="register-form-home-wrapper wow bounceIn" data-wow-delay="0.5s">
-                    <h3>Заявка на бесплатный пробный урок</h3>
-                    <p>Запишитесь на бесплатный пробный урок. Мы определим ваш уровень, покажем, как проходит урок,
-                        ответим на все ваши вопросы:</p>
-
-                    <div>
-                        <p class="register_success_box_home" style="display:none;">Мы успешно получили вашу заявку, Спасибо!</p>
-
-                        <form method="post" action="{% url 'trial_request_ajax' %}" class="register-form-home register mt-3">
-                            {% csrf_token %}
-                            <input class="register-input-home" required name="name" placeholder="Ваше имя" type="text">
-                            <input class="register-input-home" name="email" placeholder="Адрес электронной почты" type="email">
-                            <input class="register-input-home" required name="phone" placeholder="Ваш телефон" type="text">
-                            <select required name="subject" class="register-input-home">
-                                <option disabled selected hidden="">Предмет</option>
-                                <option value="Английский">Английский</option>
-                                <option value="Русский">Русский</option>
-                                <option value="Математика">Математика</option>
-                                <option value="Биология">Биология</option>
-                            </select>
-                            <input value="Отправить" class="register-submit-home" type="submit">
-                        </form>
-                    </div>
-                </div>
-            </div>
+    <!-- ЦЕНТРИРОВАННЫЙ H1 ВВЕРХУ -->
+    <div class="row">
+        <div class="col-12 text-center mb-4">
+            <h1 class="main-title">Онлайн-школа Плюс Прогресс: обучение английскому, русскому, математике и
+                биологии</h1>
         </div>
     </div>
-    <a id="blink-wa" href="https://t.me/plusprogress?text=Здравствуйте, пишу Вам с сайта." target="_blank">Написать <i class="fa fa-whatsapp ml-1"></i></a>
+    <div class="row">
+        <!-- ЛЕВАЯ ЧАСТЬ - КОНТЕНТ (РАСШИРЕНА) -->
+        <div class="col-md-7 margin-top-20">
+            <h2 class="section-subtitle">Английский онлайн</h2>
+            <div class="subjects-grid">
+                <div class="subject-column">
+                    <p class="hero-text">Взрослым:</p>
+                    <ul class="subject-list">
+                        <li>бизнес английский</li>
+                        <li>подготовка к экзаменам (IELTS, TOEFL и др.)</li>
+                        <li>подготовка к собеседованию</li>
+                        <li>английский для путешествий</li>
+                        <li>общий английский</li>
+                        <li>разговорный английский</li>
+                    </ul>
+                </div>
+                <div class="subject-column">
+                    <p class="hero-text">Детям и подросткам:</p>
+                    <ul class="subject-list">
+                        <li>курс чтения</li>
+                        <li>школьный английский</li>
+                        <li>подготовка к экзаменам (ОГЭ, ЕГЭ и др.)</li>
+                        <li>разговорный английский</li>
+                        <li>углубленное изучение английского</li>
+                        <li>английский для путешествий</li>
+                        <li>разбор трудных тем</li>
+                        <li>помощь в выполнении домашнего задания</li>
+                    </ul>
+                </div>
+            </div>
+            <h3 class="section-subtitle">Русский, математика, биология онлайн</h3>
+            <div class="subjects-grid">
+                <div class="subject-column">
+                    <p class="hero-text">Математика онлайн:</p>
+                    <ul class="subject-list">
+                        <li>помощь в освоении школьной программы</li>
+                        <li>углубленное изучение математики</li>
+                        <li>разбор трудных тем</li>
+                        <li>подготовка к ОГЭ, ЕГЭ</li>
+                    </ul>
+                </div>
+                <div class="subject-column">
+                    <p class="hero-text">Русский язык онлайн:</p>
+                    <ul class="subject-list">
+                        <li>помощь в освоении школьной программы</li>
+                        <li>углубленное изучение русского языка</li>
+                        <li>разбор трудных тем</li>
+                        <li>подготовка к ОГЭ, ЕГЭ</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="subjects-grid">
+                <div class="subject-column">
+                    <p class="hero-text">Биология онлайн:</p>
+                    <ul class="subject-list">
+                        <li>помощь в освоении школьной программы</li>
+                        <li>углубленное изучение биологии</li>
+                        <li>разбор трудных тем</li>
+                        <li>подготовка к ОГЭ, ЕГЭ</li>
+                    </ul>
+                </div>
+                <div class="subject-column">
+                    <p class="hero-text">Предметы начальной школы:</p>
+                    <ul class="subject-list">
+                        <li>помощь в освоении школьной программы</li>
+                        <li>углубленное изучение предметов начальной школы</li>
+                        <li>разбор трудных тем</li>
+                    </ul>
+                </div>
+            </div>
+            <a href="#about" class="btn-red scrool">Узнать больше</a>
+        </div>
+    </div>
+    </div>
+<!--    <a id="blink-wa" href="https://t.me/plusprogress?text=Здравствуйте, пишу Вам с сайта." target="_blank">
+        Написать <i class="fa fa-whatsapp ml-1"></i>
+    </a>-->
 </section>
-
-<!-- УДАЛЯЕМ МОДАЛЬНОЕ ОКНО - оно больше не нужно -->
 
 <!--begin partners-section-->
 <div class="partners-section">
@@ -475,7 +450,8 @@
             <div class="card"></div>
         </div>
     </div>
+
 </section>
 
-<!-- Удаляем все скрипты для модальных окон, так как их больше нет -->
 {% endblock %}
+

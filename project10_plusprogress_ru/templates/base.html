@@ -5,98 +5,137 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Онлайн школа английского, русского, математики, биологии Плюс Прогресс">
     <title>{% block title %}Плюс Прогресс - онлайн школа{% endblock %}</title>
-
     {% load static %}
-
     <!-- Bootstrap CSS -->
     <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
-
-    <!-- Template CSS (именно в таком порядке как в index.html) -->
+    <!-- Template CSS -->
     <link href="{% static 'css/style.css' %}" rel="stylesheet">
     <link href="{% static 'css/animate.css' %}" rel="stylesheet">
     <link href="{% static 'css/pe-icon-7-stroke.css' %}" rel="stylesheet">
     <link href="{% static 'css/style-magnific-popup.css' %}" rel="stylesheet">
-
     <!-- Font Awesome -->
     <link rel="stylesheet" href="{% static 'css/all.min.css' %}">
-
-    <!-- Дополнительные стили проекта (если нужны) -->
+    <!-- Дополнительные стили -->
     <link href="{% static 'css/main.css' %}" rel="stylesheet">
-
-    <!-- FullCalendar (если нужен) -->
+    <!-- FullCalendar -->
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet'/>
-
     <!-- Шрифты -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Roboto+Slab:wght@600&display=swap"
           rel="stylesheet">
-
     <style>
-        /* ГЛАВНЫЙ FLEX-КОНТЕЙНЕР */
-        body {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            margin: 0;
-            padding: 0;
-            padding-top: 100px; /* Отступ для фиксированной шапки */
+        /* Временные стили для кнопки */
+        .btn-application {
+            position: fixed !important;
+            top: 93vh;
+            right: 30px !important;
+            z-index: 9999 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: #e52f37 !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 50px !important;
+            padding: 12px 25px !important;
+            font-size: 16px !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+            box-shadow: 0 4px 15px rgba(229, 47, 55, 0.3) !important;
+            border: 2px solid #e52f37 !important;
+            white-space: nowrap !important;
+            letter-spacing: 0.5px !important;
+            margin: 0 !important;
+            animation: pulse 2s infinite;
+
         }
 
-        /* ФИКСИРОВАННАЯ ШАПКА */
-        .header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            width: 100%;
-            background: white;
-            z-index: 1000;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        @keyframes fancyPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 4px 20px rgba(229, 47, 55, 0.4);
+    }
+    25% {
+        transform: scale(1.05);
+        box-shadow: 0 8px 30px rgba(229, 47, 55, 0.6);
+    }
+    50% {
+        transform: scale(1);
+        box-shadow: 0 4px 20px rgba(229, 47, 55, 0.4);
+    }
+    75% {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 30px rgba(229, 47, 55, 0.6);
+    }
+    100% {
+        transform: translateY(0);
+        box-shadow: 0 4px 20px rgba(229, 47, 55, 0.4);
+    }
+}
+
+.btn-application:hover {
+    transform: scale(1.1) !important;
+    background: white !important;
+    color: #e52f37 !important;
+    box-shadow: 0 8px 30px rgba(229, 47, 55, 0.6) !important;
+    animation-play-state: paused !important;
+}
+
+        .btn-application i {
+            font-size: 18px !important;
+            margin-right: 8px !important;
         }
 
-        /* ОСНОВНОЙ КОНТЕНТ */
-        .main-content {
-            flex: 1 0 auto;
-            width: 100%;
-            background: #f8f9fa;
+        .btn-application:hover {
+            background: white !important;
+            color: #e52f37 !important;
+            transform: translateY(-2px) !important;
         }
 
-        /* ПОДВАЛ */
-        .footer {
-            flex-shrink: 0;
-            width: 100%;
-            background: #f8f9fa;
-            padding: 20px 0;
-        }
-
-        /* Контейнер для контента */
-        .content-wrapper {
-            padding: 20px 0;
-        }
-
-        /* Переопределяем проблемные стили header из других CSS */
-        .navbar-fixed-top {
-            position: relative !important;
+        /* Временные стили для модалки */
+        .custom-modal {
+            display: none !important;
+            position: fixed !important;
             top: 0 !important;
             left: 0 !important;
-            right: 0 !important;
-            margin-bottom: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 2147483647 !important;
         }
 
-        .auth-container {
-            margin-top: 120px !important; /* Отступ от фиксированной шапки */
-            min-height: calc(100vh - 200px); /* Минимальная высота для центрирования */
-            display: flex;
-            align-items: center;
+        .custom-modal.show {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        .custom-modal-overlay {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: rgba(0, 0, 0, 0.7) !important;
+            z-index: 2147483647 !important;
+        }
+
+        .custom-modal-container {
+            position: relative !important;
+            z-index: 2147483648 !important;
+            background: white !important;
+            max-width: 500px !important;
+            width: 90% !important;
+            border-radius: 20px !important;
+            margin: auto !important;
+            max-height: 90vh !important;
+            overflow-y: auto !important;
         }
     </style>
 </head>
-
 <body>
 <!-- ШАПКА -->
 <header class="header">
     {% include 'includes/header.html' %}
 </header>
-
 <!-- ОСНОВНОЙ КОНТЕНТ -->
 <main class="main-content">
     {% if messages %}
@@ -109,158 +148,271 @@
         {% endfor %}
     </div>
     {% endif %}
-
     <div class="content-wrapper">
         {% block content %}{% endblock %}
     </div>
 </main>
-
 <!-- ПОДВАЛ -->
 <footer class="footer">
     {% include 'includes/footer.html' %}
 </footer>
-
-<!-- 1. Сначала jQuery -->
+<!-- КНОПКА ЗАЯВКИ -->
+<button type="button" class="btn-application" id="openFormBtn">
+    <i class="fa fa-pencil-square-o mr-2" aria-hidden="true"></i>
+    Оставить заявку
+</button>
+<!-- КАСТОМНАЯ МОДАЛКА - ПОВЕРХ ВСЕГО -->
+<div class="custom-modal" id="applicationModal">
+    <div class="custom-modal-overlay" id="modalOverlay"></div>
+    <div class="custom-modal-container">
+        <div class="custom-modal-header">
+            <h3>Бесплатный пробный урок</h3>
+            <button class="custom-modal-close" id="closeModalBtn">&times;</button>
+        </div>
+        <div class="custom-modal-body">
+            <p class="text-muted mb-4">Заполните форму, и мы свяжемся с вами в течение 15 минут</p>
+            <p class="register_success_box_home" style="display:none;">
+                <i class="fa fa-check-circle mr-2"></i>
+                Мы успешно получили вашу заявку! Спасибо, что выбрали нас.
+            </p>
+            <form method="post" action="{% url 'trial_request_ajax' %}" class="register-form-home" id="trialForm">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="modalNameInput">Ваше имя <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fa fa-user"></i></span>
+                        </div>
+                        <input class="form-control" id="modalNameInput" required name="name" placeholder="Например: Анна" type="text">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="modalPhoneInput">Телефон <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fa fa-phone"></i></span>
+                        </div>
+                        <input class="form-control" id="modalPhoneInput" required name="phone" placeholder="+7 (___) ___-__-__" type="text">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="modalEmailInput">Email</label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fa fa-envelope"></i></span>
+                        </div>
+                        <input class="form-control" id="modalEmailInput" name="email" placeholder="example@mail.ru" type="email">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="modalSubjectSelect">Предмет <span class="text-danger">*</span></label>
+                    <select required name="subject" class="form-control" id="modalSubjectSelect">
+                        <option disabled selected value="">Выберите предмет</option>
+                        <option value="Английский">🇬🇧 Английский язык</option>
+                        <option value="Русский">🇷🇺 Русский язык</option>
+                        <option value="Математика">📐 Математика</option>
+                        <option value="Биология">🧬 Биология</option>
+                        <option value="Другое">📚 Другой предмет</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="modalAgeSelect">Возраст ученика</label>
+                    <select name="age" class="form-control" id="modalAgeSelect">
+                        <option disabled selected value="">Выберите возраст</option>
+                        <option value="5-7">5-7 лет (дошкольник)</option>
+                        <option value="8-12">8-12 лет (младшие классы)</option>
+                        <option value="13-17">13-17 лет (подростки)</option>
+                        <option value="18+">18+ (взрослые)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="modalCommentInput">Дополнительные пожелания</label>
+                    <textarea class="form-control" id="modalCommentInput" name="comment" rows="2" placeholder="Напишите, что важно учесть..."></textarea>
+                </div>
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" id="modalAgreeCheck" required checked>
+                    <label class="form-check-label small" for="modalAgreeCheck">
+                        Согласен(на) на обработку персональных данных
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block register-submit-home">
+                    <i class="fa fa-paper-plane mr-2"></i>
+                    Отправить заявку
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- СКРИПТЫ -->
 <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
-<!-- 2. WOW.js - ДО того, как его вызовут в plugins.js -->
- 
- <!-- 3. СКРИПТ УВЕДОМЛЕНИЙ - ОЧЕНЬ ВАЖНО! -->
-<script src="{% static 'js/notifications.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+<script src="{% static 'js/bootstrap.min.js' %}"></script>
 <script src="{% static 'js/wow.js' %}"></script>
 <script>new WOW().init();</script>
-
-<!-- 3. Потом остальные скрипты, которые могут использовать WOW -->
-<script src="{% static 'js/bootstrap.min.js' %}"></script>
+<script src="{% static 'js/notifications.js' %}"></script>
 <script src="{% static 'js/jquery.scrollTo-min.js' %}"></script>
 <script src="{% static 'js/jquery.magnific-popup.min.js' %}"></script>
 <script src="{% static 'js/jquery.nav.js' %}"></script>
-<script src="{% static 'js/plugins.js' %}"></script> 
+<script src="{% static 'js/plugins.js' %}"></script>
 <script src="{% static 'js/custom.js' %}"></script>
-
-
-<script>
-// 1. Сначала определяем функцию получения cookie
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
-// 2. Потом получаем токен
-const csrftoken = getCookie('csrftoken');
-
-// 3. Затем настраиваем AJAX
-$.ajaxSetup({
-    beforeSend: function(xhr, settings) {
-        if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
-            xhr.setRequestHeader("X-CSRFToken", csrftoken);
-        }
-    }
-});
-
-// 4. И только потом весь остальной код
-$(document).ready(function() {
-    // ===== ОБРАБОТКА ФОРМЫ ЗАЯВКИ =====
-    $('.register-form-home').on('submit', function(e) {
-        e.preventDefault();
-        
-        var form = $(this);
-        var submitBtn = form.find('input[type="submit"]');
-        var originalValue = submitBtn.val();
-        
-        // Блокируем кнопку
-        submitBtn.prop('disabled', true).val('Отправка...');
-        
-        // Прячем старое сообщение об успехе
-        $('.register_success_box_home').hide();
-        
-        $.ajax({
-            url: form.attr('action'),
-            method: 'POST',
-            data: form.serialize(),
-            dataType: 'json',
-            success: function(response) {
-                // Показываем сообщение об успехе
-                $('.register_success_box_home').show();
-                form[0].reset(); // Очищаем форму
-                
-                // Автоматически скрываем сообщение через 5 секунд
-                setTimeout(function() {
-                    $('.register_success_box_home').fadeOut();
-                }, 5000);
-            },
-            error: function(xhr) {
-                var errorMsg = 'Ошибка отправки. Попробуйте позже.';
-                if (xhr.responseJSON && xhr.responseJSON.error) {
-                    errorMsg = xhr.responseJSON.error;
-                }
-                alert(errorMsg);
-            },
-            complete: function() {
-                // Разблокируем кнопку
-                submitBtn.prop('disabled', false).val(originalValue);
-            }
-        });
-    });
-    
-    // ===== ОБРАБОТКА ССЫЛОК С ЯКОРЯМИ =====
-    // Перехватываем клики по ссылкам с якорем
-    $('a[href*="#"]').on('click', function(e) {
-        var href = $(this).attr('href');
-
-        // Если ссылка ведет на другую страницу с якорем
-        if (href.indexOf('#') > 0 && href.indexOf('/') === 0) {
-            var parts = href.split('#');
-            var url = parts[0];
-            var hash = '#' + parts[1];
-
-            // Если мы не на целевой странице
-            if (window.location.pathname !== url && url !== '') {
-                window.location.href = href;
-                e.preventDefault();
-                return false;
-            }
-        }
-    });
-
-    // Плавная прокрутка для якорей на текущей странице
-    $('a[href^="#"]').on('click', function(e) {
-        var hash = $(this).attr('href');
-        var target = $(hash);
-
-        if (target.length) {
-            e.preventDefault();
-            $('html, body').animate({
-                scrollTop: target.offset().top - 100
-            }, 800);
-        }
-    });
-
-    // Проверяем якорь при загрузке
-    if (window.location.hash) {
-        var hash = window.location.hash;
-        var target = $(hash);
-        if (target.length) {
-            setTimeout(function() {
-                $('html, body').animate({
-                    scrollTop: target.offset().top - 100
-                }, 800);
-            }, 500);
-        }
-    }
-});
-</script>
-<!-- 4. Остальные скрипты -->
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/ru.js'></script>
+<script>
+    // Функция для получения cookie
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    const csrftoken = getCookie('csrftoken');
+
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            }
+        }
+    });
+
+    $(document).ready(function() {
+        // Код для модалки
+        var modal = $('#applicationModal');
+        var openBtn = $('#openFormBtn');
+        var closeBtn = $('#closeModalBtn');
+        var overlay = $('#modalOverlay');
+
+        openBtn.on('click', function() {
+            modal.addClass('show');
+            $('body').css('overflow', 'hidden');
+        });
+
+        closeBtn.on('click', function() {
+            closeModal();
+        });
+
+        overlay.on('click', function() {
+            closeModal();
+        });
+
+        $(document).on('keydown', function(e) {
+            if (e.key === 'Escape' && modal.hasClass('show')) {
+                closeModal();
+            }
+        });
+
+        function closeModal() {
+            modal.removeClass('show');
+            $('body').css('overflow', '');
+            $('#trialForm')[0].reset();
+            $('.is-invalid').removeClass('is-invalid');
+            $('.register_success_box_home').hide();
+        }
+
+        // Маска для телефона
+        $('#modalPhoneInput').on('input', function() {
+            var phone = $(this).val().replace(/\D/g, '');
+            if (phone.length > 0) {
+                if (phone.length <= 1) {
+                    $(this).val('+7 (' + phone);
+                } else if (phone.length <= 4) {
+                    $(this).val('+7 (' + phone.substring(1, 4));
+                } else if (phone.length <= 7) {
+                    $(this).val('+7 (' + phone.substring(1, 4) + ') ' + phone.substring(4, 7));
+                } else if (phone.length <= 9) {
+                    $(this).val('+7 (' + phone.substring(1, 4) + ') ' + phone.substring(4, 7) + '-' + phone.substring(7, 9));
+                } else {
+                    $(this).val('+7 (' + phone.substring(1, 4) + ') ' + phone.substring(4, 7) + '-' + phone.substring(7, 9) + '-' + phone.substring(9, 11));
+                }
+            }
+        });
+
+        // Отправка формы
+        $('#trialForm').on('submit', function(e) {
+            e.preventDefault();
+
+            var form = $(this);
+            var submitBtn = form.find('button[type="submit"]');
+            var originalText = submitBtn.html();
+
+            // Валидация
+            var isValid = true;
+
+            var phone = $('#modalPhoneInput').val().replace(/\D/g, '');
+            if (phone.length < 11) {
+                $('#modalPhoneInput').addClass('is-invalid');
+                if (!$('#modalPhoneInput').next('.invalid-feedback').length) {
+                    $('#modalPhoneInput').after('<div class="invalid-feedback">Введите корректный номер</div>');
+                }
+                isValid = false;
+            } else {
+                $('#modalPhoneInput').removeClass('is-invalid');
+                $('#modalPhoneInput').next('.invalid-feedback').remove();
+            }
+
+            if ($('#modalNameInput').val().trim().length < 2) {
+                $('#modalNameInput').addClass('is-invalid');
+                if (!$('#modalNameInput').next('.invalid-feedback').length) {
+                    $('#modalNameInput').after('<div class="invalid-feedback">Введите имя</div>');
+                }
+                isValid = false;
+            } else {
+                $('#modalNameInput').removeClass('is-invalid');
+                $('#modalNameInput').next('.invalid-feedback').remove();
+            }
+
+            if (!$('#modalSubjectSelect').val()) {
+                $('#modalSubjectSelect').addClass('is-invalid');
+                if (!$('#modalSubjectSelect').next('.invalid-feedback').length) {
+                    $('#modalSubjectSelect').after('<div class="invalid-feedback">Выберите предмет</div>');
+                }
+                isValid = false;
+            } else {
+                $('#modalSubjectSelect').removeClass('is-invalid');
+                $('#modalSubjectSelect').next('.invalid-feedback').remove();
+            }
+
+            if (!isValid) return;
+
+            // Блокируем кнопку
+            submitBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin mr-2"></i>Отправка...');
+
+            $.ajax({
+                url: form.attr('action'),
+                method: 'POST',
+                data: form.serialize(),
+                dataType: 'json',
+                success: function(response) {
+                    $('.register_success_box_home').fadeIn();
+                    form[0].reset();
+
+                    setTimeout(function() {
+                        $('.register_success_box_home').fadeOut();
+                        closeModal();
+                    }, 3000);
+                },
+                error: function(xhr) {
+                    var errorMsg = 'Ошибка отправки. Попробуйте позже.';
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMsg = xhr.responseJSON.error;
+                    }
+                    alert(errorMsg);
+                },
+                complete: function() {
+                    submitBtn.prop('disabled', false).html(originalText);
+                }
+            });
+        });
+    });
+</script>
 </body>
 </html>

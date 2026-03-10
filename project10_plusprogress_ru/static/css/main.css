@@ -60,9 +60,8 @@ body {
   color: var(--text-primary);
   background: var(--bg-primary);
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  padding-top: 80px;
+  grid-template-rows: auto 1fr auto;
+  display: grid;
 }
 
 h1,
@@ -122,13 +121,14 @@ img {
   width: 100%;
   max-width: var(--container-width);
   margin: 0 auto;
-  padding: 20px;
+  padding: 20px 20px 0 20px;
 }
 
 .row {
   display: flex;
   flex-wrap: wrap;
-  margin: 0 calc(var(--space-sm) * -1);
+/*  margin: 0 calc(var(--space-sm) * -1);*/
+    margin: 1px;
 }
 
 .col {
@@ -785,11 +785,6 @@ img {
   height: 20px !important;
 }
 
-@media (min-width: 577px) and (max-width: 768px) {
-  .fc .fc-timegrid-slot {
-    height: 30px !important;
-  }
-}
 
 .fc .fc-timegrid-slot-label {
   height: 40px !important;
@@ -893,17 +888,24 @@ img {
 .object-tools {
   display: none;
 }
+.main-content {
+    grid-row: 2;
+    background: #f8f9fa;
+    position: relative;
+    width: 100%;
+}
+
 
 .header {
-    position: fixed;
+    position: sticky !important;
     top: 0;
     left: 0;
     right: 0;
     background: white;
     border-bottom: 1px solid var(--border-light);
-    padding: 0px !important;
-    z-index: 1000;
-    height: 60px;
+    z-index: 9999;
+    height: auto;
+    grid-row: 1;
 }
 
 .header .container {
@@ -923,7 +925,8 @@ img {
   background: #f1faff;
   color: white;
   padding: var(--space-xl) 0;
-  margin-top: auto;
+  /*margin-top: auto;*/
+  grid-row: 3;
 }
 
 .home-page .hero {
@@ -1488,40 +1491,6 @@ img {
 
 .w-auto {
   width: auto !important;
-}
-
-@media (max-width: 576px) {
-  .container {
-    padding: 0 var(--space-xs);
-  }
-  h1 {
-    font-size: 2rem;
-  }
-  h2 {
-    font-size: 1.75rem;
-  }
-  .d-none-mobile {
-    display: none !important;
-  }
-  .d-block-mobile {
-    display: block !important;
-  }
-  .balance-amount {
-    font-size: 36px;
-  }
-  .quick-stats {
-    grid-template-columns: 1fr;
-  }
-  .legend {
-    flex-direction: column;
-    gap: 10px;
-  }
-}
-
-@media (min-width: 577px) and (max-width: 768px) {
-  .balance-amount {
-    font-size: 42px;
-  }
 }
 
 /* Уведомления */
