@@ -221,6 +221,12 @@ iframe {
     color: #333;
     position: relative;
     padding-left: 20px;
+    
+}
+
+.subject-list p {
+    background-color: rgba(0, 0, 0, 0.1);
+    
 }
 
 .subject-list li:before {
@@ -748,9 +754,9 @@ iframe {
 .navbar-fixed-top {
 	position: relative!important;
 	background-color: #fff;
-	border-bottom: 1px solid #efefef;
-	box-shadow: 0px 0px 25px 0px rgba(0, 0, 0, 0.04)!important;
-	transition: background-color 0.25s ease 0s;
+	/* border-bottom: 1px solid #efefef; */
+	/* box-shadow: 0px 0px 25px 0px rgba(0, 0, 0, 0.04)!important; */
+	/* transition: background-color 0.25s ease 0s; */
 	min-height: auto;
 /*	height: 150px;*/
 }
@@ -759,9 +765,9 @@ iframe {
 	top: 0;
 	margin-top: 0;
 	background-color: #fff!important;
-	border-bottom: 1px solid #efefef;
-	box-shadow: 0px 0px 25px 0px rgba(0, 0, 0, 0.04)!important;
-	transition: all 0.25s ease-in-out 0s;
+	/* border-bottom: 1px solid #efefef; */
+	/* box-shadow: 0px 0px 25px 0px rgba(0, 0, 0, 0.04)!important; */
+	/* transition: all 0.25s ease-in-out 0s; */
 }
 
 .navbar-fixed-top.opaque .navbar-nav > li{
@@ -824,16 +830,6 @@ iframe {
     white-space: nowrap;
 }
 
-
-
-
-
-/* Для социальных ссылок и авторизации можно оставить перенос */
-#navbarSocial .navbar-nav,
-#navbarAuth .navbar-nav {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-}
 
 .navbar-fixed-top.opaque .navbar-nav > li > a.discover-btn {
 	color: #fff!important;
@@ -2243,9 +2239,8 @@ ul.benefits.white li i {
      }
 
 
-    .add_palitra,
-    #blink-wa {
-        top: 92vh;
+    .add_palitra #blink-wa {
+            top: 92vh;
     }
         #navbarAuth {
         display: block !important;
@@ -2300,13 +2295,11 @@ ul.benefits.white li i {
 
     #navbarAuth .navbar-nav {
 
-        width: 100% !important;
         flex-direction: row !important;
     }
 
     #navbarAuth .nav-item {
-        width: 100% !important;
-        text-align: left !important;
+       text-align: left !important;
     }
 
     #navbarAuth .dropdown-menu {
@@ -2346,13 +2339,13 @@ ul.benefits.white li i {
     }
 
     #HeadNavbarAuth .navbar-nav {  /* ИСПРАВЛЕНО */
-        width: 100% !important;
+       
         flex-direction: row !important;
         flex-direction: row !important;
     }
 
     #navbarAuth .nav-item {
-        width: 100% !important;
+        
         text-align: left !important;
     }
 
@@ -4335,10 +4328,10 @@ textarea.form-control {
     align-items: center;
     justify-content: center;
     width: 100%;
-    padding: 0 1rem 0 0;
     max-width: var(--container-width);
     margin: 0px auto 0 auto;
-    padding: 0 20px 0 20px;
+    padding: 0px 20px 0 20px;
+    max-height: 30px;
 }
 
 #HeadNavbarAuth .navbar-nav {
@@ -4349,6 +4342,7 @@ textarea.form-control {
     margin: 0;
     padding: 0;
     list-style: none;
+    justify-content: flex-end;
 }
 
 #HeadNavbarAuth .nav-item {
@@ -4396,7 +4390,7 @@ textarea.form-control {
 
 
 .col-md-7 {
-margin-left: 10%;
-margin-right: auto;
-background:
+margin: auto auto auto auto;
+/* background-color: rgba(255, 255, 255, 0.3); */
+
 }
