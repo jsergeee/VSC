@@ -7,7 +7,7 @@
     <!-- ЦЕНТРИРОВАННЫЙ H1 ВВЕРХУ -->
     <div class="row">
         <div class="col-12 text-center mb-4">
-            <h1 class="main-title">Онлайн-школа Плюс Прогресс <br> обучение онлайн: <br>  английский, русский, математика, информатика, история, обществознание...
+            <h1 class="main-title">Онлайн-ресурс Плюс Прогресс: <br> <!--обучение онлайн: <br>-->  английский, русский, математика, информатика, история, обществознание...
                 </h1>
         </div>
     </div>
@@ -168,129 +168,77 @@
 <!--begin testimonials section -->
 <section class="section-grey" id="testimonials">
     <div class="container">
-        <h2 class="section-title" style="text-align: center; margin-bottom: 25px">Отзывы клиентов</h2>
+        <div class="row">
+            <div class="col-12 d-flex justify-content-between align-items-center mb-4">
+                <h2 class="section-title mb-0">Отзывы клиентов</h2>
+                <button type="button" class="btn btn-outline-feedback open-feedback-modal">
+                    <i class="fa fa-pencil"></i> Оставить отзыв
+                </button>
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-md-12 mx-auto padding-bottom-40">
+                {% if feedbacks %}
                 <div id="carouselIndicators2" class="carousel slide" data-ride="carousel">
                     <ol class="carousel-indicators testimonials-indicators">
-                        <li data-target="#carouselIndicators2" data-slide-to="0" class="active"></li>
-                        <li data-target="#carouselIndicators2" data-slide-to="1"></li>
-                        <li data-target="#carouselIndicators2" data-slide-to="2"></li>
-                        <li data-target="#carouselIndicators2" data-slide-to="3"></li>
-                        <li data-target="#carouselIndicators2" data-slide-to="4"></li>
-                        <li data-target="#carouselIndicators2" data-slide-to="5"></li>
+                        {% for feedback in feedbacks %}
+                        <li data-target="#carouselIndicators2" data-slide-to="{{ forloop.counter0 }}" {% if forloop.first %}class="active"{% endif %}></li>
+                        {% endfor %}
                     </ol>
 
                     <div class="carousel-inner">
-                        <!-- Отзыв 1 -->
-                        <div class="carousel-item active">
+                        {% for feedback in feedbacks %}
+                        <div class="carousel-item {% if forloop.first %}active{% endif %}">
                             <div class="row align-items-center testim-inner">
-                                <div class="col-md-10">
+                                <div class="col-md-10 mx-auto">
                                     <i class="fa fa-quote-left" aria-hidden="true"></i>
-                                    <p>Добрый день! Сын с июня месяца занимается индивидуально онлайн обучением
-                                        английского языка у Гульмиры! Занимаясь онлайн занятиями, поняли что, это очень
-                                        удобно, нет проблем, ребенок сам подключается онлайн. Занимаемся 2раза в неделю
-                                        по 40 мин. За это время мы получили огромные знания, все понятно, доступно и
-                                        очень интересно. А самое главное, ребенок получает огромное удовольствие,
-                                        особенно когда замечаешь большой прорыв за короткий срок в школе. Сейчас всем
-                                        своим знакомым с удовольствием предлагаю данного педагога.</p>
-                                    <h6>Динара<span>, мама Таира (8 лет).</span></h6>
+                                    <p>{{ feedback.text|linebreaksbr }}</p>
+                                    <h6>
+                                        {{ feedback.name }}
+                                        {% if feedback.role %}
+                                        <span>, {{ feedback.role }}</span>
+                                        {% endif %}
+                                    </h6>
+                                    {% if feedback.teacher %}
+                                    <p class="small text-muted">Учитель: {{ feedback.teacher.user.get_full_name }}</p>
+                                    {% endif %}
+                                    {% if feedback.rating %}
+                                    <div class="feedback-rating">
+                                        {% for i in "12345"|make_list %}
+                                            {% if forloop.counter <= feedback.rating %}
+                                            <i class="fa fa-star text-warning"></i>
+                                            {% else %}
+                                            <i class="fa fa-star-o text-muted"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Отзыв 2 -->
-                        <div class="carousel-item">
-                            <div class="row align-items-center testim-inner">
-                                <div class="col-md-10">
-                                    <i class="fa fa-quote-left" aria-hidden="true"></i>
-                                    <p>Добрый день, хочу выразить свою признательность и уважение к педагогу школы
-                                        английского языка Яковенко Гульмире Булатовне. Моему сыну Александру 8 лет,
-                                        занимается в группе полгода и ни разу не сказал, что не пойдет на английский. С
-                                        первого занятия его привлекло обучение английскому языку именно здесь. До этого
-                                        был опыт поиска курсов, школ и педагогов, но никто так не заинтересовал его как
-                                        Гульмира Булатовна. Очень важно чтобы первый учитель,первый тренер и т д были
-                                        знатоками своего дела, фанатами, любили и уважали тех кого они обучают. Нам
-                                        очень повезло, что наши детки начинали знакомство с языком именно с Гульмирой
-                                        Булатовной, с человеком который и свое дело знает и любит и дети в восторге от
-                                        совместного общения !!! А сколько у Гульмиры Булатовны терпения и
-                                        доброты!!!!Детки ,особенно мальчики,и побаловаться могут и отвлечься, она
-                                        никогда их не ругает и не повышает голос))) Огромное спасибо Вам за любовь к
-                                        нашим деткам,за терпение и конечно за умение в игровой ,увлекательной форме так
-                                        много им дать!</p>
-                                    <h6>Елена<span>, мама Саши.</span></h6>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Отзыв 3 -->
-                        <div class="carousel-item">
-                            <div class="row align-items-center testim-inner">
-                                <div class="col-md-10">
-                                    <i class="fa fa-quote-left" aria-hidden="true"></i>
-                                    <p>Гульмира Булатовна прекрасный преподаватель английского языка. Она помогала мне в
-                                        подготовке к ЕГЭ и я его успешно прошла и уехала в Санкт-Петербург. Через
-                                        некоторое время решила сдать международный экзамен IELTS. Сейчас мы с ней
-                                        занимаемся онлайн. Что для ЕГЭ, что для IELTS Гульмира Булатовна даёт много
-                                        информации для подготовки, разбирает все моменты, которые у меня не получались,
-                                        отвечает на все вопросы. Занятие структурированно, расписание занятий
-                                        гибкое.</p>
-                                    <h6>Анастасия<span>, 29 лет, г. Санкт-Петербург.</span></h6>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Отзыв 4 -->
-                        <div class="carousel-item">
-                            <div class="row align-items-center testim-inner">
-                                <div class="col-md-10">
-                                    <i class="fa fa-quote-left" aria-hidden="true"></i>
-                                    <p>Отличное обучение. За месяц получил навыки общения на английском. Прошёл
-                                        собеседование на англ, вылетаю за границу работать. Очень доволен!</p>
-                                    <h6>Алексей<span>,40 лет, г. Долгопрудный.</span></h6>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Отзыв 5 -->
-                        <div class="carousel-item">
-                            <div class="row align-items-center testim-inner">
-                                <div class="col-md-10">
-                                    <i class="fa fa-quote-left" aria-hidden="true"></i>
-                                    <p>Моя дочь, Александра, занимается английским у Гульмиры Булатовны уже третий год.
-                                        Начинали с нуля, как дополнение к урокам в школе. За это время улучшилось знание
-                                        и понимание языка. Школьные задания дочь выполняет самостоятельно. У неё
-                                        появилась уверенность в своих силах в знание английского. Дочери нравятся
-                                        занятия, так как они проходят в игровой форме, много интересных заданий, формат
-                                        группы небольшой и каждому уделяется максимальное внимание. Спасибо большое
-                                        педагогу, Гульмире Булатовне, за доброжелательное отношение к ребёнку, а также
-                                        за умение заинтересовать ребёнка в предмете, закрепить полученные знания и
-                                        навыки. Планируем продолжать занятия и дальше, уже в старшей группе.</p>
-                                    <h6>Светлана<span>, мама Саши (10 лет).</span></h6>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Отзыв 6 -->
-                        <div class="carousel-item">
-                            <div class="row align-items-center testim-inner">
-                                <div class="col-md-8">
-                                    <i class="fa fa-quote-left" aria-hidden="true"></i>
-                                    <p>Моя дочь занимается у Гульмиры Булатовны уже полтора года, ребенок изучает язык с
-                                        большим удовольствием. Занятия проходят в живой и дружелюбной атмосфере.
-                                        Преподаватель легко находит подход к детям, интересно и доступно обьясняет
-                                        материал. Результаты очень заметны. С удовольствием рекомендую даного
-                                        учителя!</p>
-                                    <h6>Ирина <span>, мама Вики.</span></h6>
-                                </div>
-                            </div>
-                        </div>
+                        {% endfor %}
                     </div>
+
+                    <a class="carousel-control-prev" href="#carouselIndicators2" role="button" data-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="sr-only">Previous</span>
+                    </a>
+                    <a class="carousel-control-next" href="#carouselIndicators2" role="button" data-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="sr-only">Next</span>
+                    </a>
                 </div>
+                {% else %}
+                <div class="text-center">
+                    <p class="text-muted">Пока нет отзывов. Будьте первым!</p>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </section>
+
 
 <!--begin pricing section -->
 <section class="section-grey" id="pricing">

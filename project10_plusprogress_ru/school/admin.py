@@ -22,7 +22,7 @@ from .models import (
     Notification, LessonFeedback, TeacherRating,
     Homework, HomeworkSubmission, GroupLesson, GroupEnrollment,
     LessonAttendance, ScheduleTemplate, ScheduleTemplateStudent,
-    StudentSubjectPrice, UserActionLog, PaymentRequest 
+    StudentSubjectPrice, UserActionLog, PaymentRequest, Feedback
 )
 from .views import schedule_calendar_data, admin_complete_lesson
 
@@ -286,58 +286,313 @@ class SubjectAdmin(admin.ModelAdmin):
 
 # ==================== TEACHER ADMIN ====================
 
+    @admin.register(Teacher)
+    class TeacherAdmin(admin.ModelAdmin):
+        list_display = (
+            'id',
+            'user_link',
+            'user_photo_preview',
+            'display_subjects',
+            'experience',
+            'students_count',
+            'rating_display',
+            'get_telegram_status',
+            'show_on_team',
+            'team_sort_order',
+            'team_highlight',
+            'show_on_team_badge',
+            'team_highlight_badge'
+        )
+        list_filter = ('subjects', 'show_on_team', 'team_highlight')
+        list_editable = ('show_on_team', 'team_sort_order', 'team_highlight')
+        search_fields = ('user__first_name', 'user__last_name', 'user__email')
+        filter_horizontal = ('subjects',)
+        readonly_fields = ('wallet_balance', 'rating_display')
+        change_list_template = "admin/school/teacher/change_list_with_period.html"
 
-class TeacherAdmin(admin.ModelAdmin):
-    """
-    Административный интерфейс для модели Teacher.
+        fieldsets = (
+            (None, {
+                'fields': ('user', 'subjects', 'experience')
+            }),
+            ('Финансы', {
+                'fields': ('wallet_balance', 'payment_details'),
+                'classes': ('wide',),
+            }),
+            ('Дополнительная информация', {
+                'fields': ('education', 'bio', 'certificate'),
+                'classes': ('collapse',),
+            }),
+            ('Рейтинг', {
+                'fields': ('rating_display',),
+                'classes': ('wide',),
+            }),
+            ('👥 Страница команды', {
+                'fields': (
+                    'show_on_team',
+                    'team_sort_order',
+                    'team_highlight',
+                    'team_description',
+                    # 'team_photo', ← если есть, удалите или закомментируйте
+                ),
+                'classes': ('wide', 'collapse'),
+                'description': 'Настройки отображения на странице /team/',
+            }),
+            ('🌐 Социальные сети', {
+                'fields': (
+                    'telegram_url',
+                    'whatsapp_url',
+                    'vk_url',
+                    'instagram_url',
+                ),
+                'classes': ('wide', 'collapse'),
+            }),
+        )
 
-    Предоставляет расширенный функционал для управления учителями,
-    включая финансовую статистику, рейтинги и расчет выплат.
+        def user_photo_preview(self, obj):
+            if obj.user.photo:
+                return format_html(
+                    '<img src="{}" style="max-height: 50px; max-width: 50px; border-radius: 5px; object-fit: cover;" />',
+                    obj.user.photo.url
+                )
+            return format_html(
+                '<div style="width: 50px; height: 50px; background: #f0f0f0; border-radius: 5px; display: flex; align-items: center; justify-content: center;">'
+                '<i class="fa fa-user" style="color: #999;"></i>'
+                '</div>'
+            )
 
-    Особенности:
-        * Отображение связанных данных (ученики, предметы)
-        * Фильтрация по предметам
-        * Расчет и отображение рейтинга учителя
-        * Календарь с фильтрацией по датам
-        * Экспорт в Excel
-        * Переход к расчету выплат
+        user_photo_preview.short_description = 'Фото'
+        def get_telegram_status(self, obj):
+            if obj.user.telegram_chat_id:
+                return f"✅ {obj.user.telegram_chat_id}"
+            return "❌ Не подключен"
 
-    Методы:
-        changelist_view() - переопределяет отображение списка,
-                           добавляет финансовую статистику за период
-        export_teachers_excel() - экспорт выбранных учителей в Excel
-        calculate_payments() - переход к расчету выплат
-        get_telegram_status() - отображение статуса Telegram
-        user_link() - ссылка на профиль пользователя
-        display_subjects() - отображение списка предметов
-        students_count() - количество учеников
-        rating_display() - отображение рейтинга в виде звезд
-    """
-    list_display = ('id', 'user_link', 'display_subjects', 'experience',
-                    'students_count', 'rating_display', 'get_telegram_status')
-    list_filter = ('subjects',)
-    search_fields = ('user__first_name', 'user__last_name', 'user__email')
-    filter_horizontal = ('subjects',)
-    readonly_fields = ('wallet_balance', 'rating_display')
-    change_list_template = "admin/school/teacher/change_list_with_period.html"
+        get_telegram_status.short_description = "Telegram"
 
-    fieldsets = (
-        (None, {
-            'fields': ('user', 'subjects', 'experience')
-        }),
-        ('Финансы', {
-            'fields': ('wallet_balance', 'payment_details'),
-            'classes': ('wide',),
-        }),
-        ('Дополнительная информация', {
-            'fields': ('education', 'bio', 'certificate'),
-            'classes': ('collapse',),
-        }),
-        ('Рейтинг', {
-            'fields': ('rating_display',),
-            'classes': ('wide',),
-        }),
-    )
+        def user_link(self, obj):
+            url = f'/admin/school/user/{obj.user.id}/change/'
+            return format_html('<a href="{}">{}</a>', url, obj.user.get_full_name())
+
+        user_link.short_description = 'Учитель'
+
+        def display_subjects(self, obj):
+            return ", ".join([s.name for s in obj.subjects.all()])
+
+        display_subjects.short_description = 'Предметы'
+
+        def students_count(self, obj):
+            return obj.student_set.count()
+
+        students_count.short_description = 'Учеников'
+
+        def rating_display(self, obj):
+            try:
+                rating = obj.rating_stats
+                stars = '⭐' * int(rating.average_rating)
+                return f"{stars} ({rating.average_rating:.1f}) - {rating.total_feedbacks} оценок"
+            except:
+                return 'Нет оценок'
+
+        rating_display.short_description = 'Рейтинг'
+
+        def show_on_team_badge(self, obj):
+            if obj.show_on_team:
+                return format_html(
+                    '<span style="background: #28a745; color: white; padding: 3px 8px; border-radius: 3px;">✅ На сайте</span>'
+                )
+            return format_html(
+                '<span style="background: #dc3545; color: white; padding: 3px 8px; border-radius: 3px;">❌ Скрыт</span>'
+            )
+
+        show_on_team_badge.short_description = 'На сайте'
+
+        def team_highlight_badge(self, obj):
+            if obj.team_highlight:
+                return format_html(
+                    '<span style="background: #ffc107; color: #333; padding: 3px 8px; border-radius: 3px;">⭐ Выделен</span>'
+                )
+            return ''
+
+        team_highlight_badge.short_description = 'Выделен'
+
+        # ⚡⚡⚡ СОХРАНЯЕМ REQUEST ДЛЯ ИСПОЛЬЗОВАНИЯ В ДРУГИХ МЕТОДАХ ⚡⚡⚡
+        def get_queryset(self, request):
+            self.request = request
+            return super().get_queryset(request)
+
+        # ⚡⚡⚡ МЕТОД ДЛЯ ОБРАБОТКИ СПИСКА (ТОЛЬКО ДЛЯ ТАБЛИЦЫ СТАТИСТИКИ) ⚡⚡⚡
+        def changelist_view(self, request, extra_context=None):
+            start_date = request.GET.get('start_date')
+            end_date = request.GET.get('end_date')
+
+            # Если параметры есть в GET, сохраняем их в сессию
+            if start_date and end_date:
+                request.session['teacher_filter_start'] = start_date
+                request.session['teacher_filter_end'] = end_date
+            else:
+                # Если параметров нет, пробуем взять из сессии
+                start_date = request.session.get('teacher_filter_start')
+                end_date = request.session.get('teacher_filter_end')
+
+            print("\n" + "=" * 80)
+            print("🔍 TEACHER ADMIN CHANGELIST VIEW")
+            print(f"📅 start_date: {start_date}")
+            print(f"📅 end_date: {end_date}")
+            print("=" * 80)
+
+            if start_date and end_date:
+                try:
+                    from datetime import datetime
+                    start = datetime.strptime(start_date, '%Y-%m-%d').date()
+                    end = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+                    print(f"\n✅ Период преобразован: {start} - {end}")
+
+                    extra_context = extra_context or {}
+                    teachers_data = []
+
+                    # Получаем всех учителей
+                    teachers = self.get_queryset(request)
+                    print(f"\n👥 Всего учителей: {teachers.count()}")
+
+                    for teacher in teachers:
+                        print(f"\n{'─' * 50}")
+                        print(f"👨‍🏫 Обработка учителя: {teacher.user.get_full_name()} (ID: {teacher.id})")
+
+                        # Получаем статистику
+                        earnings = teacher.get_teacher_earnings(start, end)
+
+                        print(f"📊 earnings получены:")
+                        print(f"   total_payments: {earnings.get('total_payments', 0)}")
+                        print(f"   total_salaries: {earnings.get('total_salaries', 0)}")
+                        print(f"   net_income: {earnings.get('net_income', 0)}")
+                        print(f"   payments_count: {earnings.get('payments_count', 0)}")
+                        print(f"   salaries_count: {earnings.get('salaries_count', 0)}")
+
+                        teachers_data.append({
+                            'teacher': teacher,
+                            'earnings': earnings
+                        })
+
+                    extra_context['teachers_data'] = teachers_data
+                    extra_context['start_date'] = start_date
+                    extra_context['end_date'] = end_date
+
+                    print(f"\n✅ teachers_data создан, размер: {len(teachers_data)}")
+
+                    # Выводим итоговые данные для всех учителей
+                    print(f"\n📊 ИТОГОВЫЕ ДАННЫЕ:")
+                    for i, item in enumerate(teachers_data):
+                        teacher_name = item['teacher'].user.get_full_name()
+                        earnings = item['earnings']
+                        print(f"{i + 1}. {teacher_name}:")
+                        print(f"   💰 total_payments: {earnings.get('total_payments', 0)}")
+                        print(f"   💵 total_salaries: {earnings.get('total_salaries', 0)}")
+                        print(f"   💹 net_income: {earnings.get('net_income', 0)}")
+
+                except Exception as e:
+                    print(f"❌ ОШИБКА в changelist_view: {e}")
+                    import traceback
+                    traceback.print_exc()
+
+            print("=" * 80 + "\n")
+            return super().changelist_view(request, extra_context)
+
+        actions = ['export_teachers_excel', 'calculate_payments',
+                   'show_on_team', 'hide_from_team', 'set_highlight', 'remove_highlight']
+
+        def export_teachers_excel(self, request, queryset):
+            """Экспорт выбранных учителей в Excel"""
+            import openpyxl
+            from openpyxl.styles import Font, Alignment, PatternFill
+            from django.http import HttpResponse
+            from datetime import datetime
+            from school.models import Lesson
+
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Учителя"
+
+            headers = ['ID', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон',
+                       'Предметы', 'Опыт', 'Всего уроков', 'Проведено уроков', 'Учеников']
+
+            header_font = Font(bold=True, color="FFFFFF")
+            header_fill = PatternFill(start_color="417690", end_color="417690", fill_type="solid")
+
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col, value=header)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = Alignment(horizontal='center')
+
+            for row, teacher in enumerate(queryset, start=2):
+                subjects = ", ".join([s.name for s in teacher.subjects.all()])
+
+                total_lessons = Lesson.objects.filter(teacher=teacher).count()
+                completed_lessons = Lesson.objects.filter(teacher=teacher, status='completed').count()
+                total_students = teacher.student_set.count()
+
+                ws.cell(row=row, column=1, value=teacher.id)
+                ws.cell(row=row, column=2, value=teacher.user.last_name)
+                ws.cell(row=row, column=3, value=teacher.user.first_name)
+                ws.cell(row=row, column=4, value=teacher.user.patronymic)
+                ws.cell(row=row, column=5, value=teacher.user.email)
+                ws.cell(row=row, column=6, value=teacher.user.phone)
+                ws.cell(row=row, column=7, value=subjects)
+                ws.cell(row=row, column=8, value=teacher.experience)
+                ws.cell(row=row, column=9, value=total_lessons)
+                ws.cell(row=row, column=10, value=completed_lessons)
+                ws.cell(row=row, column=11, value=total_students)
+
+            column_widths = [8, 15, 15, 15, 25, 15, 30, 8, 12, 15, 10]
+            for i, width in enumerate(column_widths, 1):
+                ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
+
+            response = HttpResponse(
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            filename = f"teachers_export_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+            wb.save(response)
+            return response
+
+        export_teachers_excel.short_description = "📥 Экспорт выбранных учителей в Excel"
+
+        def calculate_payments(self, request, queryset):
+            """Перейти к расчету выплат"""
+            if queryset.count() == 1:
+                teacher = queryset.first()
+                return redirect(f'/admin/teacher-payments/?teacher_id={teacher.id}')
+            else:
+                self.message_user(request, 'Выберите одного учителя для расчета выплат', level='WARNING')
+
+        calculate_payments.short_description = "💰 Расчет выплат"
+
+        # ACTIONS ДЛЯ СТРАНИЦЫ КОМАНДЫ
+        def show_on_team(self, request, queryset):
+            updated = queryset.update(show_on_team=True)
+            self.message_user(request, f'✅ {updated} учителей будут показываться на странице команды')
+
+        show_on_team.short_description = "✅ Показывать на странице команды"
+
+        def hide_from_team(self, request, queryset):
+            updated = queryset.update(show_on_team=False)
+            self.message_user(request, f'❌ {updated} учителей скрыты со страницы команды')
+
+        hide_from_team.short_description = "❌ Скрыть со страницы команды"
+
+        def set_highlight(self, request, queryset):
+            updated = queryset.update(team_highlight=True)
+            self.message_user(request, f'⭐ {updated} учителей отмечены как "выделенные"')
+
+        set_highlight.short_description = "⭐ Отметить как выделенных"
+
+        def remove_highlight(self, request, queryset):
+            updated = queryset.update(team_highlight=False)
+            self.message_user(request, f'➖ У {updated} учителей снята отметка "выделенные"')
+
+        remove_highlight.short_description = "➖ Снять выделение"
+
 
     def get_telegram_status(self, obj):
         if obj.user.telegram_chat_id:
@@ -348,17 +603,14 @@ class TeacherAdmin(admin.ModelAdmin):
     def user_link(self, obj):
         url = f'/admin/school/user/{obj.user.id}/change/'
         return format_html('<a href="{}">{}</a>', url, obj.user.get_full_name())
-
     user_link.short_description = 'Учитель'
 
     def display_subjects(self, obj):
         return ", ".join([s.name for s in obj.subjects.all()])
-
     display_subjects.short_description = 'Предметы'
 
     def students_count(self, obj):
         return obj.student_set.count()
-
     students_count.short_description = 'Учеников'
 
     def rating_display(self, obj):
@@ -368,8 +620,25 @@ class TeacherAdmin(admin.ModelAdmin):
             return f"{stars} ({rating.average_rating:.1f}) - {rating.total_feedbacks} оценок"
         except:
             return 'Нет оценок'
-
     rating_display.short_description = 'Рейтинг'
+
+    def show_on_team_badge(self, obj):
+        if obj.show_on_team:
+            return format_html(
+                '<span style="background: #28a745; color: white; padding: 3px 8px; border-radius: 3px;">✅ На сайте</span>'
+            )
+        return format_html(
+            '<span style="background: #dc3545; color: white; padding: 3px 8px; border-radius: 3px;">❌ Скрыт</span>'
+        )
+    show_on_team_badge.short_description = 'На сайте'
+
+    def team_highlight_badge(self, obj):
+        if obj.team_highlight:
+            return format_html(
+                '<span style="background: #ffc107; color: #333; padding: 3px 8px; border-radius: 3px;">⭐ Выделен</span>'
+            )
+        return ''
+    team_highlight_badge.short_description = 'Выделен'
 
     # ⚡⚡⚡ СОХРАНЯЕМ REQUEST ДЛЯ ИСПОЛЬЗОВАНИЯ В ДРУГИХ МЕТОДАХ ⚡⚡⚡
     def get_queryset(self, request):
@@ -454,7 +723,8 @@ class TeacherAdmin(admin.ModelAdmin):
         print("=" * 80 + "\n")
         return super().changelist_view(request, extra_context)
 
-    actions = ['export_teachers_excel', 'calculate_payments']
+    actions = ['export_teachers_excel', 'calculate_payments',
+               'show_on_team', 'hide_from_team', 'set_highlight', 'remove_highlight']
 
     def export_teachers_excel(self, request, queryset):
         """Экспорт выбранных учителей в Excel"""
@@ -511,7 +781,6 @@ class TeacherAdmin(admin.ModelAdmin):
 
         wb.save(response)
         return response
-
     export_teachers_excel.short_description = "📥 Экспорт выбранных учителей в Excel"
 
     def calculate_payments(self, request, queryset):
@@ -521,9 +790,28 @@ class TeacherAdmin(admin.ModelAdmin):
             return redirect(f'/admin/teacher-payments/?teacher_id={teacher.id}')
         else:
             self.message_user(request, 'Выберите одного учителя для расчета выплат', level='WARNING')
-
     calculate_payments.short_description = "💰 Расчет выплат"
 
+    # НОВЫЕ ACTIONS
+    def show_on_team(self, request, queryset):
+        updated = queryset.update(show_on_team=True)
+        self.message_user(request, f'✅ {updated} учителей будут показываться на странице команды')
+    show_on_team.short_description = "✅ Показывать на странице команды"
+
+    def hide_from_team(self, request, queryset):
+        updated = queryset.update(show_on_team=False)
+        self.message_user(request, f'❌ {updated} учителей скрыты со страницы команды')
+    hide_from_team.short_description = "❌ Скрыть со страницы команды"
+
+    def set_highlight(self, request, queryset):
+        updated = queryset.update(team_highlight=True)
+        self.message_user(request, f'⭐ {updated} учителей отмечены как "выделенные"')
+    set_highlight.short_description = "⭐ Отметить как выделенных"
+
+    def remove_highlight(self, request, queryset):
+        updated = queryset.update(team_highlight=False)
+        self.message_user(request, f'➖ У {updated} учителей снята отметка "выделенные"')
+    remove_highlight.short_description = "➖ Снять выделение"
 
 
 def export_teachers_excel(self, request, queryset):
@@ -2449,12 +2737,65 @@ class PaymentRequestAdmin(admin.ModelAdmin):
     mark_as_paid.short_description = "💰 Создать выплаты по одобренным запросам"
 
 
+@admin.register(Feedback)
+class FeedbackAdmin(admin.ModelAdmin):
+    list_display = ('name', 'role', 'rating_display', 'is_active', 'is_on_main', 'sort_order', 'created_at')
+    list_filter = ('is_active', 'is_on_main', 'rating', 'teacher')
+    search_fields = ('name', 'text', 'role')
+    list_editable = ('is_active', 'is_on_main', 'sort_order')
+    list_per_page = 20
+
+    fieldsets = (
+        ('Информация об отзыве', {
+            'fields': ('name', 'role', 'text', 'photo')
+        }),
+        ('Оценка и связь', {
+            'fields': ('rating', 'teacher'),
+            'description': 'Оценка от 1 до 5 звезд. Если отзыв о конкретном учителе - выберите его'
+        }),
+        ('Настройки отображения', {
+            'fields': ('is_active', 'is_on_main', 'sort_order'),
+            'description': 'is_active - отображать на сайте, is_on_main - показывать в карусели на главной, sort_order - порядок сортировки (меньше = выше)'
+        }),
+    )
+
+    def rating_display(self, obj):
+        return '★' * obj.rating + '☆' * (5 - obj.rating)
+
+    rating_display.short_description = 'Оценка'
+    rating_display.admin_order_field = 'rating'
+
+    actions = ['activate_feedbacks', 'deactivate_feedbacks', 'show_on_main', 'hide_from_main']
+
+    def activate_feedbacks(self, request, queryset):
+        queryset.update(is_active=True)
+        self.message_user(request, f'✅ {queryset.count()} отзывов активировано')
+
+    activate_feedbacks.short_description = "✅ Активировать выбранные отзывы"
+
+    def deactivate_feedbacks(self, request, queryset):
+        queryset.update(is_active=False)
+        self.message_user(request, f'❌ {queryset.count()} отзывов деактивировано')
+
+    deactivate_feedbacks.short_description = "❌ Деактивировать выбранные отзывы"
+
+    def show_on_main(self, request, queryset):
+        queryset.update(is_on_main=True)
+        self.message_user(request, f'🏠 {queryset.count()} отзывов будут показываться на главной')
+
+    show_on_main.short_description = "🏠 Показывать на главной"
+
+    def hide_from_main(self, request, queryset):
+        queryset.update(is_on_main=False)
+        self.message_user(request, f'🚫 {queryset.count()} отзывов скрыты с главной')
+
+    hide_from_main.short_description = "🚫 Скрыть с главной"
+
 
 # ==================== REGISTER ALL MODELS ====================
 # Регистрация всех моделей в административном интерфейсе
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(Subject, SubjectAdmin)
-admin.site.register(Teacher, TeacherAdmin)
 admin.site.register(Student, StudentAdmin)
 admin.site.register(LessonFormat, LessonFormatAdmin)
 

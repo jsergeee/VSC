@@ -615,10 +615,208 @@ img {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
+/* Фото учителя на странице команды */
 .teacher-photo {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
+    width: 100%;
+    height: 100%x;  /* Высота для карточки на странице команды */
+    object-fit: cover;
+    object-position: center;  /* Центрирование изображения */
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* Фон, если фото не загрузится */
+}
+
+/* Стили для детальной страницы */
+.teacher-photo-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+.teacher-photo-placeholder {
+    height: 400px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.teacher-contact-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+.teacher-contact-card h4 {
+    color: #333;
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.teacher-contact-card p {
+    margin-bottom: 10px;
+    color: #666;
+}
+
+.teacher-contact-card i {
+    width: 25px;
+    color: #e52f37;
+}
+
+.teacher-info-card {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+.teacher-name {
+    font-size: 32px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+    font-family: 'Roboto Slab', serif;
+}
+
+.badge-subject {
+    background: #e52f37;
+    color: white;
+    padding: 6px 15px;
+    border-radius: 25px;
+    font-size: 14px;
+    font-weight: 500;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    display: inline-block;
+}
+
+.teacher-rating-summary {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.rating-stars-large {
+    color: #ffc107;
+    font-size: 24px;
+    margin-bottom: 5px;
+}
+
+.rating-stars-large i {
+    margin-right: 2px;
+}
+
+.rating-value-large {
+    margin-left: 10px;
+    font-weight: 600;
+    color: #333;
+    font-size: 18px;
+}
+
+.rating-count-large {
+    color: #999;
+    font-size: 14px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+
+.stat-item i {
+    font-size: 24px;
+    color: #e52f37;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.stat-label {
+    display: block;
+    color: #666;
+    font-size: 12px;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    display: block;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+.teacher-bio-text {
+    color: #666;
+    line-height: 1.8;
+    font-size: 16px;
+}
+
+.feedback-item {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 15px;
+}
+
+.feedback-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.feedback-stars {
+    color: #ffc107;
+}
+
+.feedback-stars i {
+    margin-right: 2px;
+}
+
+.feedback-date {
+    color: #999;
+    font-size: 13px;
+}
+
+.feedback-author {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.feedback-text {
+    color: #666;
+    line-height: 1.6;
+}
+
+.breadcrumb {
+    background: transparent;
+    padding: 0;
+    margin-bottom: 30px;
+}
+
+.breadcrumb-item a {
+    color: #e52f37;
+    text-decoration: none;
+}
+
+.breadcrumb-item a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumb-item.active {
+    color: #666;
+}
+
+@media (max-width: 768px) {
+    .teacher-name {
+        font-size: 24px;
+    }
+    .teacher-info-card {
+        padding: 20px;
+    }
+    .teacher-photo-placeholder {
+        height: 300px;
+    }
 }
 
 .lesson-item {
@@ -895,7 +1093,7 @@ img {
     background: #f8f9fa;
     position: relative;
     width: 100%;
-    margin-top: 170px;
+    margin-top: 160px;
 }
 
 .header {
@@ -1753,3 +1951,248 @@ img {
         background: #007bff;
         color: white;
     }
+
+
+.col-lg-4 {
+max-width: 20%;
+}
+/* ===== КОМПАКТНЫЕ КАРТОЧКИ ===== */
+.teacher-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 30px;
+    position: relative;
+    cursor: pointer;
+}
+
+.teacher-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+}
+
+.teacher-card.highlighted {
+    border: 3px solid #e52f37;
+}
+
+.teacher-card.highlighted::before {
+    content: '⭐ Рекомендуем';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #e52f37;
+    color: white;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    z-index: 10;
+    box-shadow: 0 2px 10px rgba(229,47,55,0.3);
+}
+
+/* Фото */
+.teacher-photo {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    transition: all 0.3s ease;
+}
+
+.bg-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    height: 200px;
+}
+
+/* Контейнер с контентом */
+.teacher-card-body {
+    padding: 15px;
+    transition: all 0.3s ease;
+}
+
+/* Имя учителя - всегда видно */
+.teacher-name {
+    font-size: 20px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+    font-family: 'Roboto Slab', serif;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+/* ВСЁ ОСТАЛЬНОЕ - СКРЫТО ПО УМОЛЧАНИЮ */
+.teacher-subjects,
+.teacher-info,
+.teacher-rating,
+.teacher-bio,
+.teacher-social,
+.teacher-actions {
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+/* ПРИ НАВЕДЕНИИ - ПОКАЗЫВАЕМ ВСЁ */
+.teacher-card:hover .teacher-subjects,
+.teacher-card:hover .teacher-info,
+.teacher-card:hover .teacher-rating,
+.teacher-card:hover .teacher-bio,
+.teacher-card:hover .teacher-social,
+.teacher-card:hover .teacher-actions {
+    display: block;
+    opacity: 1;
+}
+
+.teacher-card:hover .teacher-name {
+    margin-bottom: 10px;
+    font-size: 22px;
+}
+
+/* Стили для появляющихся элементов */
+.teacher-subjects {
+    margin: 10px 0;
+    text-align: center;
+}
+
+.badge-subject {
+    background: #e52f37;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 15px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-right: 3px;
+    margin-bottom: 3px;
+    display: inline-block;
+}
+
+.teacher-info p {
+    margin-bottom: 5px;
+    color: #666;
+    font-size: 13px;
+}
+
+.teacher-info i {
+    width: 18px;
+    color: #e52f37;
+    margin-right: 3px;
+}
+
+.teacher-rating {
+    margin: 8px 0;
+    padding: 5px 0;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+    text-align: center;
+}
+
+.rating-stars {
+    color: #ffc107;
+    font-size: 13px;
+}
+
+.rating-value {
+    margin-left: 3px;
+    font-weight: 600;
+    color: #333;
+    font-size: 12px;
+}
+
+.rating-count {
+    color: #999;
+    font-size: 11px;
+    margin-left: 3px;
+}
+
+.teacher-bio {
+    color: #666;
+    font-size: 12px;
+    line-height: 1.4;
+    margin: 8px 0;
+    text-align: center;
+}
+
+.teacher-social {
+    margin: 8px 0;
+    text-align: center;
+}
+
+.teacher-social a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    color: white;
+    margin: 0 3px;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.teacher-social a:hover {
+    transform: translateY(-2px);
+}
+
+.social-telegram {
+    background: #0088cc;
+}
+
+.social-whatsapp {
+    background: #25D366;
+}
+
+.social-vk {
+    background: #4d7198;
+}
+
+.social-instagram {
+    background: linear-gradient(45deg, #f09433, #d62976, #962fbf, #4f5bd5);
+}
+
+.teacher-actions {
+    margin-top: 10px;
+    text-align: center;
+}
+
+.teacher-actions .btn {
+    background: #e52f37;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.teacher-actions .btn:hover {
+    background: #c41e26;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(229,47,55,0.3);
+}
+
+/* Для мобильных устройств */
+@media (max-width: 768px) {
+    .teacher-photo, .bg-gradient {
+        height: 180px;
+    }
+
+    /* На мобильных показываем всё сразу */
+    .teacher-subjects,
+    .teacher-info,
+    .teacher-rating,
+    .teacher-bio,
+    .teacher-social,
+    .teacher-actions {
+        display: block;
+        opacity: 1;
+    }
+}}

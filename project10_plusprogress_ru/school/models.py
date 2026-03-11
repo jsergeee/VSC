@@ -259,6 +259,46 @@ class Teacher(models.Model):
             'net_income': float(total_salaries - paid_salary),
         }
 
+    # Новые поля для страницы команды
+    show_on_team = models.BooleanField(
+        'Показывать в команде',
+        default=True,
+        help_text='Отображать учителя на странице /team/'
+    )
+    team_sort_order = models.PositiveIntegerField(
+        'Порядок в команде',
+        default=0,
+        help_text='Меньше число = выше в списке'
+    )
+    team_description = models.TextField(
+        'Описание для страницы команды',
+        blank=True,
+        help_text='Краткое описание для карточки (если не заполнено, используется bio)'
+    )
+
+    team_highlight = models.BooleanField(
+        'Выделить на странице',
+        default=False,
+        help_text='Поместить в топ или выделить специальным образом'
+    )
+
+    # Социальные сети для страницы команды
+    telegram_url = models.URLField('Telegram', blank=True)
+    whatsapp_url = models.URLField('WhatsApp', blank=True)
+    vk_url = models.URLField('VK', blank=True)
+    instagram_url = models.URLField('Instagram', blank=True)
+
+    # Метод для получения фото
+    def get_team_photo(self):
+        """Возвращает фото для страницы команды"""
+        if self.team_photo:
+            return self.team_photo
+        return self.user.photo
+
+    class Meta:
+        verbose_name = 'Учитель'
+        verbose_name_plural = 'Учителя'
+        ordering = ['team_sort_order', 'user__last_name']
 
 class Student(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student_profile')
@@ -2161,3 +2201,38 @@ class PaymentRequest(models.Model):
             notification_type='payment_received',
             link='/teacher/dashboard/#payments'
         )
+
+
+class Feedback(models.Model):
+    """
+    Модель отзывов клиентов
+    """
+    name = models.CharField('Имя клиента', max_length=100)
+    role = models.CharField('Роль', max_length=100, blank=True,
+                            help_text='Например: мама Таира (8 лет), 29 лет, г. Санкт-Петербург')
+    text = models.TextField('Текст отзыва')
+    photo = models.ImageField('Фото', upload_to='feedback/', blank=True, null=True)
+    rating = models.PositiveSmallIntegerField('Оценка', choices=[(i, f'{i} ★') for i in range(1, 6)], default=5)
+
+    # Связи
+    teacher = models.ForeignKey('Teacher', on_delete=models.SET_NULL, null=True, blank=True,
+                                verbose_name='Учитель', help_text='Если отзыв о конкретном учителе')
+
+    # Настройки отображения
+    is_active = models.BooleanField('Активен', default=True,
+                                    help_text='Отображать на сайте')
+    is_on_main = models.BooleanField('На главной', default=True,
+                                     help_text='Показывать в карусели на главной')
+    sort_order = models.PositiveIntegerField('Порядок сортировки', default=0)
+
+    # Метаданные
+    created_at = models.DateTimeField('Дата создания', auto_now_add=True)
+    updated_at = models.DateTimeField('Дата обновления', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Отзыв'
+        verbose_name_plural = 'Отзывы'
+        ordering = ['sort_order', '-created_at']
+
+    def __str__(self):
+        return f'Отзыв от {self.name}'

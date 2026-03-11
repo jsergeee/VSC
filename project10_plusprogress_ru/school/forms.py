@@ -11,7 +11,7 @@ from .models import (
 from .models import (
     User, TrialRequest, LessonReport, LessonFeedback, 
     Homework, HomeworkSubmission, ScheduleTemplate, Student, Teacher,
-    Lesson  # ← ЭТО НУЖНО ДОБАВИТЬ!
+    Lesson, Feedback
 )
 
 # ============================================
@@ -866,3 +866,40 @@ class TelegramSettingsForm(forms.ModelForm):
             })
         }
 
+class PublicFeedbackForm(forms.ModelForm):
+    """
+    Форма для отзывов от посетителей сайта
+    """
+    class Meta:
+        model = Feedback
+        fields = ['name', 'role', 'text', 'rating']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ваше имя'
+            }),
+            'role': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Кто вы? (например: мама ученика, студент и т.д.)'
+            }),
+            'text': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 5,
+                'placeholder': 'Напишите ваш отзыв...'
+            }),
+            'rating': forms.RadioSelect(attrs={'class': 'rating-radio'}),
+        }
+        labels = {
+            'name': 'Имя',
+            'role': 'Роль',
+            'text': 'Отзыв',
+            'rating': 'Оценка',
+        }
+        help_texts = {
+            'role': 'Например: мама Саши (8 лет), студент, преподаватель и т.д.',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['rating'].choices = [(i, f'{i} ★') for i in range(1, 6)]
+        self.fields['rating'].initial = 5

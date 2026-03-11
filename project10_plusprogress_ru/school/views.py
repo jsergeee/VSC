@@ -32,6 +32,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 from weasyprint import HTML
 import logging
+from .models import Feedback
 import traceback
 from django.utils import timezone
 from .utils import log_user_action
@@ -52,6 +53,13 @@ from rest_framework.authtoken.models import Token
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator  
 from .permissions import IsTeacherUser, IsStudentUser
+from django.http import JsonResponse
+from django.contrib.admin.views.decorators import staff_member_required
+from django.shortcuts import render, redirect
+from django.contrib import messages
+import openpyxl
+from datetime import datetime
+import traceback
 
 
 
@@ -69,7 +77,7 @@ from .forms import (
     UserRegistrationForm, UserLoginForm, TrialRequestForm,
     LessonReportForm, ProfileUpdateForm, LessonFeedbackForm,
     HomeworkForm, HomeworkSubmissionForm, HomeworkCheckForm,
-    ScheduleTemplateForm
+    ScheduleTemplateForm, PublicFeedbackForm
 )
 
 from .utils import send_verification_email, send_verification_success_email
@@ -422,21 +430,57 @@ def create_lesson_with_prices(teacher, student, subject, date, start_time, end_t
 # ============================================
 
 def home(request):
-    """Главная страница"""
+    """
+    Главная страница
+    """
     trial_form = TrialRequestForm()
+    feedback_form = PublicFeedbackForm()  # ← добавляем
+
+    # Получаем активные отзывы для главной
+    feedbacks = Feedback.objects.filter(
+        is_active=True,
+        is_on_main=True
+    ).select_related('teacher__user').order_by('sort_order', '-created_at')
+
     if request.method == 'POST':
-        trial_form = TrialRequestForm(request.POST)
-        if trial_form.is_valid():
-            trial_form.save()
-            messages.success(request, 'Заявка успешно отправлена! Мы свяжемся с вами в ближайшее время.')
-            return redirect('home')
+        if 'trial_form' in request.POST:
+            trial_form = TrialRequestForm(request.POST)
+            if trial_form.is_valid():
+                trial_form.save()
+                messages.success(request, 'Заявка успешно отправлена! Мы свяжемся с вами в ближайшее время.')
+                return redirect('home')
+        elif 'feedback_form' in request.POST:
+            feedback_form = PublicFeedbackForm(request.POST)
+            if feedback_form.is_valid():
+                feedback = feedback_form.save(commit=False)
+                feedback.is_active = False
+                feedback.is_on_main = False
+                feedback.save()
+
+                # Уведомление админу
+                admin_users = User.objects.filter(is_superuser=True)
+                for admin in admin_users:
+                    Notification.objects.create(
+                        user=admin,
+                        title='✍️ Новый отзыв',
+                        message=f'Новый отзыв от {feedback.name} ожидает модерации',
+                        notification_type='system',
+                        link=f'/admin/school/feedback/{feedback.id}/change/'
+                    )
+
+                messages.success(
+                    request,
+                    'Спасибо за ваш отзыв! Он появится на сайте после проверки.'
+                )
+                return redirect('home')
 
     context = {
         'trial_form': trial_form,
+        'feedback_form': feedback_form,  # ← добавляем
         'subjects': Subject.objects.all(),
+        'feedbacks': feedbacks,
     }
     return render(request, 'school/home.html', context)
-
 
 def register(request):
     """Регистрация пользователя"""
@@ -6003,6 +6047,238 @@ class LessonReportViewSet(viewsets.ModelViewSet):
             return queryset.filter(lesson__attendance__student__user=user)
         
         return queryset
-    
-    #Тестовый
-    
+
+
+def teachers_team(request):
+    """
+    Страница со всеми учителями школы
+    """
+    # Получаем только учителей с show_on_team=True
+    teachers = Teacher.objects.filter(
+        show_on_team=True
+    ).select_related(
+        'user'
+    ).prefetch_related(
+        'subjects'
+    ).order_by('team_sort_order', '-team_highlight', 'user__last_name')
+
+    # Разделяем на выделенных и обычных
+    highlighted_teachers = []
+    regular_teachers = []
+
+    for teacher in teachers:
+        # БЕЗОПАСНО получаем рейтинг
+        try:
+            rating_stats = teacher.rating_stats
+        except:
+            # Если рейтинга нет, создаем пустой объект
+            rating_stats = None
+
+        # Получаем количество учеников
+        try:
+            students_count = teacher.student_set.count()
+        except:
+            students_count = 0
+
+        teacher_data = {
+            'id': teacher.id,
+            'full_name': teacher.user.get_full_name(),
+            'photo': teacher.user.photo,
+            'subjects': teacher.subjects.all(),
+            'experience': teacher.experience,
+            'education': teacher.education,
+            'bio': teacher.team_description or teacher.bio,
+            'rating': rating_stats,
+            'students_count': students_count,
+            'email': teacher.user.email,
+            'phone': teacher.user.phone,
+            'social': {
+                'telegram': getattr(teacher, 'telegram_url', ''),
+                'whatsapp': getattr(teacher, 'whatsapp_url', ''),
+                'vk': getattr(teacher, 'vk_url', ''),
+                'instagram': getattr(teacher, 'instagram_url', ''),
+            },
+            'highlight': teacher.team_highlight,
+            'sort_order': teacher.team_sort_order,
+        }
+
+        if teacher.team_highlight:
+            highlighted_teachers.append(teacher_data)
+        else:
+            regular_teachers.append(teacher_data)
+
+    context = {
+        'highlighted_teachers': highlighted_teachers,
+        'regular_teachers': regular_teachers,
+        'page_title': 'Наша команда',
+        'total_teachers': teachers.count(),
+    }
+    return render(request, 'school/team.html', context)
+
+def teacher_detail(request, teacher_id):
+    """
+    Детальная страница учителя
+    """
+    teacher = get_object_or_404(
+        Teacher.objects.select_related('user').prefetch_related(
+            'subjects',
+            'student_set__user'
+        ),
+        id=teacher_id
+    )
+
+    # Получаем публичные отзывы
+    feedbacks = LessonFeedback.objects.filter(
+        teacher=teacher,
+        is_public=True
+    ).select_related(
+        'student__user',
+        'lesson__subject'
+    ).order_by('-created_at')[:20]
+
+    # Безопасно получаем рейтинг
+    try:
+        rating_stats = teacher.rating_stats
+    except:
+        rating_stats = None
+
+    context = {
+        'teacher': teacher,
+        'feedbacks': feedbacks,
+        'rating_stats': rating_stats,
+        'page_title': f'{teacher.user.get_full_name()} - учитель',
+    }
+    # ИСПРАВЛЕННЫЙ ПУТЬ
+    return render(request, 'school/teacher/teacher_detail.html', context)
+
+
+def home(request):
+    """
+    Главная страница
+    """
+    trial_form = TrialRequestForm()
+    feedback_form = PublicFeedbackForm()  # ← ДОБАВИТЬ
+
+    # Получаем активные отзывы для главной
+    feedbacks = Feedback.objects.filter(
+        is_active=True,
+        is_on_main=True
+    ).select_related('teacher__user').order_by('sort_order', '-created_at')
+
+    if request.method == 'POST':
+        print("\n" + "=" * 50)
+        print("🔥 POST запрос на главную")
+        print(f"POST данные: {request.POST}")
+        print("=" * 50 + "\n")
+
+        # Проверяем, какая форма отправлена
+        if 'feedback_form' in request.POST:
+            print("📝 Обнаружена форма отзыва!")
+            feedback_form = PublicFeedbackForm(request.POST)
+
+            if feedback_form.is_valid():
+                print("✅ Форма валидна!")
+                feedback = feedback_form.save(commit=False)
+                feedback.is_active = False
+                feedback.is_on_main = False
+                feedback.save()
+
+                # Уведомление админу
+                admin_users = User.objects.filter(is_superuser=True)
+                for admin in admin_users:
+                    Notification.objects.create(
+                        user=admin,
+                        title='✍️ Новый отзыв',
+                        message=f'Новый отзыв от {feedback.name} ожидает модерации',
+                        notification_type='system',
+                        link=f'/admin/school/feedback/{feedback.id}/change/'
+                    )
+
+                print(f"✅ Отзыв сохранен! ID: {feedback.id}")
+
+                # Проверяем, AJAX ли это запрос
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'status': 'ok'})
+
+                messages.success(
+                    request,
+                    'Спасибо за ваш отзыв! Он появится на сайте после проверки.'
+                )
+                return redirect('home')
+            else:
+                print("❌ Форма не валидна!")
+                print(f"Ошибки: {feedback_form.errors}")
+
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'error': 'Проверьте правильность заполнения формы',
+                        'errors': feedback_form.errors
+                    }, status=400)
+
+                messages.error(request, 'Пожалуйста, исправьте ошибки в форме')
+
+        elif 'trial_form' in request.POST:
+            print("📝 Обнаружена форма заявки!")
+            trial_form = TrialRequestForm(request.POST)
+            if trial_form.is_valid():
+                trial_form.save()
+                print("✅ Заявка сохранена!")
+
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'status': 'ok'})
+
+                messages.success(request, 'Заявка успешно отправлена! Мы свяжемся с вами в ближайшее время.')
+                return redirect('home')
+            else:
+                print(f"❌ Ошибки в форме заявки: {trial_form.errors}")
+
+    context = {
+        'trial_form': trial_form,
+        'feedback_form': feedback_form,  # ← ДОБАВИТЬ В КОНТЕКСТ
+        'subjects': Subject.objects.all(),
+        'feedbacks': feedbacks,
+    }
+
+    return render(request, 'school/home.html', context)
+
+
+
+
+def add_feedback(request):
+    """
+    Добавление отзыва посетителем сайта
+    """
+    if request.method == 'POST':
+        form = PublicFeedbackForm(request.POST)
+        if form.is_valid():
+            feedback = form.save(commit=False)
+            feedback.is_active = False  # Отзыв требует модерации
+            feedback.is_on_main = False
+            feedback.save()
+
+            # Отправляем уведомление админу
+            admin_users = User.objects.filter(is_superuser=True)
+            for admin in admin_users:
+                Notification.objects.create(
+                    user=admin,
+                    title='✍️ Новый отзыв',
+                    message=f'Новый отзыв от {feedback.name} ожидает модерации',
+                    notification_type='system',
+                    link=f'/admin/school/feedback/{feedback.id}/change/'
+                )
+
+            messages.success(
+                request,
+                'Спасибо за ваш отзыв! Он появится на сайте после проверки модератором.'
+            )
+            return redirect('home')
+        else:
+            messages.error(request, 'Пожалуйста, исправьте ошибки в форме')
+    else:
+        form = PublicFeedbackForm()
+
+    # Добавляем форму в контекст главной страницы
+    context = {
+        'feedback_form': form,
+    }
+    return render(request, 'school/add_feedback.html', context)

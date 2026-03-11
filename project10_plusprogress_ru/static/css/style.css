@@ -343,7 +343,7 @@ iframe {
 
 .section-white {
 	background: #fff;
-	padding: 90px 0 70px 0;
+	padding: 0px 0 70px 0;
 }
 
 .section-grey{
@@ -862,7 +862,7 @@ iframe {
     box-shadow: 0px 0px 25px 0px rgba(0, 0, 0, 0.04)
     transition: all 0.25s ease-in-out 0s;top: 0;
     background: white;
-    border-bottom: 1px solid var(--border-light);
+    /*border-bottom: 1px solid var(--border-light);*/
 
 }
 
@@ -878,7 +878,7 @@ iframe {
     box-shadow: 0px 0px 25px 0px rgba(0, 0, 0, 0.04)
     transition: all 0.25s ease-in-out 0s;top: 0;
     background: white;
-    border-bottom: 1px solid var(--border-light);
+    /*border-bottom: 1px solid var(--border-light);*/
 }
 
 
@@ -3303,11 +3303,7 @@ ul.benefits.white li i {
     box-shadow: 0 10px 30px rgba(0,0,0,0.1);
 }
 
-.teacher-photo {
-    width: 100%;
-    height: 200px;
-    object-fit: cover;
-}
+
 
 .teacher-card .card-body {
     padding: 20px;
@@ -4237,6 +4233,9 @@ textarea.form-control {
     color: #071e55;
     font-weight: 700;
     font-size: 1.5rem;
+    position: relative;
+    top: 10px;
+    left: 70px;
 }
 
 .custom-modal-close {
@@ -4254,6 +4253,9 @@ textarea.form-control {
     justify-content: center;
     border-radius: 50%;
     transition: all 0.3s;
+    position: relative;
+    left: 460px;
+    bottom: 35px;
 }
 
 .custom-modal-close:hover {
@@ -4382,13 +4384,12 @@ textarea.form-control {
 #HeadNavbarAuth {
     display: flex;
     flex-direction: row;
-    align-items: center;
     justify-content: center;
     width: 100%;
     max-width: var(--container-width);
     margin: 0px auto 0 auto;
     padding: 0px 20px 0 20px;
-    max-height: 30px;
+    max-height: 25px;
 
 }
 
@@ -4415,7 +4416,8 @@ textarea.form-control {
     display: flex !important;
     flex-direction: row !important;
     width: auto;
-    max-height: 30px;
+    max-height: 25px;
+    height: auto;
 }
 
 /*
@@ -4621,7 +4623,7 @@ margin: auto auto auto auto;
 }
 #navbarAuth {
     background: white;
-    padding: 1rem;
+
 }
 
 /* Адаптация для мобильных устройств */
@@ -4663,3 +4665,184 @@ margin: auto auto auto auto;
 
     }
 
+
+.feedback-rating {
+    margin-top: 10px;
+    font-size: 18px;
+}
+
+.feedback-rating i {
+    margin-right: 3px;
+}
+
+.fa-star-o {
+    color: #ddd;
+}
+
+.testim-inner p {
+    font-style: italic;
+    margin-bottom: 15px;
+}
+
+.testim-inner h6 {
+    font-weight: 600;
+    color: #333;
+}
+
+.rating-stars-input {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.rating-stars-input .form-check {
+    padding-left: 0;
+}
+
+.rating-stars-input input[type="radio"] {
+    display: none;
+}
+
+.rating-stars-input .form-check-label {
+    cursor: pointer;
+    font-size: 24px;
+    transition: transform 0.2s;
+}
+
+.rating-stars-input .form-check-label:hover {
+    transform: scale(1.1);
+}
+
+.rating-stars-input input[type="radio"]:checked + .form-check-label {
+    transform: scale(1.1);
+}
+
+.fa-star-o {
+    color: #ddd;
+
+
+/* Стили для формы отзывов */
+.rating-stars-input .form-check-label i {
+    font-size: 24px;
+    margin-right: 2px;
+}
+
+.rating-stars-input .fa-star {
+    color: #ffc107;
+}
+
+.rating-stars-input .fa-star-o {
+    color: #ddd;
+}
+
+/* Стили для модального окна */
+.modal-content {
+    border-radius: 15px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px 15px 0 0;
+    padding: 20px 30px;
+}
+
+.modal-header .close {
+    color: white;
+    opacity: 0.8;
+}
+
+.modal-header .close:hover {
+    opacity: 1;
+}
+
+.modal-title {
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.modal-body {
+    padding: 30px;
+}
+
+/* Кнопка в разделе отзывов */
+.btn-outline-primary {
+    color: #667eea;
+    border-color: #667eea;
+    border-radius: 25px;
+    padding: 8px 20px;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.btn-outline-primary:hover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: transparent;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+* Стили для выделенных учителей */
+.teacher-card.highlighted {
+    border: 3px solid #e52f37;
+    position: relative;
+    transform: scale(1.02);
+}
+
+.teacher-card.highlighted::before {
+    content: '⭐ Рекомендуем';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #e52f37;
+    color: white;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    z-index: 10;
+    box-shadow: 0 2px 10px rgba(229,47,55,0.3);
+}
+
+/* Стили для соцсетей */
+.teacher-social {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.teacher-social a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    color: white;
+    transition: all 0.3s;
+}
+
+.teacher-social a:hover {
+    transform: translateY(-3px);
+}
+
+.social-telegram {
+    background: #0088cc;
+}
+
+.social-whatsapp {
+    background: #25D366;
+}
+
+.social-vk {
+    background: #4d7198;
+}
+
+.social-instagram {
+    background: linear-gradient(45deg, #f09433, #d62976, #962fbf, #4f5bd5);

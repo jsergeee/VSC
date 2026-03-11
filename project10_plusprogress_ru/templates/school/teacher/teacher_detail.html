@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ teacher.user.get_full_name }} - учитель Плюс Прогресс{% endblock %}
+{% block extra_css %}
+{% endblock %}
+{% block content %}
+
+<!-- BEGIN TEACHER DETAIL SECTION -->
+<section class="section-white" id="teacher-detail">
+    <div class="container">
+        <!-- Хлебные крошки -->
+        <div class="row">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/">Главная</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'teachers_team' %}">Наша команда</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">{{ teacher.user.get_full_name }}</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+        <div class="row">
+            <!-- Левая колонка с фото -->
+            <div class="col-lg-4 mb-4">
+                <div class="teacher-photo-card">
+                    {% if teacher.team_photo %}
+                    {# Специальное фото для страницы команды #}
+                    <img src="{{ teacher.team_photo.url }}" class="img-fluid" alt="{{ teacher.user.get_full_name }}" style="width: 100%; height: 400px; object-fit: cover; border-radius: 15px;">
+                    {% elif teacher.user.photo %}
+                    {# Обычное фото пользователя #}
+                    <img src="{{ teacher.user.photo.url }}" class="img-fluid" alt="{{ teacher.user.get_full_name }}" style="width: 100%; height: 400px; object-fit: cover; border-radius: 15px;">
+                    {% else %}
+                    {# Заглушка #}
+                    <div class="teacher-photo-placeholder d-flex align-items-center justify-content-center" style="width: 100%; height: 400px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px;">
+                        <i class="fa fa-user fa-5x text-white"></i>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="teacher-contact-card mt-4">
+                    <h4>Контакты</h4>
+                    {% if teacher.user.email %}
+                    <p><i class="fa fa-envelope"></i> {{ teacher.user.email }}</p>
+                    {% endif %}
+                    {% if teacher.user.phone %}
+                    <p><i class="fa fa-phone"></i> {{ teacher.user.phone }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- Правая колонка с информацией -->
+            <div class="col-lg-8">
+                <div class="teacher-info-card">
+                    <h1 class="teacher-name">{{ teacher.user.get_full_name }}</h1>
+                    <!-- Предметы -->
+                    <div class="teacher-subjects mb-3">
+                        {% for subject in teacher.subjects.all %}
+                        <span class="badge badge-subject">{{ subject.name }}</span>
+                        {% endfor %}
+                    </div>
+                    <!-- Рейтинг -->
+                    {% with rating=teacher.rating_stats %}
+                    {% if rating and rating.total_feedbacks > 0 %}
+                    <div class="teacher-rating-summary mb-4">
+                        <div class="rating-stars-large">
+                            {% for i in "12345"|make_list %}
+                            {% if forloop.counter <= rating.average_rating %}
+                            <i class="fa fa-star"></i>
+                            {% elif forloop.counter <= rating.average_rating|add:"0.5" %}
+                            <i class="fa fa-star-half-o"></i>
+                            {% else %}
+                            <i class="fa fa-star-o"></i>
+                            {% endif %}
+                            {% endfor %}
+                            <span class="rating-value-large">{{ rating.average_rating|floatformat:1 }}</span>
+                        </div>
+                        <div class="rating-count-large">на основе {{ rating.total_feedbacks }} отзывов</div>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+                    <!-- Статистика -->
+                    <div class="teacher-stats mb-4">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="stat-item">
+                                    <i class="fa fa-briefcase"></i>
+                                    <span class="stat-label">Опыт</span>
+                                    <span class="stat-value">{{ teacher.experience }} лет</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-item">
+                                    <i class="fa fa-graduation-cap"></i>
+                                    <span class="stat-label">Образование</span>
+                                    <span class="stat-value">{{ teacher.education|default:"Высшее" }}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-item">
+                                    <i class="fa fa-users"></i>
+                                    <span class="stat-label">Учеников</span>
+                                    <span class="stat-value">{{ teacher.student_set.count }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Биография -->
+                    <div class="teacher-bio-section mb-4">
+                        <h3>О преподавателе</h3>
+                        <div class="teacher-bio-text">
+                            {{ teacher.bio|default:"Нет информации"|linebreaks }}
+                        </div>
+                    </div>
+                    <!-- Отзывы -->
+                    {% if feedbacks %}
+                    <div class="teacher-feedbacks">
+                        <h3>Отзывы учеников</h3>
+                        <div class="feedbacks-list">
+                            {% for feedback in feedbacks %}
+                            <div class="feedback-item">
+                                <div class="feedback-header">
+                                    <div class="feedback-stars">
+                                        {% for i in "12345"|make_list %}
+                                        {% if forloop.counter <= feedback.rating %}
+                                        <i class="fa fa-star"></i>
+                                        {% else %}
+                                        <i class="fa fa-star-o"></i>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    <div class="feedback-date">{{ feedback.created_at|date:"d.m.Y" }}</div>
+                                </div>
+                                <div class="feedback-author">{{ feedback.student.user.get_full_name }}</div>
+                                <div class="feedback-text">{{ feedback.comment }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

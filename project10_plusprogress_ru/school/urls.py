@@ -145,6 +145,8 @@ urlpatterns = [
     path('articles/kolichestvennye-mestoimeniya-v-anglijskom-yazyke/', views.article_kolichestvennye,
          name='article_kolichestvennye'),
     path('articles/mestoimeniya-v-anglijskom-yazyke/', views.article_mestoimeniya, name='article_mestoimeniya'),
+    path('team/', views.teachers_team, name='teachers_team'),
+    path('team/<int:teacher_id>/', views.teacher_detail, name='teacher_detail'),
 
     # 📄 Маршруты для документации API
     # Схема в формате JSON/YAML (нужно для генерации)
@@ -154,7 +156,7 @@ urlpatterns = [
     # ReDoc (альтернативный, более читаемый вариант)
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-    #JVT
+    # JVT
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
