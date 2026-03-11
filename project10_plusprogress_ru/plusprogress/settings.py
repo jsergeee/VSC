@@ -65,6 +65,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'school.context_processors.lk_admin_processor',   # Сворачивание Header в ЛК
             ],
         },
     },

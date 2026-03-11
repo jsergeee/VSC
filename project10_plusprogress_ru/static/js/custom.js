@@ -6,7 +6,7 @@ $(window).on('load', function () {
   /* ========================================================== */
 
   $(window).on('scroll', function () {
-    if ($(this).scrollTop() > 230) {
+    if ($(this).scrollTop() > 100) {
       $('.site-header').addClass('opaque')
     } else {
       $('.site-header').removeClass('opaque')
