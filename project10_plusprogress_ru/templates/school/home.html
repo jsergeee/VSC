@@ -180,58 +180,61 @@
 
         <!-- ===== НОВЫЙ БЛОК СО СЧЕТЧИКОМ И СТАТИСТИКОЙ ===== -->
         {% if total_feedbacks > 0 %}
-        <div class="row mb-4">
-            <div class="col-md-8 mx-auto">
-                <div class="feedback-stats-card">
-                    <div class="row align-items-center">
-                        <!-- Общий счетчик -->
-                        <div class="col-md-4 text-center mb-3 mb-md-0">
-                            <div class="total-feedback-count">
-                                <span class="count-number">{{ total_feedbacks }}</span>
-                                <span class="count-label">отзывов</span>
-                            </div>
-                            <div class="average-rating">
-                                {% with avg=rating_stats.avg %}
-                                <span class="rating-value">{{ avg|floatformat:1 }}</span>
-                                <span class="rating-stars">
-                                    {% for i in "12345"|make_list %}
-                                    {% if forloop.counter <= avg|floatformat:0|add:0 %} <i class="fa fa-star text-warning"></i>
-                                        {% elif forloop.counter == avg|floatformat:0|add:1 and avg|floatformat:1|slice:"-1:" == "5" %}
-                                        <i class="fa fa-star-half-o text-warning"></i>
-                                        {% else %}
-                                        <i class="fa fa-star-o text-muted"></i>
-                                        {% endif %}
-                                        {% endfor %}
-                                </span>
+        <div class="row mb-3">
+    <div class="col-md-6 col-lg-5 col-xl-4 mx-auto">
+        <!-- Компактная карточка статистики -->
+        <div class="feedback-stats-card" style="background: #f8f9fa; border-radius: 10px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+            <div class="row align-items-center g-2">
+                <!-- Общий счетчик (компактный) -->
+                <div class="col-5 text-center">
+                    <div class="total-feedback-count">
+                        <span class="count-number" style="font-size: 2rem; font-weight: 700; line-height: 1; display: block; color: #2c3e50;">{{ total_feedbacks }}</span>
+                        <span class="count-label" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #7f8c8d;">отзывов</span>
+                    </div>
+                    <div class="average-rating mt-1">
+                        {% with avg=rating_stats.avg %}
+                        <span class="rating-value" style="font-size: 1.1rem; font-weight: 600; color: #f39c12; margin-right: 4px;">{{ avg|floatformat:1 }}</span>
+                        <span class="rating-stars" style="font-size: 0.8rem;">
+                            {% for i in "12345"|make_list %}
+                                {% if forloop.counter <= avg|floatformat:0|add:0 %}
+                                    <i class="fa fa-star text-warning"></i>
+                                {% elif forloop.counter == avg|floatformat:0|add:1 and avg|floatformat:1|slice:"-1:" == "5" %}
+                                    <i class="fa fa-star-half-o text-warning"></i>
+                                {% else %}
+                                    <i class="fa fa-star-o text-muted" style="opacity: 0.5;"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </span>
+                        {% endwith %}
+                    </div>
+                </div>
+
+                <!-- Детальная статистика (компактная) -->
+                <div class="col-7">
+                    <div class="rating-breakdown" style="font-size: 0.8rem;">
+                        {% for rating in "54321"|make_list %}
+                        <div class="rating-row d-flex align-items-center mb-1">
+                            <span class="rating-label" style="min-width: 35px; font-weight: 500;">
+                                {{ rating }} <i class="fa fa-star" style="font-size: 0.65rem; color: #f39c12;"></i>
+                            </span>
+                            <div class="progress flex-grow-1" style="height: 6px; margin: 0 6px; background-color: #e9ecef; border-radius: 10px;">
+                                {% with percent_key=rating|add:"_percent" %}
+                                <div class="progress-bar bg-warning" style="width: {{ rating_stats|get_item:percent_key }}%; height: 6px; border-radius: 10px;" role="progressbar"></div>
                                 {% endwith %}
                             </div>
+                            <span class="rating-count" style="min-width: 20px; text-align: right; color: #7f8c8d; font-weight: 500;">
+                                {% with count_key=rating %}
+                                {{ rating_stats|get_item:count_key }}
+                                {% endwith %}
+                            </span>
                         </div>
-
-                        <!-- Детальная статистика по оценкам -->
-                        <div class="col-md-8">
-                            <div class="rating-breakdown">
-                                {% for rating in "54321"|make_list %}
-                                <div class="rating-row">
-                                    <span class="rating-label">{{ rating }} <i class="fa fa-star text-warning"></i></span>
-                                    <div class="progress rating-progress">
-                                        {% with percent_key=rating|add:"_percent" %}
-                                        <div class="progress-bar bg-warning" style="width: {{ rating_stats|get_item:percent_key }}%" role="progressbar">
-                                        </div>
-                                        {% endwith %}
-                                    </div>
-                                    <span class="rating-count">
-                                        {% with count_key=rating %}
-                                        {{ rating_stats|get_item:count_key }}
-                                        {% endwith %}
-                                    </span>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
         </div>
+    </div>
+</div>
         {% endif %}
         <!-- ===== КОНЕЦ НОВОГО БЛОКА ===== -->
 

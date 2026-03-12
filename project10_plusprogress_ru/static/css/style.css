@@ -2015,7 +2015,7 @@ a.btn-red:visited, a.btn-red:focus{
 }
 .testim-inner h6{
 	margin-bottom: 5px;
-	font-size: 20px;
+	font-size: 15px;
 	line-height: 28px;
 	font-weight: 700;
 	color: #071e55;
@@ -2024,7 +2024,7 @@ a.btn-red:visited, a.btn-red:focus{
 
 .testim-inner p{
 	margin-bottom: 12px;
-	font-size: 21px;
+	font-size: 15px;
 	line-height: 32px;
 	font-style: italic;
 	color: #071e55;
@@ -2032,7 +2032,7 @@ a.btn-red:visited, a.btn-red:focus{
 
 .testim-inner i{
 	margin-bottom: 12px;
-	font-size: 26px;
+	font-size: 20px;
 	line-height: 40px;
 	color: #27b36a;
 }
@@ -3381,6 +3381,7 @@ ul.benefits.white li i {
     padding: 25px;
     box-shadow: 0 5px 20px rgba(0,0,0,0.05);
     border: 1px solid #f0f0f0;
+
 }
 
 .total-feedback-count {
@@ -3414,7 +3415,7 @@ ul.benefits.white li i {
 }
 
 .average-rating .rating-stars {
-    font-size: 18px;
+    font-size: 10px !important;
 }
 
 .rating-breakdown {

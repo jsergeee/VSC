@@ -2048,6 +2048,8 @@ max-width: 20%;
     opacity: 1;
 }
 
+
+
 .teacher-card:hover .teacher-name {
     margin-bottom: 10px;
     font-size: 22px;
@@ -2109,12 +2111,13 @@ max-width: 20%;
     margin-left: 3px;
 }
 
-.teacher-bio {
+.teacher-bio p {
     color: #666;
-    font-size: 12px;
+    font-size: 15px !important;
     line-height: 1.4;
     margin: 8px 0;
     text-align: center;
+    text-align: justify;
 }
 
 .teacher-social {
