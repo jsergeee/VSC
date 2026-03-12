@@ -12,7 +12,6 @@ from django.template.loader import render_to_string
 from django.db import connection, transaction
 from decimal import Decimal
 from datetime import datetime, date, timedelta
-from django.db.models import Sum, Count, Q, Prefetch, Avg
 from .telegram import notify_payment
 import json
 import csv
@@ -434,13 +433,43 @@ def home(request):
     Главная страница
     """
     trial_form = TrialRequestForm()
-    feedback_form = PublicFeedbackForm()  # ← добавляем
+    feedback_form = PublicFeedbackForm()
 
     # Получаем активные отзывы для главной
     feedbacks = Feedback.objects.filter(
         is_active=True,
         is_on_main=True
     ).select_related('teacher__user').order_by('sort_order', '-created_at')
+
+    # ===== НОВАЯ СТАТИСТИКА ПО ОТЗЫВАМ =====
+    # Все активные отзывы (не только на главной)
+    all_active_feedbacks = Feedback.objects.filter(is_active=True)
+    
+    total_feedbacks = all_active_feedbacks.count()
+    
+    # Статистика по оценкам
+    rating_stats = {
+        'avg': all_active_feedbacks.aggregate(Avg('rating'))['rating__avg'] or 0,
+        '5': all_active_feedbacks.filter(rating=5).count(),
+        '4': all_active_feedbacks.filter(rating=4).count(),
+        '3': all_active_feedbacks.filter(rating=3).count(),
+        '2': all_active_feedbacks.filter(rating=2).count(),
+        '1': all_active_feedbacks.filter(rating=1).count(),
+    }
+    
+    # Проценты для визуализации
+    if total_feedbacks > 0:
+        rating_stats['5_percent'] = round(rating_stats['5'] / total_feedbacks * 100)
+        rating_stats['4_percent'] = round(rating_stats['4'] / total_feedbacks * 100)
+        rating_stats['3_percent'] = round(rating_stats['3'] / total_feedbacks * 100)
+        rating_stats['2_percent'] = round(rating_stats['2'] / total_feedbacks * 100)
+        rating_stats['1_percent'] = round(rating_stats['1'] / total_feedbacks * 100)
+    else:
+        rating_stats['5_percent'] = rating_stats['4_percent'] = rating_stats['3_percent'] = rating_stats['2_percent'] = rating_stats['1_percent'] = 0
+
+    # Последние 3 отзыва для превью (если нужно)
+    recent_feedbacks = all_active_feedbacks.order_by('-created_at')[:3]
+    # ===== КОНЕЦ НОВОЙ СТАТИСТИКИ =====
 
     if request.method == 'POST':
         if 'trial_form' in request.POST:
@@ -476,11 +505,17 @@ def home(request):
 
     context = {
         'trial_form': trial_form,
-        'feedback_form': feedback_form,  # ← добавляем
+        'feedback_form': feedback_form,
         'subjects': Subject.objects.all(),
         'feedbacks': feedbacks,
+        # ===== ДОБАВЛЯЕМ В КОНТЕКСТ =====
+        'total_feedbacks': total_feedbacks,
+        'rating_stats': rating_stats,
+        'recent_feedbacks': recent_feedbacks,
+        # ===== КОНЕЦ ДОБАВЛЕНИЯ =====
     }
     return render(request, 'school/home.html', context)
+
 
 def register(request):
     """Регистрация пользователя"""
@@ -6157,7 +6192,7 @@ def home(request):
     Главная страница
     """
     trial_form = TrialRequestForm()
-    feedback_form = PublicFeedbackForm()  # ← ДОБАВИТЬ
+    feedback_form = PublicFeedbackForm()
 
     # Получаем активные отзывы для главной
     feedbacks = Feedback.objects.filter(
@@ -6165,19 +6200,43 @@ def home(request):
         is_on_main=True
     ).select_related('teacher__user').order_by('sort_order', '-created_at')
 
+    # ===== НОВАЯ СТАТИСТИКА ПО ОТЗЫВАМ =====
+    # Все активные отзывы (не только на главной)
+    all_active_feedbacks = Feedback.objects.filter(is_active=True)
+    
+    total_feedbacks = all_active_feedbacks.count()
+    
+    # Статистика по оценкам
+    rating_stats = {
+        'avg': all_active_feedbacks.aggregate(Avg('rating'))['rating__avg'] or 0,
+        '5': all_active_feedbacks.filter(rating=5).count(),
+        '4': all_active_feedbacks.filter(rating=4).count(),
+        '3': all_active_feedbacks.filter(rating=3).count(),
+        '2': all_active_feedbacks.filter(rating=2).count(),
+        '1': all_active_feedbacks.filter(rating=1).count(),
+    }
+    
+    # Проценты для визуализации
+    if total_feedbacks > 0:
+        rating_stats['5_percent'] = round(rating_stats['5'] / total_feedbacks * 100)
+        rating_stats['4_percent'] = round(rating_stats['4'] / total_feedbacks * 100)
+        rating_stats['3_percent'] = round(rating_stats['3'] / total_feedbacks * 100)
+        rating_stats['2_percent'] = round(rating_stats['2'] / total_feedbacks * 100)
+        rating_stats['1_percent'] = round(rating_stats['1'] / total_feedbacks * 100)
+    else:
+        rating_stats['5_percent'] = rating_stats['4_percent'] = rating_stats['3_percent'] = rating_stats['2_percent'] = rating_stats['1_percent'] = 0
+    # ===== КОНЕЦ НОВОЙ СТАТИСТИКИ =====
+
     if request.method == 'POST':
-        print("\n" + "=" * 50)
-        print("🔥 POST запрос на главную")
-        print(f"POST данные: {request.POST}")
-        print("=" * 50 + "\n")
-
-        # Проверяем, какая форма отправлена
-        if 'feedback_form' in request.POST:
-            print("📝 Обнаружена форма отзыва!")
+        if 'trial_form' in request.POST:
+            trial_form = TrialRequestForm(request.POST)
+            if trial_form.is_valid():
+                trial_form.save()
+                messages.success(request, 'Заявка успешно отправлена! Мы свяжемся с вами в ближайшее время.')
+                return redirect('home')
+        elif 'feedback_form' in request.POST:
             feedback_form = PublicFeedbackForm(request.POST)
-
             if feedback_form.is_valid():
-                print("✅ Форма валидна!")
                 feedback = feedback_form.save(commit=False)
                 feedback.is_active = False
                 feedback.is_on_main = False
@@ -6194,54 +6253,23 @@ def home(request):
                         link=f'/admin/school/feedback/{feedback.id}/change/'
                     )
 
-                print(f"✅ Отзыв сохранен! ID: {feedback.id}")
-
-                # Проверяем, AJAX ли это запрос
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'status': 'ok'})
-
                 messages.success(
                     request,
                     'Спасибо за ваш отзыв! Он появится на сайте после проверки.'
                 )
                 return redirect('home')
-            else:
-                print("❌ Форма не валидна!")
-                print(f"Ошибки: {feedback_form.errors}")
-
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({
-                        'error': 'Проверьте правильность заполнения формы',
-                        'errors': feedback_form.errors
-                    }, status=400)
-
-                messages.error(request, 'Пожалуйста, исправьте ошибки в форме')
-
-        elif 'trial_form' in request.POST:
-            print("📝 Обнаружена форма заявки!")
-            trial_form = TrialRequestForm(request.POST)
-            if trial_form.is_valid():
-                trial_form.save()
-                print("✅ Заявка сохранена!")
-
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'status': 'ok'})
-
-                messages.success(request, 'Заявка успешно отправлена! Мы свяжемся с вами в ближайшее время.')
-                return redirect('home')
-            else:
-                print(f"❌ Ошибки в форме заявки: {trial_form.errors}")
 
     context = {
         'trial_form': trial_form,
-        'feedback_form': feedback_form,  # ← ДОБАВИТЬ В КОНТЕКСТ
+        'feedback_form': feedback_form,
         'subjects': Subject.objects.all(),
         'feedbacks': feedbacks,
+        # ===== ДОБАВЛЯЕМ В КОНТЕКСТ =====
+        'total_feedbacks': total_feedbacks,
+        'rating_stats': rating_stats,
+        # ===== КОНЕЦ ДОБАВЛЕНИЯ =====
     }
-
     return render(request, 'school/home.html', context)
-
-
 
 
 def add_feedback(request):

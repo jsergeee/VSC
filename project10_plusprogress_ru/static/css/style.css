@@ -3374,6 +3374,98 @@ ul.benefits.white li i {
     display: inline-block;
 }
 
+/* Стили для статистики отзывов */
+.feedback-stats-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+    border: 1px solid #f0f0f0;
+}
+
+.total-feedback-count {
+    margin-bottom: 10px;
+}
+
+.total-feedback-count .count-number {
+    font-size: 48px;
+    font-weight: 700;
+    color: #333;
+    line-height: 1;
+}
+
+.total-feedback-count .count-label {
+    font-size: 16px;
+    color: #666;
+    margin-left: 5px;
+}
+
+.average-rating {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.average-rating .rating-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: #ffc107;
+}
+
+.average-rating .rating-stars {
+    font-size: 18px;
+}
+
+.rating-breakdown {
+    padding-left: 20px;
+    border-left: 2px solid #f0f0f0;
+}
+
+.rating-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.rating-label {
+    width: 45px;
+    font-size: 14px;
+    color: #666;
+}
+
+.rating-label i {
+    margin-left: 3px;
+}
+
+.rating-progress {
+    flex: 1;
+    height: 8px;
+    margin: 0 10px;
+    background-color: #f0f0f0;
+    border-radius: 4px;
+}
+
+.rating-progress .progress-bar {
+    border-radius: 4px;
+    background-color: #ffc107 !important;
+}
+
+.rating-count {
+    width: 35px;
+    font-size: 14px;
+    color: #666;
+    text-align: right;
+}
+
+@media (max-width: 767px) {
+    .rating-breakdown {
+        padding-left: 0;
+        border-left: none;
+        margin-top: 20px;
+    }
+}
+
 /* Статистика домашних заданий */
 .stats-grid {
     display: grid;
