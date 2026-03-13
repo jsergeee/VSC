@@ -22,6 +22,7 @@
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
     <!-- Шрифты -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Roboto+Slab:wght@600&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" type="image/png" href="{% static 'favicon.ico' %}" />
     <style>
         /* Временные стили для кнопки */
         .btn-application {
@@ -177,14 +178,14 @@
             font-weight: 500;
         }
 
-        .rating-option input[type="radio"]:checked + label {
+        .rating-option input[type="radio"]:checked+label {
             border-color: #e52f37;
             background: #fff5f5;
             transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(229,47,55,0.2);
+            box-shadow: 0 5px 15px rgba(229, 47, 55, 0.2);
         }
 
-        .rating-option input[type="radio"]:checked + label span {
+        .rating-option input[type="radio"]:checked+label span {
             color: #e52f37;
             font-weight: 600;
         }
@@ -192,7 +193,7 @@
         .rating-option label:hover {
             border-color: #e52f37;
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
 
         .feedback_success_box {
@@ -493,8 +494,8 @@
     <script src="{% static 'js/custom.js' %}"></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/ru.js'></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <script src="https://use.fontawesome.com/4f804a51bb.js"></script>
-
     <script>
         // Функция для получения cookie
         function getCookie(name) {
@@ -657,20 +658,20 @@
             var feedbackOverlay = $('#feedbackModalOverlay');
 
             // Кнопки открытия будут иметь класс open-feedback-modal
-            $('.open-feedback-modal').on('click', function() {
+            $('.open-feedback-modal').on('click', function () {
                 feedbackModal.addClass('show');
                 $('body').css('overflow', 'hidden');
             });
 
-            feedbackCloseBtn.on('click', function() {
+            feedbackCloseBtn.on('click', function () {
                 closeFeedbackModal();
             });
 
-            feedbackOverlay.on('click', function() {
+            feedbackOverlay.on('click', function () {
                 closeFeedbackModal();
             });
 
-            $(document).on('keydown', function(e) {
+            $(document).on('keydown', function (e) {
                 if (e.key === 'Escape' && feedbackModal.hasClass('show')) {
                     closeFeedbackModal();
                 }
@@ -684,7 +685,7 @@
             }
 
             // Отправка формы отзыва
-            $('#feedbackForm').on('submit', function(e) {
+            $('#feedbackForm').on('submit', function (e) {
                 e.preventDefault();
 
                 var form = $(this);
@@ -716,23 +717,23 @@
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest'
                     },
-                    success: function(response) {
+                    success: function (response) {
                         $('.feedback_success_box').fadeIn();
                         form[0].reset();
 
-                        setTimeout(function() {
+                        setTimeout(function () {
                             $('.feedback_success_box').fadeOut();
                             closeFeedbackModal();
                         }, 3000);
                     },
-                    error: function(xhr) {
+                    error: function (xhr) {
                         var errorMsg = 'Ошибка отправки. Попробуйте позже.';
                         if (xhr.responseJSON && xhr.responseJSON.error) {
                             errorMsg = xhr.responseJSON.error;
                         }
                         alert(errorMsg);
                     },
-                    complete: function() {
+                    complete: function () {
                         submitBtn.prop('disabled', false).html(originalText);
                     }
                 });
