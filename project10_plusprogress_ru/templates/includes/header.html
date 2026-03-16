@@ -5,21 +5,11 @@
     <!--begin container -->
     <div class="container">
         <!--begin logo (ВИДНО ВСЕГДА) -->
-        <div>
+        <div style="display: flex; align-items: center;">
             <img class="navbar-brand" src="{% static 'images/logo.jpg' %}" alt="Плюс Прогресс" {% if is_lk or is_admin %}style="display: none;" {% endif %}>
-
-            <!-- ЭТОТ БЛОК С ИКОНКАМИ СКРЫВАЕМ В ЛК/АДМИНКЕ -->
-            <div class="mobile-icons d-inline" {% if is_lk or is_admin %}style="display: none;" {% endif %}>
-                <a href="https://www.instagram.com/linguaglobal.ru/" target="_blank" style="font-size: 30px !important;"><i class="fa fa-instagram" style="font-size: 30px; color: #FD1D1D"></i></a>
-                <a href="https://max.ru/u/f9LHodD0cOJ_btmeih27Um4qfd1WW8CGQfHw7XpZ9KJBY991yxm4wCuHtrE?text=Здравствуйте, пишу Вам с сайта." target="_blank" style="font-size: 14px !important;"><i class="fa fa-whatsapp" style="color: #25D366; font-size: 30px"></i></a>
-                <a href="https://t.me/PlusProgress" style="font-size: 14px !important;" target="_blank"><i class="fa fa-telegram" style="color: #0088cc; font-size: 30px"></i></a>
-                <a target="_blank" style="font-size: 14px !important;" href="https://go.onelink.me/gx2x?af_dp=rossgram%253A%252F%252F&af_referrer_name=post_link&af_og_description=%25D0%25AD%25D1%2582%25D0%25BE%2B%25D1%2581%25D0%25BB%25D1%2583%25D1%2587%25D0%25B8%25D0%25BB%25D0%25BE%25D1%2581%25D1%258C%25C2%25A0%2B%25D0%25B2%2B5-%25D0%25BC%2B%25D0%25BA%25D0%25BB%25D0%25B0%25D1%2581%25D1%2581%25D0%25B5.%2B%25D0%2592%2B%25D1%2581%25D0%25B0%25D0%25BC%25D0%25BE%25D0%25BC%2B%25D0%25BD%25D0%25B0%25D1%2587%25D0%25B0%25D0%25BB%25D0%25B5%2B1%2B%25D1%2587%25D0%25B5%25D1%2582%25D0%25B2%25D0%25B5%25D1%2580%25D1%2582%25D0%25B8.%2B%25D0%2592%25D0%25BB%25D1%258E%25D0%25B1%25D0%25B8%25D0%25BB%25D0%25B0%25D1%2581%25D1%258C...%2B%25D0%259F%25D0%25BE%2B%25D1%2583%25D1%2588%25D0%25B8%252C%2B%25D0%25BF%25D1%2580%25D1%258F%25D0%25BC%2B%25D0%25B3%25D0%25BE">
-                </a>
-            </div>
-
             <!-- ТЕЛЕФОН И ОПИСАНИЕ - скрываем в ЛК/админке -->
             <a class="header-number mt-1" href="tel:79272418211" {% if is_lk or is_admin %}style="display: none;" {% endif %}>+7 (927) 241-82-11</a>
-            <span {% if is_lk or is_admin %}style="display: none; font-size: 14px; font-family: 'Roboto', sans-serif;" {% endif %}>Онлайн английский, русский, математика, биология</span>
+            
         </div>
         <!--end logo -->
 
@@ -42,44 +32,7 @@
                 </ul>
             </div>
 
-            <!-- СОЦИАЛЬНЫЕ СЕТИ И КОНТАКТЫ - скрываем в ЛК/админке -->
-            <div class="navbar-collapse collapse custom-links" id="navbarSocial">
-                <ul class="navbar-nav" {% if is_lk or is_admin %}style="display: none;" {% endif %}>
-                    <li><a style="font-size: 14px !important; color: #071e55 !important;">Мы в соц сетях:</a></li>
-                    <li>
-                        <a href="https://vk.com/plusprog" target="_blank"><i class="fa fa-vk" style="font-size: 25px; color: #4d7198"></i><img src="" alt="" class="app-icon"></a>
-                    </li>
-                    <li>
-                        <a href="https://www.instagram.com/linguaglobal.ru/" target="_blank"><i class="fa fa-instagram" style="font-size: 25px; color: #FD1D1D"></i><img src="" alt="" class="app-icon"></a>
-                    </li>
-                    <li>
-                        <a target="_blank" href="https://go.onelink.me/gx2x?af_dp=rossgram%253A%252F%252F&af_referrer_name=post_link&af_og_description=%25D0%25AD%25D1%2582%25D0%25BE%2B%25D1%2581%25D0%25BB%25D1%2583%25D1%2587%25D0%25B8%25D0%25BB%25D0%25BE%25D1%2581%25D1%258C%25C2%25A0%2B%25D0%25B2%2B5-%25D0%25BC%2B%25D0%25BA%25D0%25BB%25D0%25B0%25D1%2581%25D1%2581%25D0%25B5.%2B%25D0%2592%2B%25D1%2581%25D0%25B0%25D0%25BC%25D0%25BE%25D0%25BC%2B%25D0%25BD%25D0%25B0%25D1%2587%25D0%25B0%25D0%25BB%25D0%25B5%2B1%2B%25D1%2587%25D0%25B5%25D1%2582%25D0%25B2%25D0%25B5%25D1%2580%25D1%2582%25D0%25B8.%2B%25D0%2592%25D0%25BB%25D1%258E%25D0%25B1%25D0%25B8%25D0%25BB%25D0%25B0%25D1%2581%25D1%258C...%2B%25D0%259F%25D0%25BE%2B%25D1%2583%25D1%2588%25D0%25B8%252C%2B%25D0%25BF%25D1%2580%25D1%258F%25D0%25BC%2B%25D0%25B3%25D0%25BE">
-                            <img src="{% static 'images/ros.jpg' %}" alt="" width="25px">
-                        </a>
-                    </li>
-                    <li>
-                        <a target="_blank" href="https://go.onelink.me/gx2x?af_dp=rossgram%253A%252F%252F&af_referrer_name=post_link&af_og_description=%25D0%25AD%25D1%2582%25D0%25BE%2B%25D1%2581%25D0%25BB%25D1%2583%25D1%2587%25D0%25B8%25D0%25BB%25D0%25BE%25D1%2581%25D1%258C%25C2%25A0%2B%25D0%25B2%2B5-%25D0%25BC%2B%25D0%25BA%25D0%25BB%25D0%25B0%25D1%2581%25D1%2581%25D0%25B5.%2B%25D0%2592%2B%25D1%2581%25D0%25B0%25D0%25BC%25D0%25BE%25D0%25BC%2B%25D0%25BD%25D0%25B0%25D1%2587%25D0%25B0%25D0%25BB%25D0%25B5%2B1%2B%25D1%2587%25D0%25B5%25D1%2582%25D0%25B2%25D0%25B5%25D1%2580%25D1%2582%25D0%25B8.%2B%25D0%2592%25D0%25BB%25D1%258E%25D0%25B1%25D0%25B8%25D0%25BB%25D0%25B0%25D1%2581%25D1%258C...%2B%25D0%259F%25D0%25BE%2B%25D1%2583%25D1%2588%25D0%25B8%252C%2B%25D0%25BF%25D1%2580%25D1%258F%25D0%25BC%2B%25D0%25B3%25D0%25BE">
-                        </a>
-                    </li>
-                </ul>
 
-                <!-- Напишите нам -->
-                <ul class="navbar-nav" {% if is_lk or is_admin %}style="display: none;" {% endif %}>
-                    <li><a style="font-size: 14px !important; color: #071e55 !important; display: flex; align-items: center; justify-content: center;">Напишите нам:</a></li>
-                    <li>
-                        <a href="https://max.ru/u/f9LHodD0cOJ_btmeih27Um4qfd1WW8CGQfHw7XpZ9KJBY991yxm4wCuHtrE?text=Здравствуйте%2C%20пишу%20Вам%20с%20сайта." target="_blank" style="font-size: 14px !important; display: inline-flex; align-items: center;">
-                            <i style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; background-image: url('{% static 'images/max-messenger-sign-logo.svg' %}'); background-size: contain; background-repeat: no-repeat;"></i>
-                            Max
-                        </a>
-                    </li>
-                    <li>
-                        <a href="https://t.me/plusprogress" target="_blank" style="font-size: 14px !important; display: inline-flex; align-items: center;">
-                            <i class="fa fa-telegram" style="color: #0088cc; font-size: 20px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; margin-right: 5px;"></i>
-                            Telegram
-                        </a>
-                    </li>
-                </ul>
-            </div>
         </div>
         <!--end navbar-collapse -->
     </div>

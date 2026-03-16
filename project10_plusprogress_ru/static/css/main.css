@@ -121,7 +121,6 @@ img {
   width: 100%;
   max-width: var(--container-width);
   margin: 0 auto;
-  padding: 20px 20px 0 20px;
 }
 
 .row {
@@ -1093,7 +1092,7 @@ img {
     background: #f8f9fa;
     position: relative;
     width: 100%;
-    margin-top: 160px;
+    margin-top: 100px;
 }
 
 .header {
@@ -1107,7 +1106,7 @@ img {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /*height: 60px;*/
+  min-height: 60px;
 }
 
 .logo {
