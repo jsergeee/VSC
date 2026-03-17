@@ -130,7 +130,7 @@ img {
   flex-wrap: wrap;
 /*  margin: 0 calc(var(--space-sm) * -1);*/
     /* margin: 1px; */
-    background-color: rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.5);
 }
 
 .col {
@@ -526,7 +526,10 @@ img {
 
 .accordion-item.open .accordion-body {
   display: block;
+  
 }
+
+
 
 .badge {
   display: inline-block;

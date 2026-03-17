@@ -221,7 +221,7 @@ iframe {
     font-size: 16px;
     line-height: 24px;
     margin-bottom: 8px;
-    color: #333;
+    color: black;
     position: relative;
     padding-left: 20px;
     
@@ -298,7 +298,7 @@ iframe {
 }
 
 .section-bg-1{
-    background: url(../images/bg10.jpg);
+    background: url(../images/fon_head_sheeet.png);
     background-position: top center;
     background-repeat: no-repeat;
     background-attachment: fixed;
@@ -1018,8 +1018,27 @@ ul.footer_social li a i:hover {
 	z-index: 999;
   	/*padding-top: 10px;*/
   /*	padding-bottom: 110px;*/
-  	background: url(../images/bg10.jpg) top center no-repeat;
+  	background: url(../images/fon_head_sheeet.png) top center no-repeat;
 	background-size: cover;
+}
+
+.home-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.6); /* белый полупрозрачный слой */
+    /* или rgba(0, 0, 0, 0.3) для затемнения */
+    pointer-events: none; /* чтобы слой не мешал кликать по элементам */
+    z-index: 1;
+}
+
+/* Чтобы контент был поверх полупрозрачного слоя */
+.home-section > * {
+    position: relative;
+    z-index: 2;
 }
 
 .links-section {
@@ -1029,22 +1048,7 @@ ul.footer_social li a i:hover {
 	width: 1440px;
 }
 
-.home-section-overlay{
-	width: 100%;
-	background: #101010;
-	opacity: 0.01;
-	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-}
 
-.home-section h1{
-	margin: 20px auto 20px auto;
-	line-height: 1.2;
-    color: #071e55;
-}
 
 .home-section p.hero-text{
 	margin-bottom: 25px;
