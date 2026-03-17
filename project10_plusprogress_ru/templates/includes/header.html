@@ -6,17 +6,25 @@
     <div class="container">
         <!--begin logo (ВИДНО ВСЕГДА) -->
         <div style="display: flex; align-items: center;">
-            <img class="navbar-brand" src="{% static 'images/logo.jpg' %}" alt="Плюс Прогресс" {% if is_lk or is_admin %}style="display: none;" {% endif %}>
+            <img class="navbar-brand" src="{% static 'images/logo_new_red.png' %}" alt="Плюс Прогресс" {% if is_lk or is_admin %}style="display: none;" {% endif %}>
             <!-- ТЕЛЕФОН И ОПИСАНИЕ - скрываем в ЛК/админке -->
             <a class="header-number mt-1" href="tel:79272418211" {% if is_lk or is_admin %}style="display: none;" {% endif %}>+7 (927) 241-82-11</a>
             
         </div>
         <!--end logo -->
+                <!-- Контакты -->
+        <a href="https://vk.com/plusprog" target="_blank" style="margin-right: 15px;">
+            <i class="fa fa-vk" style="font-size: 25px; color: #4d7198;"></i>
+        </a>
+        <div style="text-align: center; display: flex; justify-content: center; align-items: center;">
+            <a href="https://max.ru/u/f9LHodD0cOJ_btmeih27Um4qfd1WW8CGQfHw7XpZ9KJBY991yxm4wCuHtrE?text=Здравствуйте%2C%20пишу%20Вам%20с%20сайта." target="_blank" style="margin-right: 15px; text-decoration: none; color: #071e55; display: flex; align-items: center;">
+                <i class="max-icon" style="color: #4a90e2; margin-right: 8px; "></i> Max
+            </a>
+            
+            <a href="https://t.me/plusprogress" target="_blank" style="text-decoration: none; color: #071e55; align-items: center;">
+                <i class="fa fa-telegram" style="color: #0088cc;"></i> Telegram
 
-        <!--begin navbar-toggler -->
-        <button class="navbar-toggler collapsed" type="button" data-toggle="collapse" data-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"><i class="fas fa-bars"></i></span>
-        </button>
+        </div>
         <!--end navbar-toggler -->
 
         <div class="d-block">
