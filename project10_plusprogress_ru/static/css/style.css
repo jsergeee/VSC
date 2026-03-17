@@ -4812,7 +4812,7 @@ margin: auto auto auto auto;
 .fa-star-o {
     color: #ddd;
 
-
+}
 /* Стили для формы отзывов */
 .rating-stars-input .form-check-label i {
     font-size: 24px;
@@ -4938,3 +4938,13 @@ margin: auto auto auto auto;
 
 .social-instagram {
     background: linear-gradient(45deg, #f09433, #d62976, #962fbf, #4f5bd5);
+
+}
+
+.social-net {
+    display: flex;
+    justify-content: center;
+    text-align: center; 
+    margin-bottom: 20px;
+    align-items: center;
+}
