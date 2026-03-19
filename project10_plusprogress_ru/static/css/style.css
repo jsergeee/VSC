@@ -2363,6 +2363,46 @@ ul.benefits.white li i {
 
 /* От 768px до 991px */
 @media (min-width: 768px) and (max-width: 991px) {
+        /* Принудительно показываем dropdown меню */
+    .dropdown-menu {
+        display: block !important;
+        position: static !important;
+        float: none !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: transparent !important;
+        
+    }
+    
+    /* Прячем стрелку */
+ 
+    .dropdown-toggle::after {
+        display: none !important;
+    }
+    
+    /* Делаем "Еще..." как обычный заголовок без возможности клика */
+    .dropdown-toggle {
+        pointer-events: none !important;
+        cursor: default !important;
+        display: none;
+    }
+    
+    /* Убираем любые трансформации от Bootstrap */
+    .collapse.show .dropdown-menu.show,
+    .collapsing .dropdown-menu {
+        display: block !important;
+    }
+
+    .dropdown-item{
+        color: #071e55;
+        font-size: 17px;
+        line-height: 30px !important;
+        padding: 10px 15px !important;
+        font-family: 'Roboto Slab', serif;
+        font-weight: 600;
+    }
+
 
     .main-content {
     margin-top: 109px;
@@ -2478,6 +2518,43 @@ ul.benefits.white li i {
 
 /* От 426px до 768px */
 @media (min-width: 426px) and (max-width: 768px) {
+    /* Принудительно показываем dropdown меню */
+    .dropdown-menu {
+        display: block !important;
+        position: static !important;
+        float: none !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: transparent !important;
+        
+    }
+        .dropdown-item{
+        color: #071e55;
+        font-size: 17px;
+        line-height: 30px !important;
+        padding: 10px 15px !important;
+        font-family: 'Roboto Slab', serif;
+        font-weight: 600;
+    }
+    /* Прячем стрелку */
+    .dropdown-toggle::after {
+        display: none !important;
+    }
+    
+    /* Делаем "Еще..." как обычный заголовок без возможности клика */
+    .dropdown-toggle {
+        pointer-events: none !important;
+        cursor: default !important;
+        display: none;
+    }
+    
+    /* Убираем любые трансформации от Bootstrap */
+    .collapse.show .dropdown-menu.show,
+    .collapsing .dropdown-menu {
+        display: block !important;
+    }
+
     .main-content {
     margin-top: 109px;
 }
@@ -2597,6 +2674,43 @@ ul.benefits.white li i {
 
 /* От 376px до 425px */
 @media (min-width: 376px) and (max-width: 425px) {
+
+        /* Принудительно показываем dropdown меню */
+    .dropdown-menu {
+        display: block !important;
+        position: static !important;
+        float: none !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: transparent !important;
+        
+    }
+        .dropdown-item{
+        color: #071e55;
+        font-size: 17px;
+        line-height: 30px !important;
+        padding: 10px 15px !important;
+        font-family: 'Roboto Slab', serif;
+        font-weight: 600;
+    }
+    /* Прячем стрелку */
+    .dropdown-toggle::after {
+        display: none !important;
+    }
+    
+    /* Делаем "Еще..." как обычный заголовок без возможности клика */
+    .dropdown-toggle {
+        pointer-events: none !important;
+        cursor: default !important;
+        display: none;
+    }
+    
+    /* Убираем любые трансформации от Bootstrap */
+    .collapse.show .dropdown-menu.show,
+    .collapsing .dropdown-menu {
+        display: block !important;
+    }
     .main-content {
     margin-top: 109px;
 }
@@ -2722,6 +2836,43 @@ ul.benefits.white li i {
 
 /* До 375px */
 @media (max-width: 375px) {
+
+        /* Принудительно показываем dropdown меню */
+    .dropdown-menu {
+        display: block !important;
+        position: static !important;
+        float: none !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: transparent !important;
+        
+    }
+        .dropdown-item{
+        color: #071e55;
+        font-size: 17px;
+        line-height: 30px !important;
+        padding: 10px 15px !important;
+        font-family: 'Roboto Slab', serif;
+        font-weight: 600;
+    }
+    /* Прячем стрелку */
+    .dropdown-toggle::after {
+        display: none !important;
+    }
+    
+    /* Делаем "Еще..." как обычный заголовок без возможности клика */
+    .dropdown-toggle {
+        pointer-events: none !important;
+        cursor: default !important;
+        display: none;
+    }
+    
+    /* Убираем любые трансформации от Bootstrap */
+    .collapse.show .dropdown-menu.show,
+    .collapsing .dropdown-menu {
+        display: block !important;
+    }
 .main-content {
     margin-top: 109px;
 }
@@ -4759,8 +4910,11 @@ margin: auto auto auto auto;
 
     .navbar-expand-lg .navbar-collapse {
     border-bottom: 1px solid #dee2e6;
-
-    }
+    background-color: white;
+    position: absolute;
+    right: 5px;
+    top: 80px;
+}
 
 
 .feedback-rating {

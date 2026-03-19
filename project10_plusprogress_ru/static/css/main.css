@@ -290,11 +290,11 @@ img {
   padding: 0;
 }
 
-.nav-link {
+/* .nav-link {
   display: block;
   padding: var(--space-xs) var(--space-sm);
   color: var(--text-secondary);
-}
+} */
 
 .nav-link:hover {
   color: var(--color-primary);
