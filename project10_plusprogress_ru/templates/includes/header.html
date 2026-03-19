@@ -13,16 +13,17 @@
         </div>
         <!--end logo -->
                 <!-- Контакты -->
-        <a href="https://vk.com/plusprog" target="_blank" style="margin-right: 15px;">
-            <i class="fa fa-vk" style="font-size: 25px; color: #4d7198;"></i>
-        </a>
+
         <div style="text-align: center; display: flex; justify-content: center; align-items: center;">
+        <a href="https://vk.com/plusprog" target="_blank" style="margin-right: 15px; text-decoration: none; color: #071e55; display: flex; align-items: center;">
+            <i class="fa fa-vk" style="font-size: 25px; color: #4d7198; margin-right: 8px;"></i>В контакте
+        </a>
             <a href="https://max.ru/u/f9LHodD0cOJ_btmeih27Um4qfd1WW8CGQfHw7XpZ9KJBY991yxm4wCuHtrE?text=Здравствуйте%2C%20пишу%20Вам%20с%20сайта." target="_blank" style="margin-right: 15px; text-decoration: none; color: #071e55; display: flex; align-items: center;">
                 <i class="max-icon" style="color: #4a90e2; margin-right: 8px; "></i> Max
             </a>
             
             <a href="https://t.me/plusprogress" target="_blank" style="text-decoration: none; color: #071e55; align-items: center;">
-                <i class="fa fa-telegram" style="color: #0088cc;"></i> Telegram
+                <i class="fa fa-telegram" style="color: #0088cc;"></i> Telegram</a>
 
         </div>
         <!--end navbar-toggler -->
@@ -30,26 +31,25 @@
         <div class="d-block">
             <!-- ОСНОВНОЕ МЕНЮ - ВИДНО ВСЕГДА (это и есть navbarMain) -->
             <div class="navbar-collapse collapse" id="navbarMain">
-                <ul class="navbar-nav ml-auto">
-                    <li><a href="/#home">Главная</a></li>
-                    <li><a href="/#about">О нас</a></li>
-                    <li><a href="{% url 'teachers_team' %}">Наша команда</a></li>
-                    <li><a href="/#testimonials">Отзывы</a></li>
-                    <li><a href="/#pricing">Цены</a></li>
-                    <li><a href="/#articles">Статьи</a></li>
-                </ul>
-            </div>
-
-
-        </div>
-        <!--end navbar-collapse -->
-    </div>
-    <!--end container -->
-</nav>
-<!--end navbar-fixed-top -->
-
-<!-- БЛОК АВТОРИЗАЦИИ - ВИДЕН ВСЕГДА! (это и есть HeadNavbarAuth) -->
-<div id="HeadNavbarAuth">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item"><a class="nav-link" href="/#home">Главная</a></li>
+                <li class="nav-item"><a class="nav-link" href="/#about">О нас</a></li>
+                <li class="nav-item"><a class="nav-link" href="/#pricing">Цены </a></li>
+                                
+                <!-- Выпадающий список с остальными пунктами -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="moreMenu" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Еще...
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="moreMenu">
+                        <a class="dropdown-item" href="{% url 'teachers_team' %}">Наша команда</a>
+                        <a class="dropdown-item" href="/#testimonials">Отзывы</a>
+                        <a class="dropdown-item" href="/#articles">Статьи</a>
+                    </div>
+                </li>
+                <li class="nav-item">
+                <!-- БЛОК АВТОРИЗАЦИИ - ВИДЕН ВСЕГДА! (это и есть HeadNavbarAuth) -->
+<div>
     {% if user.is_authenticated %}
     <div class="navbar-collapse collapse show" id="navbarAuth" {% if is_lk or is_admin %}style="border-bottom: 1px solid var(--border-light);" {% endif %}>
         <ul class="navbar-nav ml-auto">
@@ -103,8 +103,20 @@
     <div class="navbar-collapse collapse show" id="navbarAuth">
         <ul class="navbar-nav ml-auto">
             <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Войти</a></li>
-            <li class="nav-item"><a class="nav-link" href="{% url 'register' %}">Регистрация</a></li>
+            {% comment %} <li class="nav-item"><a class="nav-link" href="{% url 'register' %}">Регистрация</a></li> {% endcomment %}
         </ul>
     </div>
     {% endif %}
 </div>
+                </li>
+            </ul>
+            </div>
+
+
+        </div>
+        <!--end navbar-collapse -->
+    </div>
+    <!--end container -->
+</nav>
+<!--end navbar-fixed-top -->
+

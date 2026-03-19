@@ -4558,12 +4558,12 @@ margin: auto auto auto auto;
 
 /* Ссылки в навигации (Войти/Регистрация) */
 #navbarAuth .nav-link {
-    color: #071e55 !important;
+    /* color: #071e55 !important;
     font-family: 'Roboto', sans-serif;
     font-size: 14px;
     font-weight: 400;
     padding: 0.5rem 1rem !important;
-    transition: color 0.3s ease;
+    transition: color 0.3s ease; */
 }
 
 #navbarAuth .nav-link:hover {
