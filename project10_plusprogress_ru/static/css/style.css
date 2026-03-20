@@ -711,13 +711,19 @@ iframe {
   padding: 0;
 }
 
+.logo_phone {
+    display: flex;
+    align-items: center;
+    margin-right: 50px; 
+}
+
 
 .navbar-brand{
 	font-family: 'Roboto Slab', serif;
 	font-size: 28px;
 	font-weight: 600;
 	color: #e52f37;
-	width: 80px;
+	width: 70px;
 }
 
 .navbar-brand:hover{
@@ -760,7 +766,7 @@ iframe {
 	/* box-shadow: 0px 0px 25px 0px rgba(0, 0, 0, 0.04)!important; */
 	/* transition: background-color 0.25s ease 0s; */
 	min-height: auto;
-	max-height: 50px;
+	max-height: 70px;
     margin-top: 10px;
 }
 
@@ -826,11 +832,6 @@ iframe {
 	color: #e52f37!important;
 	background: transparent;
 	border: 1px solid #e52f37;
-}
-/* Чтобы меню не переносилось */
-#navbarMain .navbar-nav {
-    flex-wrap: nowrap !important;
-    white-space: nowrap;
 }
 
 
@@ -2207,8 +2208,19 @@ ul.benefits.white li i {
 .navbar-toggler {
     margin-left: auto;  /* Сдвигает кнопку вправо */
     margin-right: 10px; /* Отступ от правого края */
+
 }
 
+.collapse:not(.show) {
+   justify-content: flex-end;
+}
+
+.ml-auto, .mx-auto {
+    margin-left: 0px !important;
+}
+.navbar-collapse {
+    background-color: white;
+}
 
 .card-header h5 .btn-link:hover, .card-header h5 .btn-link:focus {
 	text-decoration: none;
@@ -2344,14 +2356,13 @@ ul.benefits.white li i {
        text-align: left !important;
     }
 
-/*    #navbarAuth .dropdown-menu {
-        position: static !important;
-        float: none !important;
-        width: 100% !important;
-        box-shadow: none !important;
-    }*/
+    .logo_phone {
+        margin-right: 0px; 
+    }
+
     .navbar-brand {
         width: 60px;
+        display: none;
     }
 
     .collapsible-form-wrapper {
@@ -2363,6 +2374,10 @@ ul.benefits.white li i {
 
 /* От 768px до 991px */
 @media (min-width: 768px) and (max-width: 991px) {
+
+    .navbar>.container {
+        justify-content: flex-start;
+    }
         /* Принудительно показываем dropdown меню */
     .dropdown-menu {
         display: block !important;
@@ -2930,11 +2945,6 @@ ul.benefits.white li i {
 
 .notifications-header h6 {
     margin: 0;
-}
-
-.notifications-list {
-    max-height: 400px;
-    overflow-y: auto;
 }
 
 .notification-item {
@@ -4905,15 +4915,6 @@ margin: auto auto auto auto;
     .notifications-dropdown {
         width: 100% !important;
     }
-}
-
-
-    .navbar-expand-lg .navbar-collapse {
-    border-bottom: 1px solid #dee2e6;
-    background-color: white;
-    position: absolute;
-    right: 5px;
-    top: 80px;
 }
 
 

@@ -5,7 +5,7 @@
     <!--begin container -->
     <div class="container">
         <!--begin logo (ВИДНО ВСЕГДА) -->
-        <div style="display: flex; align-items: center;">
+        <div class="logo_phone">
             <img class="navbar-brand" src="{% static 'images/logo_new_red.png' %}" alt="Плюс Прогресс" {% if is_lk or is_admin %}style="display: none;" {% endif %}>
             <!-- ТЕЛЕФОН И ОПИСАНИЕ - скрываем в ЛК/админке -->
             <a class="header-number mt-1" href="tel:79272418211" {% if is_lk or is_admin %}style="display: none;" {% endif %}>+7 (927) 241-82-11</a>
@@ -49,8 +49,30 @@
                     </div>
                 </li>
                 
-                <!-- БЛОК АВТОРИЗАЦИИ -->
+                <!-- БЛОК АВТОРИЗАЦИИ (ПЕРЕСТАВЛЕН) -->
                 {% if user.is_authenticated %}
+                <!-- СНАЧАЛА МЕНЮ ПОЛЬЗОВАТЕЛЯ -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        {{ user.first_name|default:user.username }}
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
+                        <a class="dropdown-item" href="{% url 'dashboard' %}">Личный кабинет</a>
+                        {% if user.role == 'student' %}
+                        <a class="dropdown-item" href="{% url 'student_feedbacks' %}">Мои отзывы</a>
+                        {% elif user.role == 'teacher' %}
+                        <a class="dropdown-item" href="{% url 'teacher_feedbacks' %}">Отзывы обо мне</a>
+                        {% endif %}
+                        <a class="dropdown-item" href="{% url 'profile' %}">Профиль</a>
+                        {% if user.is_staff %}
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="{% url 'admin:index' %}">Админ-панель</a>
+                        {% endif %}
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="{% url 'logout' %}">Выйти</a>
+                    </div>
+                </li>
+                <!-- ПОТОМ БЛОК УВЕДОМЛЕНИЙ -->
                 <li class="nav-item dropdown">
                     <a class="nav-link" href="#" id="notificationsDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fa fa-bell" style="font-size: 20px;"></i>
@@ -71,26 +93,6 @@
                         <div class="notifications-footer">
                             <a href="#" class="dropdown-item text-center small py-2">Все уведомления</a>
                         </div>
-                    </div>
-                </li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        {{ user.first_name|default:user.username }}
-                    </a>
-                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
-                        <a class="dropdown-item" href="{% url 'dashboard' %}">Личный кабинет</a>
-                        {% if user.role == 'student' %}
-                        <a class="dropdown-item" href="{% url 'student_feedbacks' %}">Мои отзывы</a>
-                        {% elif user.role == 'teacher' %}
-                        <a class="dropdown-item" href="{% url 'teacher_feedbacks' %}">Отзывы обо мне</a>
-                        {% endif %}
-                        <a class="dropdown-item" href="{% url 'profile' %}">Профиль</a>
-                        {% if user.is_staff %}
-                        <div class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="{% url 'admin:index' %}">Админ-панель</a>
-                        {% endif %}
-                        <div class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="{% url 'logout' %}">Выйти</a>
                     </div>
                 </li>
                 {% else %}

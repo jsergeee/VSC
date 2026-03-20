@@ -117,14 +117,6 @@ img {
   height: auto;
 }
 
-.container {
-  width: 100%;
-  max-width: var(--container-width);
-  margin: 0 auto;
-}
-
-
-
 .row {
   display: flex;
   flex-wrap: wrap;
@@ -1107,12 +1099,6 @@ img {
 
 }
 
-.header .container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 60px;
-}
 
 .logo {
   font-size: 1.5rem;
@@ -1526,10 +1512,6 @@ img {
 
 .mb-auto {
   margin-bottom: auto !important;
-}
-
-.ml-auto {
-  margin-left: auto !important;
 }
 
 .mr-auto {
