@@ -2236,3 +2236,121 @@ class Feedback(models.Model):
 
     def __str__(self):
         return f'Отзыв от {self.name}'
+    
+    
+class Article(models.Model):
+    """
+    Модель для статей/публикаций на сайте
+    """
+    title = models.CharField('Заголовок', max_length=200)
+    slug = models.SlugField('URL', max_length=200, unique=True, blank=True,
+                             help_text='Автоматически создается из заголовка. Можно изменить вручную.')
+    content = models.TextField('Текст статьи', help_text='Основной текст статьи (поддерживает HTML)')
+    photo = models.ImageField('Основное фото', upload_to='articles/', blank=True, null=True,
+                              help_text='Главное изображение для статьи')
+    
+    # Дополнительные поля
+    author = models.CharField('Автор', max_length=100, blank=True, default='Плюс Прогресс')
+    excerpt = models.CharField('Краткое описание', max_length=300, blank=True,
+                               help_text='Показывается в списке статей')
+    
+    # Мета-данные
+    is_published = models.BooleanField('Опубликовано', default=True)
+    is_featured = models.BooleanField('Рекомендуемая', default=False,
+                                       help_text='Показывать в виджете "Рекомендуемые статьи"')
+    views_count = models.PositiveIntegerField('Просмотров', default=0)
+    
+    # Даты
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлено', auto_now=True)
+    published_at = models.DateTimeField('Дата публикации', null=True, blank=True)
+    
+    class Meta:
+        verbose_name = 'Статья'
+        verbose_name_plural = 'Статьи'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['slug']),
+            models.Index(fields=['-created_at']),
+            models.Index(fields=['is_published', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return self.title
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.title)
+            # Уникальность slug
+            if Article.objects.filter(slug=self.slug).exists():
+                import uuid
+                self.slug = f"{self.slug}-{uuid.uuid4().hex[:4]}"
+        
+        # Если публикуется впервые, устанавливаем дату публикации
+        if self.is_published and not self.published_at:
+            self.published_at = timezone.now()
+        
+        super().save(*args, **kwargs)
+    
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('article_detail', args=[self.slug])
+
+
+class ArticleAttachment(models.Model):
+    """
+    Модель для вложений к статьям (файлы, документы, ссылки)
+    """
+    ATTACHMENT_TYPES = (
+        ('file', 'Файл'),
+        ('link', 'Ссылка'),
+    )
+    
+    article = models.ForeignKey(
+        Article,
+        on_delete=models.CASCADE,
+        related_name='attachments',
+        verbose_name='Статья'
+    )
+    title = models.CharField('Название', max_length=200)
+    attachment_type = models.CharField('Тип', max_length=10, choices=ATTACHMENT_TYPES, default='file')
+    file = models.FileField('Файл', upload_to='articles/attachments/', blank=True, null=True)
+    link = models.URLField('Ссылка', blank=True, null=True)
+    
+    # Настройки доступа
+    allow_download = models.BooleanField('Разрешить скачивание', default=True,
+                                         help_text='Если отключено, файл можно только просматривать в браузере')
+    is_embedded = models.BooleanField('Встраивать на страницу', default=False,
+                                      help_text='Для изображений и PDF - показывать прямо на странице')
+    description = models.TextField('Описание', blank=True)
+    
+    # Порядок отображения
+    order = models.PositiveIntegerField('Порядок', default=0)
+    
+    created_at = models.DateTimeField('Добавлено', auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Вложение'
+        verbose_name_plural = 'Вложения'
+        ordering = ['order', '-created_at']
+    
+    def __str__(self):
+        return f"{self.article.title} - {self.title}"
+    
+    def get_file_size(self):
+        """Возвращает размер файла в читаемом формате"""
+        if self.file and self.file.size:
+            size = self.file.size
+            for unit in ['Б', 'КБ', 'МБ', 'ГБ']:
+                if size < 1024.0:
+                    return f"{size:.1f} {unit}"
+                size /= 1024.0
+        return 'Неизвестно'
+    
+    def get_file_extension(self):
+        """Возвращает расширение файла"""
+        if self.file and self.file.name:
+            import os
+            return os.path.splitext(self.file.name)[1].lower()[1:]
+        return ''

@@ -18,10 +18,12 @@ from datetime import timedelta
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here')
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+SITE_URL = "http://127.0.0.1:8000"
 
 DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.0.117']
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -36,6 +38,8 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'school.apps.SchoolConfig',
     'drf_spectacular',
+    'django.contrib.sitemaps',
+
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,312 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ article.title }} - Плюс Прогресс{% endblock %}
+{% block meta_description %}{{ article.excerpt|default:article.content|striptags|truncatechars:160 }}{% endblock %}
+{% block meta_keywords %}{{ article.title }}, обучение, онлайн школа, статьи{% endblock %}
+
+
+{% block extra_head %}
+<!-- Open Graph теги для соцсетей -->
+<meta property="og:title" content="{{ article.title }}">
+<meta property="og:description" content="{{ article.excerpt|default:article.content|striptags|truncatechars:160 }}">
+<meta property="og:type" content="article">
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+{% if article.photo %}
+<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ article.photo.url }}">
+{% endif %}
+<meta property="og:site_name" content="Плюс Прогресс">
+<meta property="og:locale" content="ru_RU">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ article.title }}">
+<meta name="twitter:description" content="{{ article.excerpt|default:article.content|striptags|truncatechars:160 }}">
+{% if article.photo %}
+<meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ article.photo.url }}">
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .article-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 80px 0 50px;
+        margin-bottom: 2rem;
+    }
+    .article-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+    .article-meta {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    .article-meta i {
+        margin-right: 0.3rem;
+    }
+    .article-content {
+        font-size: 1.1rem;
+        line-height: 1.8;
+        color: #2c3e50;
+    }
+    .article-content img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 10px;
+        margin: 1rem 0;
+    }
+    .article-content h2 {
+        font-size: 1.8rem;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+    .article-content h3 {
+        font-size: 1.5rem;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+    .article-content ul, .article-content ol {
+        margin: 1rem 0;
+        padding-left: 1.5rem;
+    }
+    .article-content li {
+        margin: 0.5rem 0;
+    }
+    .article-content blockquote {
+        border-left: 4px solid #e52f37;
+        padding: 0.75rem 1rem;
+        background: #f8f9fa;
+        font-style: italic;
+        margin: 1rem 0;
+    }
+    .attachments-section {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 2rem;
+        margin: 2rem 0;
+    }
+    .attachments-section h3 {
+        margin-bottom: 1.5rem;
+        font-weight: 600;
+    }
+    .attachment-item {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: transform 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .attachment-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .attachment-info {
+        flex: 1;
+    }
+    .attachment-info i {
+        font-size: 2rem;
+        margin-right: 1rem;
+        color: #667eea;
+    }
+    .attachment-title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    .attachment-desc {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    .attachment-meta {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
+    .attachment-actions a {
+        margin-left: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 5px;
+        text-decoration: none;
+    }
+    .related-articles {
+        margin-top: 3rem;
+    }
+    .related-articles h3 {
+        margin-bottom: 1.5rem;
+    }
+    .related-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem;
+        height: 100%;
+        transition: transform 0.2s;
+    }
+    .related-card:hover {
+        transform: translateY(-3px);
+    }
+    .related-card h4 {
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+    .related-card h4 a {
+        color: #2c3e50;
+        text-decoration: none;
+    }
+    .related-card h4 a:hover {
+        color: #e52f37;
+    }
+    .back-link {
+        display: inline-block;
+        margin-bottom: 1rem;
+        color: #6c757d;
+        text-decoration: none;
+    }
+    .back-link:hover {
+        color: #e52f37;
+    }
+    @media (max-width: 768px) {
+        .article-header h1 {
+            font-size: 1.8rem;
+        }
+        .article-content {
+            font-size: 1rem;
+        }
+        .attachment-item {
+            flex-direction: column;
+            text-align: center;
+        }
+        .attachment-info i {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        .attachment-actions {
+            margin-top: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+
+{% block content %}
+<article>
+    <!-- Шапка статьи -->
+    <div class="article-header">
+        <div class="container">
+            <a href="{% url 'article_list' %}" class="back-link text-white">
+                <i class="fa fa-arrow-left"></i> Все статьи
+            </a>
+            <h1>{{ article.title }}</h1>
+            <div class="article-meta">
+                <i class="fa fa-calendar"></i> {{ article.created_at|date:"d.m.Y" }}
+                <i class="fa fa-eye ms-3"></i> {{ article.views_count }} просмотров
+                {% if article.author %}
+                <i class="fa fa-user ms-3"></i> {{ article.author }}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <!-- Основное фото -->
+                {% if article.photo %}
+                <div class="text-center mb-4">
+                    <img src="{{ article.photo.url }}" alt="{{ article.title }}" class="img-fluid rounded shadow">
+                </div>
+                {% endif %}
+                
+                <!-- Содержание статьи -->
+                <div class="article-content">
+                    {{ article.content|safe }}
+                </div>
+                
+                <!-- Вложения -->
+                {% if attachments %}
+                <div class="attachments-section">
+                    <h3>📎 Материалы к статье</h3>
+                    <div class="attachments-list">
+                        {% for attachment in attachments %}
+                        <div class="attachment-item">
+                            <div class="attachment-info">
+                                {% if attachment.attachment_type == 'file' %}
+                                <i class="fa fa-file-text-o"></i>
+                                {% else %}
+                                <i class="fa fa-link"></i>
+                                {% endif %}
+                                <div class="attachment-title">{{ attachment.title }}</div>
+                                {% if attachment.description %}
+                                <div class="attachment-desc">{{ attachment.description }}</div>
+                                {% endif %}
+                                {% if attachment.attachment_type == 'file' %}
+                                <div class="attachment-meta">
+                                    {{ attachment.get_file_extension|upper }} • {{ attachment.get_file_size }}
+                                    {% if not attachment.allow_download %}
+                                    • <span class="text-warning">Только чтение</span>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="attachment-actions">
+                                {% if attachment.attachment_type == 'file' %}
+                                    {% if attachment.allow_download %}
+                                    <a href="{{ attachment.file.url }}" download class="btn btn-sm btn-outline-primary">
+                                        <i class="fa fa-download"></i> Скачать
+                                    </a>
+                                    {% endif %}
+                                    {% if attachment.is_embedded and attachment.get_file_extension in 'pdf,jpg,jpeg,png,gif' %}
+                                    <a href="{{ attachment.file.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fa fa-eye"></i> Просмотреть
+                                    </a>
+                                    {% endif %}
+                                {% else %}
+                                <a href="{{ attachment.link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="fa fa-external-link"></i> Перейти
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Похожие статьи -->
+                {% if related_articles %}
+                <div class="related-articles">
+                    <h3>📖 Похожие статьи</h3>
+                    <div class="row">
+                        {% for related in related_articles %}
+                        <div class="col-md-4 mb-3">
+                            <div class="related-card">
+                                <h4>
+                                    <a href="{% url 'article_detail' related.slug %}">
+                                        {{ related.title|truncatechars:50 }}
+                                    </a>
+                                </h4>
+                                <div class="small text-muted">
+                                    {{ related.created_at|date:"d.m.Y" }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Навигация -->
+                <div class="text-center mt-4">
+                    <a href="{% url 'article_list' %}" class="btn btn-outline-primary">
+                        <i class="fa fa-list"></i> Все статьи
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</article>
+{% endblock %}

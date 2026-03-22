@@ -8,11 +8,33 @@ from rest_framework.routers import DefaultRouter
 from django.contrib import admin
 from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+from django.contrib.sitemaps.views import sitemap
+from .sitemaps import StaticSitemap, ArticleSitemap
+from django.http import HttpResponse
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
     TokenVerifyView
 )
+sitemaps = {
+    'static': StaticSitemap,
+    'articles': ArticleSitemap,
+}
+def robots_txt(request):
+    return HttpResponse(
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /admin/\n"
+        "Disallow: /login/\n"
+        "Disallow: /register/\n"
+        "Disallow: /dashboard/\n"
+        "Disallow: /profile/\n"
+        "Disallow: /student/\n"
+        "Disallow: /teacher/\n"
+        "Disallow: /api/\n\n"
+        "Sitemap: http://127.0.0.1:8000/sitemap.xml",  # исправить на сайт при продакшене
+        content_type="text/plain"
+    )
 
 router = DefaultRouter()
 router.register('teachers', views.TeacherViewSet)
@@ -139,12 +161,7 @@ urlpatterns = [
     path('teacher/materials/<int:material_id>/delete/', views.teacher_material_delete, name='teacher_material_delete'),
     path('material/<int:material_id>/', views.material_detail, name='material_detail'),
 
-    # Статьи
-    path('articles/artikli-v-anglijskom-yazyke/', views.article_artikli, name='article_artikli'),
-    path('articles/glagol-to-be-v-anglijskom-yazyke/', views.article_glagol, name='article_glagol'),
-    path('articles/kolichestvennye-mestoimeniya-v-anglijskom-yazyke/', views.article_kolichestvennye,
-         name='article_kolichestvennye'),
-    path('articles/mestoimeniya-v-anglijskom-yazyke/', views.article_mestoimeniya, name='article_mestoimeniya'),
+
     path('team/', views.teachers_team, name='teachers_team'),
     path('team/<int:teacher_id>/', views.teacher_detail, name='teacher_detail'),
 
@@ -160,5 +177,11 @@ urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    # Статьи
+    path('articles/', views.article_list, name='article_list'),  # или 'articles_list'
+    path('articles/<slug:slug>/', views.article_detail, name='article_detail'),
+        # Sitemap
+    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='sitemap'),
+    path('robots.txt', robots_txt),
 
 ]

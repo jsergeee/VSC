@@ -22,7 +22,8 @@ from .models import (
     Notification, LessonFeedback, TeacherRating,
     Homework, HomeworkSubmission, GroupLesson, GroupEnrollment,
     LessonAttendance, ScheduleTemplate, ScheduleTemplateStudent,
-    StudentSubjectPrice, UserActionLog, PaymentRequest, Feedback
+    StudentSubjectPrice, UserActionLog, PaymentRequest, Feedback,
+    Article, ArticleAttachment
 )
 from .views import schedule_calendar_data, admin_complete_lesson
 
@@ -2805,3 +2806,152 @@ admin.site.site_title = 'Плюс Прогресс'
 admin.site.index_title = 'Управление онлайн школой'
 
 
+
+
+from django.utils.html import format_html
+from django.urls import reverse
+
+class ArticleAttachmentInline(admin.TabularInline):
+    """Inline для вложений в админке"""
+    model = ArticleAttachment
+    extra = 1
+    fields = ['title', 'attachment_type', 'file', 'link', 'allow_download', 'is_embedded', 'order']
+    classes = ['collapse']
+    
+    def get_extra(self, request, obj=None, **kwargs):
+        return 1 if obj else 0
+
+
+@admin.register(Article)
+class ArticleAdmin(admin.ModelAdmin):
+    """
+    Административный интерфейс для статей
+    """
+    list_display = ('id', 'title_display', 'author', 'is_published_badge', 'is_featured_badge',
+                    'created_at_display', 'views_count', 'attachments_count')
+    list_filter = ('is_published', 'is_featured', 'created_at', 'author')
+    search_fields = ('title', 'content', 'author')
+    prepopulated_fields = {'slug': ('title',)}
+    date_hierarchy = 'created_at'
+    inlines = [ArticleAttachmentInline]
+    actions = ['publish_articles', 'unpublish_articles', 'make_featured', 'make_unfeatured']
+    
+    fieldsets = (
+        ('Основное', {
+            'fields': ('title', 'slug', 'author', 'content', 'photo', 'excerpt')
+        }),
+        ('Настройки публикации', {
+            'fields': ('is_published', 'is_featured', 'published_at'),
+            'classes': ('wide',),
+        }),
+        ('Мета-данные', {
+            'fields': ('views_count', 'created_at', 'updated_at'),
+            'classes': ('collapse',),
+        }),
+    )
+    
+    readonly_fields = ('views_count', 'created_at', 'updated_at')
+    
+    def title_display(self, obj):
+        """Отображение заголовка со ссылкой на просмотр"""
+        return format_html(
+            '<a href="{}" target="_blank"><strong>{}</strong></a>',
+            obj.get_absolute_url(),
+            obj.title[:50] + '...' if len(obj.title) > 50 else obj.title
+        )
+    title_display.short_description = 'Заголовок'
+    title_display.admin_order_field = 'title'
+    
+    def created_at_display(self, obj):
+        """Отображение даты создания"""
+        return obj.created_at.strftime('%d.%m.%Y %H:%M')
+    created_at_display.short_description = 'Создано'
+    created_at_display.admin_order_field = 'created_at'
+    
+    def is_published_badge(self, obj):
+        """Значок статуса публикации"""
+        if obj.is_published:
+            return format_html(
+                '<span style="background: #28a745; color: white; padding: 3px 8px; border-radius: 3px;">✅ Опубликовано</span>'
+            )
+        return format_html(
+            '<span style="background: #dc3545; color: white; padding: 3px 8px; border-radius: 3px;">❌ Черновик</span>'
+        )
+    is_published_badge.short_description = 'Статус'
+    
+    def is_featured_badge(self, obj):
+        """Значок рекомендуемой статьи"""
+        if obj.is_featured:
+            return format_html(
+                '<span style="background: #ffc107; color: #333; padding: 3px 8px; border-radius: 3px;">⭐ Рекомендуемая</span>'
+            )
+        return '-'
+    is_featured_badge.short_description = 'Рекомендуемая'
+    
+    def attachments_count(self, obj):
+        """Количество вложений"""
+        count = obj.attachments.count()
+        if count > 0:
+            return format_html(
+                '<span style="background: #17a2b8; color: white; padding: 2px 6px; border-radius: 10px;">📎 {}</span>',
+                count
+            )
+        return '-'
+    attachments_count.short_description = 'Вложения'
+    
+    def publish_articles(self, request, queryset):
+        """Опубликовать выбранные статьи"""
+        now = timezone.now()
+        updated = queryset.update(is_published=True, published_at=now)
+        self.message_user(request, f'✅ Опубликовано {updated} статей')
+    publish_articles.short_description = "✅ Опубликовать выбранные статьи"
+    
+    def unpublish_articles(self, request, queryset):
+        """Снять с публикации"""
+        updated = queryset.update(is_published=False)
+        self.message_user(request, f'❌ Снято с публикации {updated} статей')
+    unpublish_articles.short_description = "❌ Снять с публикации"
+    
+    def make_featured(self, request, queryset):
+        """Сделать рекомендуемыми"""
+        updated = queryset.update(is_featured=True)
+        self.message_user(request, f'⭐ {updated} статей отмечены как рекомендуемые')
+    make_featured.short_description = "⭐ Отметить как рекомендуемые"
+    
+    def make_unfeatured(self, request, queryset):
+        """Снять отметку "рекомендуемая" """
+        updated = queryset.update(is_featured=False)
+        self.message_user(request, f'➖ У {updated} статей снята отметка "рекомендуемая"')
+    make_unfeatured.short_description = '➖ Снять отметку "рекомендуемая"'
+
+@admin.register(ArticleAttachment)
+class ArticleAttachmentAdmin(admin.ModelAdmin):
+    """Админка для вложений"""
+    list_display = ('id', 'article_link', 'title', 'attachment_type', 
+                    'allow_download_badge', 'allow_download',  
+                    'is_embedded_badge', 'is_embedded',
+                    'file_size', 'order')
+    list_filter = ('attachment_type', 'allow_download', 'is_embedded')
+    search_fields = ('title', 'article__title')
+    list_editable = ('order', 'allow_download', 'is_embedded')
+    
+    def article_link(self, obj):
+        url = reverse('admin:school_article_change', args=[obj.article.id])
+        return format_html('<a href="{}">{}</a>', url, obj.article.title[:50])
+    article_link.short_description = 'Статья'
+    
+    def allow_download_badge(self, obj):
+        if obj.allow_download:
+            return format_html('<span style="color: #28a745;">✅ Разрешено</span>')
+        return format_html('<span style="color: #dc3545;">❌ Запрещено</span>')
+    allow_download_badge.short_description = 'Скачивание'
+    
+    def is_embedded_badge(self, obj):
+        if obj.is_embedded:
+            return format_html('<span style="color: #17a2b8;">📄 Встраивать</span>')
+        return '-'
+    is_embedded_badge.short_description = 'Встраивание'
+    
+    def file_size(self, obj):
+        return obj.get_file_size()
+    file_size.short_description = 'Размер'

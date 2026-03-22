@@ -4,7 +4,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Онлайн-ресурс Плюс Прогресс: английский, русский, математика, информатика, история, обществознание и другие предметы">
+    <meta name="description" content="{% block meta_description %}Онлайн-ресурс Плюс Прогресс: английский, русский, математика, информатика, история, обществознание и другие предметы{% endblock %}">
+    <meta name="keywords" content="{% block meta_keywords %}онлайн школа, английский онлайн, подготовка к ЕГЭ, репетитор{% endblock %}">
     <title>{% block title %}Плюс Прогресс - онлайн школа{% endblock %}</title>
     {% load static %}
     <!-- Bootstrap CSS -->
@@ -264,6 +265,7 @@
         }
     </style>
     {% block extra_css %}{% endblock %}
+    {% block extra_head %}{% endblock %}
 </head>
 
 <body>
@@ -289,7 +291,6 @@
             {% block content %}{% endblock %}
         </div>
     </main>
-
     <!-- ПОДВАЛ -->
     <footer class="footer">
         {% include 'includes/footer.html' %}
