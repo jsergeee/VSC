@@ -5,132 +5,101 @@
 
 {% block extra_css %}
 <style>
+    /* Только анимация для карточек и элементов */
     .article-card {
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         height: 100%;
-        border: none;
-        border-radius: 15px;
-        overflow: hidden;
     }
+    
     .article-card:hover {
         transform: translateY(-5px);
         box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     }
+    
     .article-card-img {
         height: 200px;
         object-fit: cover;
         width: 100%;
     }
-    .article-card .card-body {
-        padding: 1.5rem;
-    }
+    
     .article-meta {
         color: #6c757d;
         font-size: 0.85rem;
         margin-bottom: 0.5rem;
     }
+    
     .article-meta i {
         margin-right: 0.3rem;
     }
+    
     .article-title {
         font-size: 1.25rem;
         font-weight: 600;
         margin-bottom: 0.75rem;
-        line-height: 1.4;
     }
+    
     .article-title a {
         color: #2c3e50;
         text-decoration: none;
     }
+    
     .article-title a:hover {
         color: #e52f37;
     }
+    
     .article-excerpt {
         color: #6c757d;
         margin-bottom: 1rem;
         line-height: 1.5;
     }
+    
     .read-more {
         color: #e52f37;
         font-weight: 500;
         text-decoration: none;
     }
+    
     .read-more:hover {
         text-decoration: underline;
     }
-    .sidebar-widget {
-        background: #f8f9fa;
-        border-radius: 10px;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
+    
+    /* Анимация для элементов */
+    .wow {
+        visibility: visible !important;
     }
-    .sidebar-widget h4 {
-        margin-bottom: 1rem;
-        font-weight: 600;
-        color: #2c3e50;
-    }
-    .featured-article {
-        padding: 0.75rem 0;
-        border-bottom: 1px solid #e9ecef;
-    }
-    .featured-article:last-child {
-        border-bottom: none;
-    }
-    .featured-article a {
-        color: #2c3e50;
-        text-decoration: none;
-    }
-    .featured-article a:hover {
-        color: #e52f37;
-    }
-    .archive-list {
-        list-style: none;
-        padding-left: 0;
-    }
-    .archive-list li {
-        margin-bottom: 0.5rem;
-    }
-    .archive-list a {
-        color: #6c757d;
-        text-decoration: none;
-    }
-    .archive-list a:hover {
-        color: #e52f37;
-    }
-    .search-form {
-        display: flex;
-        gap: 0.5rem;
-    }
-    .search-form input {
-        flex: 1;
-    }
+    
     .sort-select {
         width: auto;
         min-width: 180px;
+        padding: 8px 12px;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        background: white;
     }
+    
     @media (max-width: 768px) {
         .sort-select {
             width: 100%;
-            margin-bottom: 1rem;
+            margin-top: 1rem;
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<section style="padding-top: 150px; min-height: 70vh;">
+<section class="section-grey" style="padding-top: 120px; min-height: 70vh;">
     <div class="container">
         <div class="row">
             <!-- Основной контент -->
             <div class="col-lg-8">
-                <h1 class="mb-4">{{ page_title }}</h1>
+                <h1 class="section-title text-center mb-5 wow fadeInUp">{{ page_title }}</h1>
                 
                 <!-- Поиск и сортировка -->
-                <div class="row mb-4 align-items-center">
+                <div class="row mb-4 align-items-center wow fadeInUp">
                     <div class="col-md-6">
-                        <form method="get" class="search-form">
+                        <form method="get" class="search-form-block d-flex gap-2">
                             <input type="text" name="q" class="form-control" placeholder="Поиск статей..." value="{{ query|default:'' }}">
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" class="btn btn-red btn-search-article">
                                 <i class="fa fa-search"></i>
                             </button>
                         </form>
@@ -160,8 +129,8 @@
                 {% if articles %}
                 <div class="row">
                     {% for article in articles %}
-                    <div class="col-md-6 mb-4">
-                        <div class="card article-card">
+                    <div class="col-md-6 mb-4 wow fadeInUp" data-wow-delay="0.{{ forloop.counter }}s">
+                        <div class="card article-card h-100">
                             {% if article.photo %}
                             <img src="{{ article.photo.url }}" class="card-img-top article-card-img" alt="{{ article.title }}">
                             {% endif %}
@@ -190,7 +159,7 @@
                 
                 <!-- Пагинация -->
                 {% if page_obj.has_other_pages %}
-                <nav aria-label="Навигация по страницам">
+                <nav aria-label="Навигация по страницам" class="wow fadeInUp">
                     <ul class="pagination justify-content-center">
                         {% if page_obj.has_previous %}
                         <li class="page-item">
@@ -224,7 +193,7 @@
                 {% endif %}
                 
                 {% else %}
-                <div class="alert alert-info">
+                <div class="alert alert-info text-center wow fadeInUp">
                     <i class="fa fa-info-circle"></i> Статей не найдено.
                 </div>
                 {% endif %}
@@ -232,28 +201,18 @@
             
             <!-- Сайдбар -->
             <div class="col-lg-4">
-                <!-- Поиск (дубль для удобства) -->
-                <div class="sidebar-widget d-lg-none">
-                    <h4>Поиск</h4>
-                    <form method="get" class="search-form">
-                        <input type="text" name="q" class="form-control" placeholder="Поиск статей..." value="{{ query|default:'' }}">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fa fa-search"></i>
-                        </button>
-                    </form>
-                </div>
-                
                 <!-- Рекомендуемые статьи -->
                 {% if featured_articles %}
-                <div class="sidebar-widget">
-                    <h4>Рекомендуемые</h4>
+                <div class="sidebar-widget bg-light p-4 rounded mb-4 wow fadeInUp">
+                    <h4 class="mb-3">Рекомендуемые</h4>
                     {% for article in featured_articles %}
-                    <div class="featured-article">
-                        <a href="{% url 'article_detail' article.slug %}">
-                            <strong>{{ article.title }}</strong>
+                    <div class="featured-article mb-3 pb-2 border-bottom">
+                        <a href="{% url 'article_detail' article.slug %}" class="fw-bold">
+                            {{ article.title }}
                         </a>
-                        <div class="small text-muted">
-                            {{ article.created_at|date:"d.m.Y" }} • {{ article.views_count }} просмотров
+                        <div class="small text-muted mt-1">
+                            <i class="fa fa-calendar"></i> {{ article.created_at|date:"d.m.Y" }}
+                            <i class="fa fa-eye ms-2"></i> {{ article.views_count }}
                         </div>
                     </div>
                     {% endfor %}
@@ -262,13 +221,13 @@
                 
                 <!-- Архив -->
                 {% if archive %}
-                <div class="sidebar-widget">
-                    <h4>Архив</h4>
-                    <ul class="archive-list">
+                <div class="sidebar-widget bg-light p-4 rounded mb-4 wow fadeInUp">
+                    <h4 class="mb-3">Архив</h4>
+                    <ul class="list-unstyled">
                         {% for date in archive %}
-                        <li>
-                            <a href="?year={{ date.year }}{% if query %}&q={{ query }}{% endif %}">
-                                {{ date|date:"F Y" }}
+                        <li class="mb-2">
+                            <a href="?year={{ date.year }}" class="text-decoration-none">
+                                <i class="fa fa-folder-o"></i> {{ date|date:"F Y" }}
                             </a>
                         </li>
                         {% endfor %}

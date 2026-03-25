@@ -32,7 +32,7 @@ class APITestCase(APITestCase):
         )
 
         # Создаем токен для админа
-        self.admin_token = Token.objects.create(user=self.admin_user)
+        self.admin_token, created = Token.objects.get_or_create(user=self.admin_user)
 
         # Создаем тестового учителя
         self.teacher_user = User.objects.create_user(
@@ -1318,7 +1318,7 @@ class MaterialAPITests(APITestCase):
     def setUp(self):
         super().setUp()  # 👈 ВАЖНО: вызываем setUp родительского класса
         # Создаем токен для ученика
-        self.student_token = Token.objects.create(user=self.student_user)
+        self.student_token, _ = Token.objects.get_or_create(user=self.student_user)
 
     def test_create_material_as_teacher(self):
         """Тест создания материала учителем"""
@@ -1518,7 +1518,7 @@ class StudentNoteAPITests(APITestCase):
     def setUp(self):
         super().setUp()
         # Создаем токен для учителя
-        self.teacher_token = Token.objects.create(user=self.teacher_user)
+        self.teacher_token, _ = Token.objects.get_or_create(user=self.teacher_user)
 
     def test_create_student_note(self):
         """Тест создания заметки"""
@@ -1568,7 +1568,7 @@ class LessonReportAPITests(APITestCase):
     def setUp(self):
         super().setUp()
         # 👇 СОЗДАЕМ ТОКЕН ДЛЯ УЧИТЕЛЯ (ЭТОГО НЕ ХВАТАЛО)
-        self.teacher_token = Token.objects.create(user=self.teacher_user)
+        self.teacher_token, _ = Token.objects.get_or_create(user=self.teacher_user)
 
         # Создаем урок
         self.lesson = Lesson.objects.create(
@@ -1611,7 +1611,7 @@ class NotificationAPITests(APITestCase):
     def setUp(self):
         super().setUp()
         # 👇 СОЗДАЕМ ТОКЕН ДЛЯ УЧЕНИКА
-        self.student_token = Token.objects.create(user=self.student_user)
+        self.student_token, _ = Token.objects.get_or_create(user=self.student_user)
 
         self.notification = Notification.objects.create(
             user=self.student_user,
