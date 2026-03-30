@@ -462,52 +462,51 @@
 <section class="section-grey" id="articles">
     <div class="container">
         <div class="row">
-            <div class="col-12 text-center margin-bottom-10 wow fadeInUp">
-                <h2 class="section-title">Полезные статьи</h2>
-                <p class="text-muted">Полезные материалы по английскому языку, математике, русскому и другим предметам</p>
+            <div class="col-12">
+                <h2 class="section-title text-center mb-5">Полезные статьи</h2>
             </div>
         </div>
-
+        
+        <!-- Копируем содержимое list.html, но убираем паддинг-top и сайдбар -->
         <div class="row">
             {% if articles %}
                 {% for article in articles %}
-                <div class="col-md-4 mb-4 wow fadeInUp" data-wow-delay="0.{{ forloop.counter }}s">
-                    <div class="card h-100 border-0 shadow-sm">
+                <div class="col-md-4 mb-4">
+                    <div class="card article-card">
                         {% if article.photo %}
-                        <img src="{{ article.photo.url }}" class="card-img-top" alt="{{ article.title }}" style="height: 200px; object-fit: cover; border-radius: 10px 10px 0 0;">
-                        {% else %}
-                        <img src="{% static 'images/default-article.jpg' %}" class="card-img-top" alt="Статья" style="height: 200px; object-fit: cover; border-radius: 10px 10px 0 0;">
+                        <img src="{{ article.photo.url }}" class="card-img-top" alt="{{ article.title }}" style="height: 200px; object-fit: cover;">
                         {% endif %}
                         <div class="card-body">
-                            <div class="text-muted small mb-2">
+                            <div class="article-meta">
                                 <i class="fa fa-calendar"></i> {{ article.created_at|date:"d.m.Y" }}
                                 <i class="fa fa-eye ms-2"></i> {{ article.views_count }}
                             </div>
-                            <h5 class="card-title">
-                                <a href="{% url 'article_detail' article.slug %}" class="text-dark text-decoration-none hover-red">
-                                    {{ article.title|truncatechars:60 }}
-                                </a>
-                            </h5>
-                            <p class="card-text text-muted">
-                                {{ article.excerpt|default:article.content|striptags|truncatechars:100 }}
-                            </p>
-                            <a href="{% url 'article_detail' article.slug %}" class="btn-red">
-                                Читать далее <i class="fa fa-arrow-right"></i>
+                            <h3 class="article-title">
+                                <a href="{% url 'article_detail' article.slug %}">{{ article.title }}</a>
+                            </h3>
+                            <div class="article-excerpt">
+                                {{ article.excerpt|default:article.content|striptags|truncatechars:120 }}
+                            </div>
+                            <a href="{% url 'article_detail' article.slug %}" class="price-tag__red">
+                                Читать далее <i class="read-more"></i>
                             </a>
                         </div>
                     </div>
                 </div>
                 {% endfor %}
             {% else %}
-                <div class="col-12 text-center wow fadeInUp">
-                    <p class="text-muted">Статей пока нет. Скоро появятся!</p>
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <i class="fa fa-info-circle"></i> Статей пока нет. Скоро появятся!
+                    </div>
                 </div>
             {% endif %}
         </div>
-
+        
+        <!-- Кнопка "Все статьи" -->
         <div class="row mt-4">
-            <div class="col-12 text-center wow fadeInUp">
-                <a href="{% url 'article_list' %}" class="btn-red">
+            <div class="col-12 text-center">
+                <a href="{% url 'article_list' %}" class="btn btn-outline-primary btn-lg">
                     Все статьи <i class="fa fa-arrow-right ms-2"></i>
                 </a>
             </div>
