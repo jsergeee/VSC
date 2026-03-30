@@ -445,8 +445,8 @@
                             <div class="article-excerpt">
                                 {{ article.excerpt|default:article.content|striptags|truncatechars:120 }}
                             </div>
-                            <a href="{% url 'article_detail' article.slug %}" class="read-more">
-                                Читать далее <i class="fa fa-arrow-right"></i>
+                            <a href="{% url 'article_detail' article.slug %}" class="price-tag__red">
+                                Читать далее <i class="read-more"></i>
                             </a>
                         </div>
                     </div>

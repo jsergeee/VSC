@@ -179,7 +179,7 @@
                                 <div class="article-excerpt">
                                     {{ article.excerpt|default:article.content|striptags|truncatechars:120 }}
                                 </div>
-                                <a href="{% url 'article_detail' article.slug %}" class="read-more">
+                                <a class="price-tag__red" href="{% url 'article_detail' article.slug %}">
                                     Читать далее <i class="fa fa-arrow-right"></i>
                                 </a>
                             </div>
