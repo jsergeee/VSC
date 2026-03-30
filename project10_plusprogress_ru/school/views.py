@@ -69,7 +69,8 @@ from .models import (
     Material, Deposit, StudentNote, GroupLesson, GroupEnrollment,
     Notification, LessonFeedback, TeacherRating, Homework,
     HomeworkSubmission, ScheduleTemplate, ScheduleTemplateStudent,
-    StudentSubjectPrice, EmailVerificationToken, PaymentRequest
+    StudentSubjectPrice, EmailVerificationToken, PaymentRequest,
+    Article, ArticleAttachment
 )
 
 from .forms import (
@@ -441,8 +442,7 @@ def home(request):
         is_on_main=True
     ).select_related('teacher__user').order_by('sort_order', '-created_at')
 
-    # ===== НОВАЯ СТАТИСТИКА ПО ОТЗЫВАМ =====
-    # Все активные отзывы (не только на главной)
+    # ===== СТАТИСТИКА ПО ОТЗЫВАМ =====
     all_active_feedbacks = Feedback.objects.filter(is_active=True)
     
     total_feedbacks = all_active_feedbacks.count()
@@ -469,7 +469,10 @@ def home(request):
 
     # Последние 3 отзыва для превью (если нужно)
     recent_feedbacks = all_active_feedbacks.order_by('-created_at')[:3]
-    # ===== КОНЕЦ НОВОЙ СТАТИСТИКИ =====
+    
+    # ===== ПОЛУЧАЕМ СТАТЬИ ДЛЯ ГЛАВНОЙ СТРАНИЦЫ =====
+    recent_articles = Article.objects.filter(is_published=True).order_by('-created_at')[:6]
+    # ===== КОНЕЦ ДОБАВЛЕНИЯ СТАТЕЙ =====
 
     if request.method == 'POST':
         if 'trial_form' in request.POST:
@@ -508,14 +511,12 @@ def home(request):
         'feedback_form': feedback_form,
         'subjects': Subject.objects.all(),
         'feedbacks': feedbacks,
-        # ===== ДОБАВЛЯЕМ В КОНТЕКСТ =====
         'total_feedbacks': total_feedbacks,
         'rating_stats': rating_stats,
         'recent_feedbacks': recent_feedbacks,
-        # ===== КОНЕЦ ДОБАВЛЕНИЯ =====
+        'articles': recent_articles,  # ДОБАВЛЯЕМ СТАТЬИ В КОНТЕКСТ
     }
     return render(request, 'school/home.html', context)
-
 
 def register(request):
     """Регистрация пользователя"""
@@ -6187,91 +6188,6 @@ def teacher_detail(request, teacher_id):
     return render(request, 'school/teacher/teacher_detail.html', context)
 
 
-def home(request):
-    """
-    Главная страница
-    """
-    trial_form = TrialRequestForm()
-    feedback_form = PublicFeedbackForm()
-
-    # Получаем активные отзывы для главной
-    feedbacks = Feedback.objects.filter(
-        is_active=True,
-        is_on_main=True
-    ).select_related('teacher__user').order_by('sort_order', '-created_at')
-
-    # ===== НОВАЯ СТАТИСТИКА ПО ОТЗЫВАМ =====
-    # Все активные отзывы (не только на главной)
-    all_active_feedbacks = Feedback.objects.filter(is_active=True)
-    
-    total_feedbacks = all_active_feedbacks.count()
-    
-    # Статистика по оценкам
-    rating_stats = {
-        'avg': all_active_feedbacks.aggregate(Avg('rating'))['rating__avg'] or 0,
-        '5': all_active_feedbacks.filter(rating=5).count(),
-        '4': all_active_feedbacks.filter(rating=4).count(),
-        '3': all_active_feedbacks.filter(rating=3).count(),
-        '2': all_active_feedbacks.filter(rating=2).count(),
-        '1': all_active_feedbacks.filter(rating=1).count(),
-    }
-    
-    # Проценты для визуализации
-    if total_feedbacks > 0:
-        rating_stats['5_percent'] = round(rating_stats['5'] / total_feedbacks * 100)
-        rating_stats['4_percent'] = round(rating_stats['4'] / total_feedbacks * 100)
-        rating_stats['3_percent'] = round(rating_stats['3'] / total_feedbacks * 100)
-        rating_stats['2_percent'] = round(rating_stats['2'] / total_feedbacks * 100)
-        rating_stats['1_percent'] = round(rating_stats['1'] / total_feedbacks * 100)
-    else:
-        rating_stats['5_percent'] = rating_stats['4_percent'] = rating_stats['3_percent'] = rating_stats['2_percent'] = rating_stats['1_percent'] = 0
-    # ===== КОНЕЦ НОВОЙ СТАТИСТИКИ =====
-
-    if request.method == 'POST':
-        if 'trial_form' in request.POST:
-            trial_form = TrialRequestForm(request.POST)
-            if trial_form.is_valid():
-                trial_form.save()
-                messages.success(request, 'Заявка успешно отправлена! Мы свяжемся с вами в ближайшее время.')
-                return redirect('home')
-        elif 'feedback_form' in request.POST:
-            feedback_form = PublicFeedbackForm(request.POST)
-            if feedback_form.is_valid():
-                feedback = feedback_form.save(commit=False)
-                feedback.is_active = False
-                feedback.is_on_main = False
-                feedback.save()
-
-                # Уведомление админу
-                admin_users = User.objects.filter(is_superuser=True)
-                for admin in admin_users:
-                    Notification.objects.create(
-                        user=admin,
-                        title='✍️ Новый отзыв',
-                        message=f'Новый отзыв от {feedback.name} ожидает модерации',
-                        notification_type='system',
-                        link=f'/admin/school/feedback/{feedback.id}/change/'
-                    )
-
-                messages.success(
-                    request,
-                    'Спасибо за ваш отзыв! Он появится на сайте после проверки.'
-                )
-                return redirect('home')
-
-    context = {
-        'trial_form': trial_form,
-        'feedback_form': feedback_form,
-        'subjects': Subject.objects.all(),
-        'feedbacks': feedbacks,
-        # ===== ДОБАВЛЯЕМ В КОНТЕКСТ =====
-        'total_feedbacks': total_feedbacks,
-        'rating_stats': rating_stats,
-        # ===== КОНЕЦ ДОБАВЛЕНИЯ =====
-    }
-    return render(request, 'school/home.html', context)
-
-
 def add_feedback(request):
     """
     Добавление отзыва посетителем сайта
@@ -6310,3 +6226,115 @@ def add_feedback(request):
         'feedback_form': form,
     }
     return render(request, 'school/add_feedback.html', context)
+
+
+
+from django.core.paginator import Paginator
+from django.db.models import Q
+
+def article_list(request):
+    """
+    Список всех статей
+    """
+    articles = Article.objects.filter(is_published=True).select_related()
+    
+    # Поиск
+    query = request.GET.get('q')
+    if query:
+        articles = articles.filter(
+            Q(title__icontains=query) |
+            Q(content__icontains=query) |
+            Q(author__icontains=query)
+        )
+    
+    # Фильтр по году
+    year = request.GET.get('year')
+    if year:
+        articles = articles.filter(created_at__year=year)
+    
+    # Фильтр по месяцу
+    month = request.GET.get('month')
+    if month:
+        articles = articles.filter(created_at__month=month)
+    
+    # Сортировка
+    sort = request.GET.get('sort', '-created_at')
+    if sort in ['created_at', '-created_at', 'title', '-title', 'views_count', '-views_count']:
+        articles = articles.order_by(sort)
+    
+    # Пагинация
+    paginator = Paginator(articles, 12)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Получаем рекомендуемые статьи для сайдбара
+    featured_articles = Article.objects.filter(
+        is_published=True,
+        is_featured=True
+    )[:5]
+    
+    # Получаем архив по годам/месяцам
+    archive = Article.objects.filter(is_published=True).dates('created_at', 'month', order='DESC')
+    
+    context = {
+        'page_obj': page_obj,
+        'articles': page_obj,
+        'featured_articles': featured_articles,
+        'archive': archive,
+        'query': query,
+        'current_sort': sort,
+        'selected_year': year,
+        'selected_month': month,
+        'page_title': 'Статьи',
+        'is_article_list': True,
+    }
+    return render(request, 'school/articles/list.html', context)
+
+
+def article_detail(request, slug):
+    """
+    Детальная страница статьи
+    """
+    article = get_object_or_404(Article, slug=slug, is_published=True)
+    
+    # Увеличиваем счетчик просмотров
+    article.views_count += 1
+    article.save(update_fields=['views_count'])
+    
+    # Логируем просмотр
+    log_user_action(
+        request,
+        'other',
+        f'Просмотр статьи: {article.title}',
+        object_id=article.id,
+        object_type='article',
+        additional_data={'slug': article.slug}
+    )
+    
+    # Получаем вложения
+    attachments = article.attachments.all()
+    
+    # Получаем похожие статьи (по автору или по тегам)
+    related_articles = Article.objects.filter(
+        is_published=True,
+        author=article.author
+    ).exclude(id=article.id)[:3]
+    
+    # Если нет похожих по автору, берем последние статьи
+    if related_articles.count() < 3:
+        more_articles = Article.objects.filter(
+            is_published=True
+        ).exclude(id=article.id).order_by('-created_at')[:5]
+        for a in more_articles:
+            if a not in related_articles:
+                related_articles = list(related_articles) + [a]
+                if len(related_articles) >= 3:
+                    break
+    
+    context = {
+        'article': article,
+        'attachments': attachments,
+        'related_articles': related_articles[:3],
+        'page_title': article.title,
+    }
+    return render(request, 'school/articles/detail.html', context)

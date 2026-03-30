@@ -1,21 +1,41 @@
 <!-- templates/includes/footer.html -->
 {% load static %}
 
-<!--begin footer -->
-<div class="footer">
-    <!--begin container -->
-    <div class="container">
-        <!--begin row -->
-        <div class="row">
-            <!--begin col-md-12 -->
-            <div class="col-md-12">
-                <p>© 2025 <span class="template-name">Плюс Прогресс</span>
-                </p>
-            </div>
-            <!--end col-md-12 -->
+<footer style="background: #f8f9fa; padding: 30px 0; margin-top: 50px; border-top: 1px solid #dee2e6;">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px;">
+        <!-- Соцсети -->
+        <div class="social-net">
+            <span style="font-size: 14px; color: #071e55; margin-right: 20px;">Мы в соц сетях:</span>
+            
+            <a href="https://vk.com/plusprog" target="_blank" style="margin-right: 15px;">
+                <i class="fa fa-vk" style="font-size: 25px; color: #4d7198;"></i>
+            </a>
+            
+            <a href="https://www.instagram.com/linguaglobal.ru/" target="_blank" style="margin-right: 15px; margin-top: 4px;">
+                <i class="fa fa-instagram" style="font-size: 27px; color: #FD1D1D;"></i>
+            </a>
+            
+            <a href="https://go.onelink.me/gx2x?af_dp=rossgram%253A%252F%252F&af_referrer_name=post_link" target="_blank">
+                <img src="{% static 'images/ros.jpg' %}" alt="Rossgram" width="23" height="21">
+            </a>
         </div>
-        <!--end row -->
+        
+        <!-- Контакты -->
+        <div style="text-align: center; margin-bottom: 20px; display: flex; justify-content: center; align-items: center;">
+            <span style="font-size: 14px; color: #071e55; margin-right: 20px;">Напишите нам:</span>
+            
+            <a href="https://max.ru/u/f9LHodD0cOJ_btmeih27Um4qfd1WW8CGQfHw7XpZ9KJBY991yxm4wCuHtrE?text=Здравствуйте%2C%20пишу%20Вам%20с%20сайта." target="_blank" style="margin-right: 15px; text-decoration: none; color: #071e55; display: flex; align-items: center;">
+                <i class="max-icon" style="color: #4a90e2; margin-right: 8px; "></i> Max
+            </a>
+            
+            <a href="https://t.me/plusprogress" target="_blank" style="text-decoration: none; color: #071e55; align-items: center;">
+                <i class="fa fa-telegram" style="color: #0088cc;"></i> Telegram
+            </a>
+        </div>
+        
+        <!-- Копирайт -->
+        <div style="text-align: center; color: #6c757d; font-size: 14px; border-top: 1px solid #dee2e6; padding-top: 20px;">
+            © 2025 <span style="color: #071e55;">Плюс Прогресс</span>
+        </div>
     </div>
-    <!--end container -->
-</div>
-<!--end footer -->
+</footer>

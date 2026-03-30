@@ -5,145 +5,103 @@
     <!--begin container -->
     <div class="container">
         <!--begin logo (ВИДНО ВСЕГДА) -->
-        <div>
-            <img class="navbar-brand" src="{% static 'images/logo.jpg' %}" alt="Плюс Прогресс" {% if is_lk or is_admin %}style="display: none;" {% endif %}>
-
-            <!-- ЭТОТ БЛОК С ИКОНКАМИ СКРЫВАЕМ В ЛК/АДМИНКЕ -->
-            <div class="mobile-icons d-inline" {% if is_lk or is_admin %}style="display: none;" {% endif %}>
-                <a href="https://www.instagram.com/linguaglobal.ru/" target="_blank" style="font-size: 30px !important;"><i class="fa fa-instagram" style="font-size: 30px; color: #FD1D1D"></i></a>
-                <a href="https://max.ru/u/f9LHodD0cOJ_btmeih27Um4qfd1WW8CGQfHw7XpZ9KJBY991yxm4wCuHtrE?text=Здравствуйте, пишу Вам с сайта." target="_blank" style="font-size: 14px !important;"><i class="fa fa-whatsapp" style="color: #25D366; font-size: 30px"></i></a>
-                <a href="https://t.me/PlusProgress" style="font-size: 14px !important;" target="_blank"><i class="fa fa-telegram" style="color: #0088cc; font-size: 30px"></i></a>
-                <a target="_blank" style="font-size: 14px !important;" href="https://go.onelink.me/gx2x?af_dp=rossgram%253A%252F%252F&af_referrer_name=post_link&af_og_description=%25D0%25AD%25D1%2582%25D0%25BE%2B%25D1%2581%25D0%25BB%25D1%2583%25D1%2587%25D0%25B8%25D0%25BB%25D0%25BE%25D1%2581%25D1%258C%25C2%25A0%2B%25D0%25B2%2B5-%25D0%25BC%2B%25D0%25BA%25D0%25BB%25D0%25B0%25D1%2581%25D1%2581%25D0%25B5.%2B%25D0%2592%2B%25D1%2581%25D0%25B0%25D0%25BC%25D0%25BE%25D0%25BC%2B%25D0%25BD%25D0%25B0%25D1%2587%25D0%25B0%25D0%25BB%25D0%25B5%2B1%2B%25D1%2587%25D0%25B5%25D1%2582%25D0%25B2%25D0%25B5%25D1%2580%25D1%2582%25D0%25B8.%2B%25D0%2592%25D0%25BB%25D1%258E%25D0%25B1%25D0%25B8%25D0%25BB%25D0%25B0%25D1%2581%25D1%258C...%2B%25D0%259F%25D0%25BE%2B%25D1%2583%25D1%2588%25D0%25B8%252C%2B%25D0%25BF%25D1%2580%25D1%258F%25D0%25BC%2B%25D0%25B3%25D0%25BE">
-                </a>
-            </div>
-
+        <div class="logo_phone">
+            <img class="navbar-brand" src="{% static 'images/logo_new_red.png' %}" alt="Плюс Прогресс" {% if is_lk or is_admin %}style="display: none;" {% endif %}>
             <!-- ТЕЛЕФОН И ОПИСАНИЕ - скрываем в ЛК/админке -->
             <a class="header-number mt-1" href="tel:79272418211" {% if is_lk or is_admin %}style="display: none;" {% endif %}>+7 (927) 241-82-11</a>
-            <span {% if is_lk or is_admin %}style="display: none; font-size: 14px; font-family: 'Roboto', sans-serif;" {% endif %}>Онлайн английский, русский, математика, биология</span>
         </div>
         <!--end logo -->
+        
+        <!-- Контакты -->
+        <div class="social_net">
+            <a href="https://vk.com/plusprog" target="_blank" style="margin-right: 15px; text-decoration: none; color: #071e55; display: flex; align-items: center;">
+                <i class="fa fa-vk" style="font-size: 25px; color: #4d7198; margin-right: 8px;"></i>В контакте
+            </a>
+            <a href="https://max.ru/u/f9LHodD0cOJ_btmeih27Um4qfd1WW8CGQfHw7XpZ9KJBY991yxm4wCuHtrE?text=Здравствуйте%2C%20пишу%20Вам%20с%20сайта." target="_blank" style="margin-right: 15px; text-decoration: none; color: #071e55; display: flex; align-items: center;">
+                <i class="max-icon" style="color: #4a90e2; margin-right: 8px;"></i> Max
+            </a>
+            <a href="https://t.me/plusprogress" target="_blank" style="text-decoration: none; color: #071e55; align-items: center;">
+                <i class="fa fa-telegram" style="color: #0088cc;"></i> Telegram
+            </a>
+        </div>
 
-        <!--begin navbar-toggler -->
-        <button class="navbar-toggler collapsed" type="button" data-toggle="collapse" data-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"><i class="fas fa-bars"></i></span>
+        <!-- Кнопка гамбургер -->
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="fa fa-bars"></i>
         </button>
-        <!--end navbar-toggler -->
 
-        <div class="d-block">
-            <!-- ОСНОВНОЕ МЕНЮ - ВИДНО ВСЕГДА (это и есть navbarMain) -->
-            <div class="navbar-collapse collapse" id="navbarMain">
-                <ul class="navbar-nav ml-auto">
-                    <li><a href="/#home">Главная</a></li>
-                    <li><a href="/#about">О нас</a></li>
-                    <li><a href="{% url 'teachers_team' %}">Наша команда</a></li>
-                    <li><a href="/#testimonials">Отзывы</a></li>
-                    <li><a href="/#pricing">Цены</a></li>
-                    <li><a href="/#articles">Статьи</a></li>
-                </ul>
-            </div>
-
-            <!-- СОЦИАЛЬНЫЕ СЕТИ И КОНТАКТЫ - скрываем в ЛК/админке -->
-            <div class="navbar-collapse collapse custom-links" id="navbarSocial">
-                <ul class="navbar-nav" {% if is_lk or is_admin %}style="display: none;" {% endif %}>
-                    <li><a style="font-size: 14px !important; color: #071e55 !important;">Мы в соц сетях:</a></li>
-                    <li>
-                        <a href="https://vk.com/plusprog" target="_blank"><i class="fa fa-vk" style="font-size: 25px; color: #4d7198"></i><img src="" alt="" class="app-icon"></a>
-                    </li>
-                    <li>
-                        <a href="https://www.instagram.com/linguaglobal.ru/" target="_blank"><i class="fa fa-instagram" style="font-size: 25px; color: #FD1D1D"></i><img src="" alt="" class="app-icon"></a>
-                    </li>
-                    <li>
-                        <a target="_blank" href="https://go.onelink.me/gx2x?af_dp=rossgram%253A%252F%252F&af_referrer_name=post_link&af_og_description=%25D0%25AD%25D1%2582%25D0%25BE%2B%25D1%2581%25D0%25BB%25D1%2583%25D1%2587%25D0%25B8%25D0%25BB%25D0%25BE%25D1%2581%25D1%258C%25C2%25A0%2B%25D0%25B2%2B5-%25D0%25BC%2B%25D0%25BA%25D0%25BB%25D0%25B0%25D1%2581%25D1%2581%25D0%25B5.%2B%25D0%2592%2B%25D1%2581%25D0%25B0%25D0%25BC%25D0%25BE%25D0%25BC%2B%25D0%25BD%25D0%25B0%25D1%2587%25D0%25B0%25D0%25BB%25D0%25B5%2B1%2B%25D1%2587%25D0%25B5%25D1%2582%25D0%25B2%25D0%25B5%25D1%2580%25D1%2582%25D0%25B8.%2B%25D0%2592%25D0%25BB%25D1%258E%25D0%25B1%25D0%25B8%25D0%25BB%25D0%25B0%25D1%2581%25D1%258C...%2B%25D0%259F%25D0%25BE%2B%25D1%2583%25D1%2588%25D0%25B8%252C%2B%25D0%25BF%25D1%2580%25D1%258F%25D0%25BC%2B%25D0%25B3%25D0%25BE">
-                            <img src="{% static 'images/ros.jpg' %}" alt="" width="25px">
-                        </a>
-                    </li>
-                    <li>
-                        <a target="_blank" href="https://go.onelink.me/gx2x?af_dp=rossgram%253A%252F%252F&af_referrer_name=post_link&af_og_description=%25D0%25AD%25D1%2582%25D0%25BE%2B%25D1%2581%25D0%25BB%25D1%2583%25D1%2587%25D0%25B8%25D0%25BB%25D0%25BE%25D1%2581%25D1%258C%25C2%25A0%2B%25D0%25B2%2B5-%25D0%25BC%2B%25D0%25BA%25D0%25BB%25D0%25B0%25D1%2581%25D1%2581%25D0%25B5.%2B%25D0%2592%2B%25D1%2581%25D0%25B0%25D0%25BC%25D0%25BE%25D0%25BC%2B%25D0%25BD%25D0%25B0%25D1%2587%25D0%25B0%25D0%25BB%25D0%25B5%2B1%2B%25D1%2587%25D0%25B5%25D1%2582%25D0%25B2%25D0%25B5%25D1%2580%25D1%2582%25D0%25B8.%2B%25D0%2592%25D0%25BB%25D1%258E%25D0%25B1%25D0%25B8%25D0%25BB%25D0%25B0%25D1%2581%25D1%258C...%2B%25D0%259F%25D0%25BE%2B%25D1%2583%25D1%2588%25D0%25B8%252C%2B%25D0%25BF%25D1%2580%25D1%258F%25D0%25BC%2B%25D0%25B3%25D0%25BE">
-                        </a>
-                    </li>
-                </ul>
-
-                <!-- Напишите нам -->
-                <ul class="navbar-nav" {% if is_lk or is_admin %}style="display: none;" {% endif %}>
-                    <li><a style="font-size: 14px !important; color: #071e55 !important; display: flex; align-items: center; justify-content: center;">Напишите нам:</a></li>
-                    <li>
-                        <a href="https://max.ru/u/f9LHodD0cOJ_btmeih27Um4qfd1WW8CGQfHw7XpZ9KJBY991yxm4wCuHtrE?text=Здравствуйте%2C%20пишу%20Вам%20с%20сайта." target="_blank" style="font-size: 14px !important; display: inline-flex; align-items: center;">
-                            <i style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; background-image: url('{% static 'images/max-messenger-sign-logo.svg' %}'); background-size: contain; background-repeat: no-repeat;"></i>
-                            Max
-                        </a>
-                    </li>
-                    <li>
-                        <a href="https://t.me/plusprogress" target="_blank" style="font-size: 14px !important; display: inline-flex; align-items: center;">
-                            <i class="fa fa-telegram" style="color: #0088cc; font-size: 20px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; margin-right: 5px;"></i>
-                            Telegram
-                        </a>
-                    </li>
-                </ul>
-            </div>
+        <!-- ОСНОВНОЕ МЕНЮ И БЛОК АВТОРИЗАЦИИ -->
+        <div class="collapse navbar-collapse" id="navbarMain">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item"><a class="nav-link" href="/#home">Главная</a></li>
+                <li class="nav-item"><a class="nav-link" href="/#about">О нас</a></li>
+                <li class="nav-item"><a class="nav-link" href="/#pricing">Цены</a></li>
+                
+                <!-- Выпадающий список с остальными пунктами -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="moreMenu" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Еще...
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="moreMenu">
+                        <a class="dropdown-item" href="{% url 'teachers_team' %}">Наша команда</a>
+                        <a class="dropdown-item" href="/#testimonials">Отзывы</a>
+                        <a class="dropdown-item" href="/#articles">Статьи</a>
+                    </div>
+                </li>
+                
+                <!-- БЛОК АВТОРИЗАЦИИ (ПЕРЕСТАВЛЕН) -->
+                {% if user.is_authenticated %}
+                <!-- СНАЧАЛА МЕНЮ ПОЛЬЗОВАТЕЛЯ -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        {{ user.first_name|default:user.username }}
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
+                        <a class="dropdown-item" href="{% url 'dashboard' %}">Личный кабинет</a>
+                        {% if user.role == 'student' %}
+                        <a class="dropdown-item" href="{% url 'student_feedbacks' %}">Мои отзывы</a>
+                        {% elif user.role == 'teacher' %}
+                        <a class="dropdown-item" href="{% url 'teacher_feedbacks' %}">Отзывы обо мне</a>
+                        {% endif %}
+                        <a class="dropdown-item" href="{% url 'profile' %}">Профиль</a>
+                        {% if user.is_staff %}
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="{% url 'admin:index' %}">Админ-панель</a>
+                        {% endif %}
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="{% url 'logout' %}">Выйти</a>
+                    </div>
+                </li>
+                <!-- ПОТОМ БЛОК УВЕДОМЛЕНИЙ -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link" href="#" id="notificationsDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="fa fa-bell" style="font-size: 20px;"></i>
+                        <span class="badge badge-pill badge-danger" id="notificationBadge" style="display: none;">0</span>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right notifications-dropdown" aria-labelledby="notificationsDropdown">
+                        <div class="notifications-header">
+                            <h6 class="mb-0">Уведомления</h6>
+                            <button class="btn btn-sm btn-link" id="markAllRead">Все прочитано</button>
+                        </div>
+                        <div class="notifications-list" id="notificationsList">
+                            <div class="text-center p-3">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="sr-only">Загрузка...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="notifications-footer">
+                            <a href="#" class="dropdown-item text-center small py-2">Все уведомления</a>
+                        </div>
+                    </div>
+                </li>
+                {% else %}
+                <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Войти</a></li>
+                {% endif %}
+            </ul>
         </div>
         <!--end navbar-collapse -->
     </div>
     <!--end container -->
 </nav>
 <!--end navbar-fixed-top -->
-
-<!-- БЛОК АВТОРИЗАЦИИ - ВИДЕН ВСЕГДА! (это и есть HeadNavbarAuth) -->
-<div id="HeadNavbarAuth">
-    {% if user.is_authenticated %}
-    <div class="navbar-collapse collapse show" id="navbarAuth" {% if is_lk or is_admin %}style="border-bottom: 1px solid var(--border-light);" {% endif %}>
-        <ul class="navbar-nav ml-auto">
-            <!-- БЛОК УВЕДОМЛЕНИЙ -->
-            <li class="nav-item dropdown">
-                <a class="nav-link" href="#" id="notificationsDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    <i class="fa fa-bell" style="font-size: 20px;"></i>
-                    <span class="badge badge-pill badge-danger" id="notificationBadge" style="display: none;">0</span>
-                </a>
-                <div class="dropdown-menu dropdown-menu-right notifications-dropdown" aria-labelledby="notificationsDropdown">
-                    <div class="notifications-header">
-                        <h6 class="mb-0">Уведомления</h6>
-                        <button class="btn btn-sm btn-link" id="markAllRead">Все прочитано</button>
-                    </div>
-                    <div class="notifications-list" id="notificationsList">
-                        <div class="text-center p-3">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                <span class="sr-only">Загрузка...</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="notifications-footer">
-                        <a href="#" class="dropdown-item text-center small py-2">Все уведомления</a>
-                    </div>
-                </div>
-            </li>
-            <!-- ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ -->
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    {{ user.first_name|default:user.username }}
-                </a>
-                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
-                    <a class="dropdown-item" href="{% url 'dashboard' %}">Личный кабинет</a>
-                    {% if user.role == 'student' %}
-                    <a class="dropdown-item" href="{% url 'student_feedbacks' %}">Мои отзывы</a>
-                    {% elif user.role == 'teacher' %}
-                    <a class="dropdown-item" href="{% url 'teacher_feedbacks' %}">Отзывы обо мне</a>
-                    {% endif %}
-                    <a class="dropdown-item" href="{% url 'profile' %}">Профиль</a>
-                    {% if user.is_staff %}
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" href="{% url 'admin:index' %}">Админ-панель</a>
-                    {% endif %}
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" href="{% url 'logout' %}">Выйти</a>
-                </div>
-            </li>
-        </ul>
-    </div>
-    {% else %}
-    <div class="navbar-collapse collapse show" id="navbarAuth">
-        <ul class="navbar-nav ml-auto">
-            <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Войти</a></li>
-            <li class="nav-item"><a class="nav-link" href="{% url 'register' %}">Регистрация</a></li>
-        </ul>
-    </div>
-    {% endif %}
-</div>

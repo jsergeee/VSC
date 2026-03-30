@@ -48,12 +48,12 @@ class UserRegistrationForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name', 'patronymic',  # 👈 Фамилия, потом Имя
+        fields = ('username', 'last_name', 'first_name','patronymic',  # 👈 Фамилия, потом Имя
                   'email', 'phone', 'role', 'photo', 'password1', 'password2')
         labels = {
             'username': 'Логин',
-            'first_name': 'Фамилия',  # 👈 first_name = Фамилия
-            'last_name': 'Имя',  # 👈 last_name = Имя
+            'last_name': 'Фамилия',
+            'first_name': 'Имя',
             'patronymic': 'Отчество',
             'email': 'Email',
             'phone': 'Телефон',
@@ -61,8 +61,8 @@ class UserRegistrationForm(UserCreationForm):
         }
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите логин'}),
-            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите имя'}),
-            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите фамилию'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите фамилию'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите имя'}),
             'patronymic': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите отчество'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'example@mail.ru'}),
             'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+7 (999) 123-45-67'}),
@@ -159,18 +159,18 @@ class ProfileUpdateForm(forms.ModelForm):
     """
     class Meta:
         model = User
-        fields = ('first_name', 'last_name', 'patronymic', 'email', 'phone', 'photo')
+        fields = ('last_name', 'first_name', 'patronymic', 'email', 'phone', 'photo')
         widgets = {
-            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Имя'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Фамилия'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Имя'}),
             'patronymic': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Отчество'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email'}),
             'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Телефон'}),
             'photo': forms.FileInput(attrs={'class': 'form-control'}),
         }
         labels = {
-            'first_name': 'Имя',
             'last_name': 'Фамилия',
+            'first_name': 'Имя',
             'patronymic': 'Отчество',
             'email': 'Email',
             'phone': 'Телефон',
@@ -656,8 +656,8 @@ class CustomUserCreationForm(UserCreationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['first_name'].required = True
         self.fields['last_name'].required = True
+        self.fields['first_name'].required = True
         self.fields['email'].required = True
         self.fields['phone'].required = True
         

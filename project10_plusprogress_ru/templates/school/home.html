@@ -8,7 +8,7 @@
     <!-- ЦЕНТРИРОВАННЫЙ H1 ВВЕРХУ -->
     <div class="row">
         <div class="col-12 text-center mb-4">
-            <h1 class="main-title">Онлайн-ресурс Плюс Прогресс: <br> <!--обучение онлайн: <br>--> английский, русский, математика, информатика, история, обществознание...
+            <h1 class="main-title">Плюс Прогресс: <br> Эксперное сопровождение в учебе.<br> <!--обучение онлайн: <br>--> Английский, русский, математика, информатика и другие предметы — с интересом и результатом
             </h1>
         </div>
     </div>
@@ -419,50 +419,57 @@
 <!--begin articles section -->
 <section class="section-grey" id="articles">
     <div class="container">
-        <h2 class="mb-5">Полезные статьи</h2>
-        <div class="card-group">
-            <div class="card">
-                <img src="{% static 'images/articles.jpg' %}" class="card-img-top" alt="...">
-                <div class="card-body">
-                    <h5 class="card-title">Артикли в английском языке.</h5>
-                    <p class="card-text">В чем трудность данной темы для изучающих английский в нашей стране? Только в
-                        том, что в русском языке им нет аналога. Именно поэтому многих пугает...</p>
-                    <a href="{% url 'article_artikli' %}" class="btn-red scrool">Читать далее</a>
-                </div>
-            </div>
-            <div class="card">
-                <img src="{% static 'images/articles-2.jpg' %}" class="card-img-top" alt="...">
-                <div class="card-body">
-                    <h5 class="card-title">Глагол to be.</h5>
-                    <p class="card-text">Очень важный и часто используемый глагол в английском языке. Он лежит в основе
-                        построения огромного количества грамматических конструкций...</p>
-                    <a href="{% url 'article_glagol' %}" class="btn-red scrool">Читать далее</a>
-                </div>
-            </div>
-            <div class="card">
-                <img src="{% static 'images/article-3.jpg' %}" class="card-img-top" alt="...">
-                <div class="card-body">
-                    <h5 class="card-title">Количественные местоимения.</h5>
-                    <p class="card-text">Особое внимание придется уделить количественным местоимениям
-                        (quantifiers), так как имея одно и то же значение, употребляются они
-                        по-разному...</p>
-                    <a href="{% url 'article_kolichestvennye' %}" class="btn-red scrool">Читать далее</a>
-                </div>
+        <div class="row">
+            <div class="col-12">
+                <h2 class="section-title text-center mb-5">Полезные статьи</h2>
             </div>
         </div>
-        <div class="card-group">
-            <div class="card">
-                <img src="{% static 'images/art-4.jpg' %}" class="card-img-top" alt="...">
-                <div class="card-body">
-                    <h5 class="card-title">Местоимения в английском. Pronouns.</h5>
-                    <a href="{% url 'article_mestoimeniya' %}" class="btn-red scrool">Читать далее</a>
+        
+        <!-- Копируем содержимое list.html, но убираем паддинг-top и сайдбар -->
+        <div class="row">
+            {% if articles %}
+                {% for article in articles %}
+                <div class="col-md-4 mb-4">
+                    <div class="card article-card">
+                        {% if article.photo %}
+                        <img src="{{ article.photo.url }}" class="card-img-top" alt="{{ article.title }}" style="height: 200px; object-fit: cover;">
+                        {% endif %}
+                        <div class="card-body">
+                            <div class="article-meta">
+                                <i class="fa fa-calendar"></i> {{ article.created_at|date:"d.m.Y" }}
+                                <i class="fa fa-eye ms-2"></i> {{ article.views_count }}
+                            </div>
+                            <h3 class="article-title">
+                                <a href="{% url 'article_detail' article.slug %}">{{ article.title }}</a>
+                            </h3>
+                            <div class="article-excerpt">
+                                {{ article.excerpt|default:article.content|striptags|truncatechars:120 }}
+                            </div>
+                            <a href="{% url 'article_detail' article.slug %}" class="price-tag__red">
+                                Читать далее <i class="read-more"></i>
+                            </a>
+                        </div>
+                    </div>
                 </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <i class="fa fa-info-circle"></i> Статей пока нет. Скоро появятся!
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Кнопка "Все статьи" -->
+        <div class="row mt-4">
+            <div class="col-12 text-center">
+                <a href="{% url 'article_list' %}" class="btn btn-outline-primary btn-lg">
+                    Все статьи <i class="fa fa-arrow-right ms-2"></i>
+                </a>
             </div>
-            <div class="card"></div>
-            <div class="card"></div>
         </div>
     </div>
-
 </section>
 
 {% endblock %}

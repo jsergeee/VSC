@@ -221,7 +221,7 @@ iframe {
     font-size: 16px;
     line-height: 24px;
     margin-bottom: 8px;
-    color: #333;
+    color: black;
     position: relative;
     padding-left: 20px;
     
@@ -298,7 +298,7 @@ iframe {
 }
 
 .section-bg-1{
-    background: url(../images/bg10.jpg);
+    background: url(../images/fon_head_sheeet.png);
     background-position: top center;
     background-repeat: no-repeat;
     background-attachment: fixed;
@@ -363,7 +363,6 @@ iframe {
 	outline: 0;
 	display:block;
 	font-size: 20px;
-	margin-top: -10px;
 	font-family: 'Roboto', sans-serif;
 }
 
@@ -712,13 +711,26 @@ iframe {
   padding: 0;
 }
 
+.logo_phone {
+    display: flex;
+    align-items: center;
+    margin-right: 50px; 
+}
+
+.social_net {
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 
 .navbar-brand{
 	font-family: 'Roboto Slab', serif;
 	font-size: 28px;
 	font-weight: 600;
 	color: #e52f37;
-	width: 80px;
+	width: 70px;
 }
 
 .navbar-brand:hover{
@@ -760,8 +772,9 @@ iframe {
 	/* border-bottom: 1px solid #efefef; */
 	/* box-shadow: 0px 0px 25px 0px rgba(0, 0, 0, 0.04)!important; */
 	/* transition: background-color 0.25s ease 0s; */
-	min-height: auto;
-/*	height: 150px;*/
+	
+	height: 70px;
+    margin-top: 10px;
 }
 
 .navbar-fixed-top.opaque {
@@ -826,11 +839,6 @@ iframe {
 	color: #e52f37!important;
 	background: transparent;
 	border: 1px solid #e52f37;
-}
-/* Чтобы меню не переносилось */
-#navbarMain .navbar-nav {
-    flex-wrap: nowrap !important;
-    white-space: nowrap;
 }
 
 
@@ -1018,8 +1026,27 @@ ul.footer_social li a i:hover {
 	z-index: 999;
   	/*padding-top: 10px;*/
   /*	padding-bottom: 110px;*/
-  	background: url(../images/bg10.jpg) top center no-repeat;
+  	background: url(../images/fon_head_sheeet.png) top center no-repeat;
 	background-size: cover;
+}
+
+.home-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.6); /* белый полупрозрачный слой */
+    /* или rgba(0, 0, 0, 0.3) для затемнения */
+    pointer-events: none; /* чтобы слой не мешал кликать по элементам */
+    z-index: 1;
+}
+
+/* Чтобы контент был поверх полупрозрачного слоя */
+.home-section > * {
+    position: relative;
+    z-index: 2;
 }
 
 .links-section {
@@ -1029,22 +1056,7 @@ ul.footer_social li a i:hover {
 	width: 1440px;
 }
 
-.home-section-overlay{
-	width: 100%;
-	background: #101010;
-	opacity: 0.01;
-	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-}
 
-.home-section h1{
-	margin: 20px auto 20px auto;
-	line-height: 1.2;
-    color: #071e55;
-}
 
 .home-section p.hero-text{
 	margin-bottom: 25px;
@@ -2203,8 +2215,19 @@ ul.benefits.white li i {
 .navbar-toggler {
     margin-left: auto;  /* Сдвигает кнопку вправо */
     margin-right: 10px; /* Отступ от правого края */
+
 }
 
+.collapse:not(.show) {
+   justify-content: flex-end;
+}
+
+.ml-auto, .mx-auto {
+    margin-left: 0px !important;
+}
+.navbar-collapse {
+    background-color: white;
+}
 
 .card-header h5 .btn-link:hover, .card-header h5 .btn-link:focus {
 	text-decoration: none;
@@ -2340,14 +2363,13 @@ ul.benefits.white li i {
        text-align: left !important;
     }
 
-/*    #navbarAuth .dropdown-menu {
-        position: static !important;
-        float: none !important;
-        width: 100% !important;
-        box-shadow: none !important;
-    }*/
+    .logo_phone {
+        margin-right: 0px; 
+    }
+
     .navbar-brand {
         width: 60px;
+        display: none;
     }
 
     .collapsible-form-wrapper {
@@ -2359,6 +2381,50 @@ ul.benefits.white li i {
 
 /* От 768px до 991px */
 @media (min-width: 768px) and (max-width: 991px) {
+
+    .navbar>.container {
+        justify-content: flex-start;
+    }
+        /* Принудительно показываем dropdown меню */
+    .dropdown-menu {
+        display: block !important;
+        position: static !important;
+        float: none !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: transparent !important;
+        
+    }
+    
+    /* Прячем стрелку */
+ 
+    .dropdown-toggle::after {
+        display: none !important;
+    }
+    
+    /* Делаем "Еще..." как обычный заголовок без возможности клика */
+    .dropdown-toggle {
+        pointer-events: none !important;
+        cursor: default !important;
+        display: none;
+    }
+    
+    /* Убираем любые трансформации от Bootstrap */
+    .collapse.show .dropdown-menu.show,
+    .collapsing .dropdown-menu {
+        display: block !important;
+    }
+
+    .dropdown-item{
+        color: #071e55;
+        font-size: 17px;
+        line-height: 30px !important;
+        padding: 10px 15px !important;
+        font-family: 'Roboto Slab', serif;
+        font-weight: 600;
+    }
+
 
     .main-content {
     margin-top: 109px;
@@ -2474,6 +2540,43 @@ ul.benefits.white li i {
 
 /* От 426px до 768px */
 @media (min-width: 426px) and (max-width: 768px) {
+    /* Принудительно показываем dropdown меню */
+    .dropdown-menu {
+        display: block !important;
+        position: static !important;
+        float: none !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: transparent !important;
+        
+    }
+        .dropdown-item{
+        color: #071e55;
+        font-size: 17px;
+        line-height: 30px !important;
+        padding: 10px 15px !important;
+        font-family: 'Roboto Slab', serif;
+        font-weight: 600;
+    }
+    /* Прячем стрелку */
+    .dropdown-toggle::after {
+        display: none !important;
+    }
+    
+    /* Делаем "Еще..." как обычный заголовок без возможности клика */
+    .dropdown-toggle {
+        pointer-events: none !important;
+        cursor: default !important;
+        display: none;
+    }
+    
+    /* Убираем любые трансформации от Bootstrap */
+    .collapse.show .dropdown-menu.show,
+    .collapsing .dropdown-menu {
+        display: block !important;
+    }
+
     .main-content {
     margin-top: 109px;
 }
@@ -2593,6 +2696,43 @@ ul.benefits.white li i {
 
 /* От 376px до 425px */
 @media (min-width: 376px) and (max-width: 425px) {
+
+        /* Принудительно показываем dropdown меню */
+    .dropdown-menu {
+        display: block !important;
+        position: static !important;
+        float: none !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: transparent !important;
+        
+    }
+        .dropdown-item{
+        color: #071e55;
+        font-size: 17px;
+        line-height: 30px !important;
+        padding: 10px 15px !important;
+        font-family: 'Roboto Slab', serif;
+        font-weight: 600;
+    }
+    /* Прячем стрелку */
+    .dropdown-toggle::after {
+        display: none !important;
+    }
+    
+    /* Делаем "Еще..." как обычный заголовок без возможности клика */
+    .dropdown-toggle {
+        pointer-events: none !important;
+        cursor: default !important;
+        display: none;
+    }
+    
+    /* Убираем любые трансформации от Bootstrap */
+    .collapse.show .dropdown-menu.show,
+    .collapsing .dropdown-menu {
+        display: block !important;
+    }
     .main-content {
     margin-top: 109px;
 }
@@ -2718,6 +2858,49 @@ ul.benefits.white li i {
 
 /* До 375px */
 @media (max-width: 375px) {
+
+    .social_net {
+        
+        display: none;
+        
+    }
+
+        /* Принудительно показываем dropdown меню */
+    .dropdown-menu {
+        display: block !important;
+        position: static !important;
+        float: none !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: transparent !important;
+        
+    }
+        .dropdown-item{
+        color: #071e55;
+        font-size: 17px;
+        line-height: 30px !important;
+        padding: 10px 15px !important;
+        font-family: 'Roboto Slab', serif;
+        font-weight: 600;
+    }
+    /* Прячем стрелку */
+    .dropdown-toggle::after {
+        display: none !important;
+    }
+    
+    /* Делаем "Еще..." как обычный заголовок без возможности клика */
+    .dropdown-toggle {
+        pointer-events: none !important;
+        cursor: default !important;
+        display: none;
+    }
+    
+    /* Убираем любые трансформации от Bootstrap */
+    .collapse.show .dropdown-menu.show,
+    .collapsing .dropdown-menu {
+        display: block !important;
+    }
 .main-content {
     margin-top: 109px;
 }
@@ -2743,6 +2926,20 @@ ul.benefits.white li i {
         font-size: 1rem !important;
     }
 }
+
+@media (max-width: 317px) {
+    .header-number {
+        font-size: 15px;
+    }
+    .logo_phone {
+        margin-right: 0;
+    
+    }
+    .site-header {
+        width: 150%;
+    }
+}
+
 
 /* До 330px - особо маленькие экраны */
 @media (max-width: 330px) {
@@ -2775,11 +2972,6 @@ ul.benefits.white li i {
 
 .notifications-header h6 {
     margin: 0;
-}
-
-.notifications-list {
-    max-height: 400px;
-    overflow-y: auto;
 }
 
 .notification-item {
@@ -4554,12 +4746,12 @@ margin: auto auto auto auto;
 
 /* Ссылки в навигации (Войти/Регистрация) */
 #navbarAuth .nav-link {
-    color: #071e55 !important;
+    /* color: #071e55 !important;
     font-family: 'Roboto', sans-serif;
     font-size: 14px;
     font-weight: 400;
     padding: 0.5rem 1rem !important;
-    transition: color 0.3s ease;
+    transition: color 0.3s ease; */
 }
 
 #navbarAuth .nav-link:hover {
@@ -4753,12 +4945,6 @@ margin: auto auto auto auto;
 }
 
 
-    .navbar-expand-lg .navbar-collapse {
-    border-bottom: 1px solid #dee2e6;
-
-    }
-
-
 .feedback-rating {
     margin-top: 10px;
     font-size: 18px;
@@ -4813,7 +4999,7 @@ margin: auto auto auto auto;
 .fa-star-o {
     color: #ddd;
 
-
+}
 /* Стили для формы отзывов */
 .rating-stars-input .form-check-label i {
     font-size: 24px;
@@ -4939,3 +5125,24 @@ margin: auto auto auto auto;
 
 .social-instagram {
     background: linear-gradient(45deg, #f09433, #d62976, #962fbf, #4f5bd5);
+
+}
+
+.social-net {
+    display: flex;
+    justify-content: center;
+    text-align: center; 
+    margin-bottom: 20px;
+    align-items: center;
+}
+
+.max-icon {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    background-image: url('../images/max-messenger-sign-logo.svg');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    vertical-align: middle;
+}
