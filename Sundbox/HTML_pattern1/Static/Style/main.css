@@ -1,0 +1,280 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  font-family: "Arial", sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #333333;
+  background-color: #ecf0f1;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+@media (max-width: 768px) {
+  .container {
+    padding: 0 8px;
+  }
+}
+
+.text-center {
+  text-align: center;
+}
+
+.mt-1 {
+  margin-top: 16px;
+}
+
+.mt-2 {
+  margin-top: 32px;
+}
+
+.mb-1 {
+  margin-bottom: 16px;
+}
+
+.mb-2 {
+  margin-bottom: 32px;
+}
+
+.btn {
+  display: inline-block;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+}
+.btn-primary {
+  background-color: #3498db;
+  color: white;
+}
+.btn-primary:hover {
+  background-color: rgb(33.1380753138, 125.1882845188, 186.8619246862);
+}
+.btn-secondary {
+  background-color: #2ecc71;
+  color: white;
+}
+.btn-secondary:hover {
+  background-color: rgb(36.616, 162.384, 89.948);
+}
+.btn-danger {
+  background-color: #e74c3c;
+  color: white;
+}
+.btn-danger:hover {
+  background-color: rgb(213.698630137, 43.8356164384, 26.301369863);
+}
+
+.navbar {
+  background-color: #2c3e50;
+  padding: 16px;
+}
+.navbar-menu {
+  list-style: none;
+  display: flex;
+  gap: 16px;
+}
+@media (max-width: 576px) {
+  .navbar-menu {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+.navbar-item a {
+  color: white;
+  text-decoration: none;
+  transition: all 0.3s ease-in-out;
+}
+.navbar-item a:hover {
+  color: #3498db;
+}
+
+.card {
+  background-color: white;
+  border-radius: 4px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease-in-out;
+}
+.card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+.card-image {
+  width: 100%;
+  height: auto;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 1.25rem;
+  margin-bottom: 8px;
+}
+.card-text {
+  color: #666666;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+.form-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: all 0.3s ease-in-out;
+}
+.form-input:focus {
+  outline: none;
+  border-color: #3498db;
+}
+.form-error {
+  color: #e74c3c;
+  font-size: 0.875rem;
+  margin-top: 4px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+@media (max-width: 576px) {
+  .grid {
+    gap: 8px;
+  }
+}
+.grid-col-6 {
+  grid-column: span 6;
+}
+.grid-col-4 {
+  grid-column: span 4;
+}
+.grid-col-3 {
+  grid-column: span 3;
+}
+@media (max-width: 576px) {
+  .grid-col-6, .grid-col-4, .grid-col-3 {
+    grid-column: span 12;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes slideIn {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.fade-in {
+  animation: fadeIn 0.5s ease-in;
+}
+
+.slide-in {
+  animation: slideIn 0.5s ease-out;
+}
+
+body {
+  background-image: url("../../typeawaynumerodos.jpg");
+  background-repeat: no-repeat;
+}
+
+.body {
+  position: absolute;
+  background-color: rgba(222, 222, 236, 0.5);
+  z-index: 10;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.header {
+  display: flex !important;
+  justify-content: center;
+  margin: auto;
+  border-radius: 50px;
+  background-color: white;
+  border: 1px solid white;
+  z-index: 10;
+  margin-top: 50px;
+  position: absolute;
+  top: 50px;
+  width: 95%;
+  max-width: 100hv;
+}
+@media (max-width: 768px) {
+  .header {
+    justify-content: flex-start;
+  }
+}
+
+.head_container {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-content: center;
+}
+
+.logo {
+  border-radius: 50px;
+  background-position: center;
+  background-image: url("../../logo_white.png");
+  background-size: cover;
+  height: 100px;
+  width: 100px;
+  margin-left: 0px;
+  min-width: 50px;
+}
+@media (max-width: 768px) {
+  .logo {
+    justify-content: left;
+  }
+}
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  margin-left: 200px;
+  align-items: center;
+  max-width: 100%;
+}
+@media (max-width: 768px) {
+  .nav {
+    display: none;
+  }
+}
+.nav ul {
+  display: flex;
+}
+.nav li {
+  margin-right: 10px;
+  list-style: none;
+  display: flex;
+}/*# sourceMappingURL=main.css.map */

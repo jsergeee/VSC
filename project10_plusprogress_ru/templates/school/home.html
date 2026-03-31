@@ -1,7 +1,49 @@
 {% extends 'base.html' %}
 {% load custom_filters %}
 {% load static %}
+
 {% block title %}Плюс Прогресс - английский, русский, математика онлайн. Подготовка к ОГЭ, ЕГЭ.{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Стили для карточек статей (как в list.html) */
+    #articles .card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border-radius: 15px;
+        overflow: hidden;
+    }
+
+    #articles .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    }
+
+    #articles .card-img-top {
+        transition: transform 0.5s ease;
+    }
+
+    #articles .card:hover .card-img-top {
+        transform: scale(1.05);
+    }
+
+    #articles .btn-red {
+        transition: all 0.3s ease;
+    }
+
+    #articles .btn-red:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(229, 47, 55, 0.3);
+    }
+
+    #articles .card-title a {
+        transition: color 0.3s ease;
+    }
+
+    #articles .card-title a:hover {
+        color: #e52f37;
+    }
+</style>
+{% endblock %}
 {% block content %}
 <!--begin home section -->
 <section class="home-section" id="home">
@@ -181,132 +223,132 @@
         <!-- ===== НОВЫЙ БЛОК СО СЧЕТЧИКОМ И СТАТИСТИКОЙ ===== -->
         {% if total_feedbacks > 0 %}
         <div class="row mb-3">
-    <div class="col-md-6 col-lg-5 col-xl-4 mx-auto">
-        <!-- Компактная карточка статистики -->
-        <div class="feedback-stats-card" style="background: #f8f9fa; border-radius: 10px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-            <div class="row align-items-center g-2">
-                <!-- Общий счетчик (компактный) -->
-                <div class="col-5 text-center">
-                    <div class="total-feedback-count">
-                        <span class="count-number" style="font-size: 2rem; font-weight: 700; line-height: 1; display: block; color: #2c3e50;">{{ total_feedbacks }}</span>
-                        <span class="count-label" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #7f8c8d;">отзывов</span>
-                    </div>
-                    <div class="average-rating mt-1">
-                        {% with avg=rating_stats.avg %}
-                        <span class="rating-value" style="font-size: 1.1rem; font-weight: 600; color: #f39c12; margin-right: 4px;">{{ avg|floatformat:1 }}</span>
-                        <span class="rating-stars" style="font-size: 0.8rem;">
-                            {% for i in "12345"|make_list %}
-                                {% if forloop.counter <= avg|floatformat:0|add:0 %}
-                                    <i class="fa fa-star text-warning"></i>
-                                {% elif forloop.counter == avg|floatformat:0|add:1 and avg|floatformat:1|slice:"-1:" == "5" %}
-                                    <i class="fa fa-star-half-o text-warning"></i>
-                                {% else %}
-                                    <i class="fa fa-star-o text-muted" style="opacity: 0.5;"></i>
-                                {% endif %}
-                            {% endfor %}
-                        </span>
-                        {% endwith %}
-                    </div>
-                </div>
-
-                <!-- Детальная статистика (компактная) -->
-                <div class="col-7">
-                    <div class="rating-breakdown" style="font-size: 0.8rem;">
-                        {% for rating in "54321"|make_list %}
-                        <div class="rating-row d-flex align-items-center mb-1">
-                            <span class="rating-label" style="min-width: 35px; font-weight: 500;">
-                                {{ rating }} <i class="fa fa-star" style="font-size: 0.65rem; color: #f39c12;"></i>
-                            </span>
-                            <div class="progress flex-grow-1" style="height: 6px; margin: 0 6px; background-color: #e9ecef; border-radius: 10px;">
-                                {% with percent_key=rating|add:"_percent" %}
-                                <div class="progress-bar bg-warning" style="width: {{ rating_stats|get_item:percent_key }}%; height: 6px; border-radius: 10px;" role="progressbar"></div>
-                                {% endwith %}
-                            </div>
-                            <span class="rating-count" style="min-width: 20px; text-align: right; color: #7f8c8d; font-weight: 500;">
-                                {% with count_key=rating %}
-                                {{ rating_stats|get_item:count_key }}
-                                {% endwith %}
-                            </span>
+        <div class="col-md-6 col-lg-5 col-xl-4 mx-auto">
+            <!-- Компактная карточка статистики -->
+            <div class="feedback-stats-card" style="background: #f8f9fa; border-radius: 10px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <div class="row align-items-center g-2">
+                    <!-- Общий счетчик (компактный) -->
+                    <div class="col-5 text-center">
+                        <div class="total-feedback-count">
+                            <span class="count-number" style="font-size: 2rem; font-weight: 700; line-height: 1; display: block; color: #2c3e50;">{{ total_feedbacks }}</span>
+                            <span class="count-label" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #7f8c8d;">отзывов</span>
                         </div>
-                        {% endfor %}
+                        <div class="average-rating mt-1">
+                            {% with avg=rating_stats.avg %}
+                            <span class="rating-value" style="font-size: 1.1rem; font-weight: 600; color: #f39c12; margin-right: 4px;">{{ avg|floatformat:1 }}</span>
+                            <span class="rating-stars" style="font-size: 0.8rem;">
+                                {% for i in "12345"|make_list %}
+                                    {% if forloop.counter <= avg|floatformat:0|add:0 %}
+                                        <i class="fa fa-star text-warning"></i>
+                                    {% elif forloop.counter == avg|floatformat:0|add:1 and avg|floatformat:1|slice:"-1:" == "5" %}
+                                        <i class="fa fa-star-half-o text-warning"></i>
+                                    {% else %}
+                                        <i class="fa fa-star-o text-muted" style="opacity: 0.5;"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </span>
+                            {% endwith %}
+                        </div>
+                    </div>
+
+                    <!-- Детальная статистика (компактная) -->
+                    <div class="col-7">
+                        <div class="rating-breakdown" style="font-size: 0.8rem;">
+                            {% for rating in "54321"|make_list %}
+                            <div class="rating-row d-flex align-items-center mb-1">
+                                <span class="rating-label" style="min-width: 35px; font-weight: 500;">
+                                    {{ rating }} <i class="fa fa-star" style="font-size: 0.65rem; color: #f39c12;"></i>
+                                </span>
+                                <div class="progress flex-grow-1" style="height: 6px; margin: 0 6px; background-color: #e9ecef; border-radius: 10px;">
+                                    {% with percent_key=rating|add:"_percent" %}
+                                    <div class="progress-bar bg-warning" style="width: {{ rating_stats|get_item:percent_key }}%; height: 6px; border-radius: 10px;" role="progressbar"></div>
+                                    {% endwith %}
+                                </div>
+                                <span class="rating-count" style="min-width: 20px; text-align: right; color: #7f8c8d; font-weight: 500;">
+                                    {% with count_key=rating %}
+                                    {{ rating_stats|get_item:count_key }}
+                                    {% endwith %}
+                                </span>
+                            </div>
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
-        {% endif %}
-        <!-- ===== КОНЕЦ НОВОГО БЛОКА ===== -->
+        </div>
+            {% endif %}
+            <!-- ===== КОНЕЦ НОВОГО БЛОКА ===== -->
 
-        <div class="row">
-            <div class="col-md-12 mx-auto padding-bottom-40">
-                {% if feedbacks %}
-                <div class="row">
-                    <div class="col-md-12 mx-auto padding-bottom-40">
-                        {% if feedbacks %}
-                        <div id="carouselIndicators2" class="carousel slide" data-ride="carousel">
-                            <ol class="carousel-indicators testimonials-indicators">
-                                {% for feedback in feedbacks %}
-                                <li data-target="#carouselIndicators2" data-slide-to="{{ forloop.counter0 }}" {% if forloop.first %}class="active" {% endif %}></li>
-                                {% endfor %}
-                            </ol>
+            <div class="row">
+                <div class="col-md-12 mx-auto padding-bottom-40">
+                    {% if feedbacks %}
+                    <div class="row">
+                        <div class="col-md-12 mx-auto padding-bottom-40">
+                            {% if feedbacks %}
+                            <div id="carouselIndicators2" class="carousel slide" data-ride="carousel">
+                                <ol class="carousel-indicators testimonials-indicators">
+                                    {% for feedback in feedbacks %}
+                                    <li data-target="#carouselIndicators2" data-slide-to="{{ forloop.counter0 }}" {% if forloop.first %}class="active" {% endif %}></li>
+                                    {% endfor %}
+                                </ol>
 
-                            <div class="carousel-inner">
-                                {% for feedback in feedbacks %}
-                                <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                                    <div class="row align-items-center testim-inner">
-                                        <div class="col-md-10 mx-auto">
-                                            <i class="fa fa-quote-left" aria-hidden="true"></i>
-                                            <p>{{ feedback.text|linebreaksbr }}</p>
-                                            <h6>
-                                                {{ feedback.name }}
-                                                {% if feedback.role %}
-                                                <span>, {{ feedback.role }}</span>
-                                                {% endif %}
-                                            </h6>
-                                            {% if feedback.teacher %}
-                                            <p class="small text-muted">Учитель: {{ feedback.teacher.user.get_full_name }}</p>
-                                            {% endif %}
-                                            {% if feedback.rating %}
-                                            <div class="feedback-rating">
-                                                {% for i in "12345"|make_list %}
-                                                {% if forloop.counter <= feedback.rating %} <i class="fa fa-star text-warning"></i>
-                                                    {% else %}
-                                                    <i class="fa fa-star-o text-muted"></i>
+                                <div class="carousel-inner">
+                                    {% for feedback in feedbacks %}
+                                    <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                                        <div class="row align-items-center testim-inner">
+                                            <div class="col-md-10 mx-auto">
+                                                <i class="fa fa-quote-left" aria-hidden="true"></i>
+                                                <p>{{ feedback.text|linebreaksbr }}</p>
+                                                <h6>
+                                                    {{ feedback.name }}
+                                                    {% if feedback.role %}
+                                                    <span>, {{ feedback.role }}</span>
                                                     {% endif %}
-                                                    {% endfor %}
+                                                </h6>
+                                                {% if feedback.teacher %}
+                                                <p class="small text-muted">Учитель: {{ feedback.teacher.user.get_full_name }}</p>
+                                                {% endif %}
+                                                {% if feedback.rating %}
+                                                <div class="feedback-rating">
+                                                    {% for i in "12345"|make_list %}
+                                                    {% if forloop.counter <= feedback.rating %} <i class="fa fa-star text-warning"></i>
+                                                        {% else %}
+                                                        <i class="fa fa-star-o text-muted"></i>
+                                                        {% endif %}
+                                                        {% endfor %}
+                                                </div>
+                                                {% endif %}
                                             </div>
-                                            {% endif %}
                                         </div>
                                     </div>
+                                    {% endfor %}
                                 </div>
-                                {% endfor %}
-                            </div>
 
-                            <a class="carousel-control-prev" href="#carouselIndicators2" role="button" data-slide="prev">
-                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                <span class="sr-only">Previous</span>
-                            </a>
-                            <a class="carousel-control-next" href="#carouselIndicators2" role="button" data-slide="next">
-                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                <span class="sr-only">Next</span>
-                            </a>
+                                <a class="carousel-control-prev" href="#carouselIndicators2" role="button" data-slide="prev">
+                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                    <span class="sr-only">Previous</span>
+                                </a>
+                                <a class="carousel-control-next" href="#carouselIndicators2" role="button" data-slide="next">
+                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                    <span class="sr-only">Next</span>
+                                </a>
+                            </div>
+                            {% else %}
+                            <div class="text-center">
+                                <p class="text-muted">Пока нет отзывов. Будьте первым!</p>
+                            </div>
+                            {% endif %}
                         </div>
-                        {% else %}
-                        <div class="text-center">
-                            <p class="text-muted">Пока нет отзывов. Будьте первым!</p>
-                        </div>
-                        {% endif %}
                     </div>
+                    {% else %}
+                    <div class="text-center">
+                        <p class="text-muted">Пока нет отзывов. Будьте первым!</p>
+                    </div>
+                    {% endif %}
                 </div>
-                {% else %}
-                <div class="text-center">
-                    <p class="text-muted">Пока нет отзывов. Будьте первым!</p>
-                </div>
-                {% endif %}
             </div>
         </div>
-    </div>
 </section>
 
 
