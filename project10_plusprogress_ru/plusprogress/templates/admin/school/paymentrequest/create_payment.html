@@ -1,0 +1,28 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div class="module">
+    <h2>Создать выплату по запросу #{{ payment_request.id }}</h2>
+
+    <div style="background: #f8f9fa; padding: 15px; margin-bottom: 20px;">
+        <p><strong>Учитель:</strong> {{ payment_request.teacher.user.get_full_name }}</p>
+        <p><strong>Email:</strong> {{ payment_request.teacher.user.email }}</p>
+        <p><strong>Телефон:</strong> {{ payment_request.teacher.user.phone|default:"не указан" }}</p>
+        <p><strong>Сумма:</strong> {{ payment_request.amount }} ₽</p>
+        <p><strong>Способ выплаты:</strong> {{ payment_request.get_payment_method_display }}</p>
+        <p><strong>Реквизиты:</strong> {{ payment_request.payment_details }}</p>
+        <p><strong>Текущий баланс учителя:</strong> {{ teacher_balance }} ₽</p>
+        <p><strong>Баланс после выплаты:</strong> {{ teacher_balance|add:payment_request.amount|floatformat:0 }} →
+           <span style="color: #28a745;">{{ teacher_balance|add:payment_request.amount|floatformat:0 }} ₽</span>
+        </p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="submit-row">
+            <input type="submit" value="✅ Подтвердить выплату" class="default" style="background: #28a745;">
+            <a href="{% url 'admin:school_paymentrequest_changelist' %}" class="button">Отмена</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ homework.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Задание -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">{{ homework.title }}</h4>
+                </div>
+                <div class="card-body">
+                    <p><strong>Учитель:</strong> {{ homework.teacher.user.get_full_name }}</p>
+                    <p><strong>Предмет:</strong> {{ homework.subject.name }}</p>
+                    <p><strong>Срок сдачи:</strong> {{ homework.deadline|date:"d.m.Y H:i" }}</p>
+                    <p><strong>Статус:</strong>
+                        <span class="badge badge-{{ homework.get_status }} p-2">
+                            {{ homework.get_status_display }}
+                        </span>
+                    </p>
+
+                    <hr>
+
+                    <h5>Описание задания:</h5>
+                    <div class="homework-description">
+                        {{ homework.description|linebreaks|safe }}
+                    </div>
+
+                    {% if homework.attachments %}
+                    <a href="{{ homework.attachments.url }}" class="btn btn-sm btn-info" download>
+                        <i class="fa fa-download"></i> Скачать файл задания
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            {% if submission %}
+            <!-- Мой ответ -->
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Мой ответ</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Сдано:</strong> {{ submission.submitted_at|date:"d.m.Y H:i" }}</p>
+
+                    {% if submission.answer_text %}
+                    <hr>
+                    <h6>Мой ответ:</h6>
+                    <p>{{ submission.answer_text|linebreaks }}</p>
+                    {% endif %}
+
+                    {% if submission.file %}
+                    <a href="{{ submission.file.url }}" class="btn btn-sm btn-success" download>
+                        <i class="fa fa-download"></i> Мой файл
+                    </a>
+                    {% endif %}
+
+                    {% if submission.status == 'checked' %}
+                    <hr>
+                    <h6>Проверка учителя:</h6>
+                    <p><strong>Оценка:</strong> {{ submission.grade }}/5</p>
+                    <p><strong>Комментарий:</strong> {{ submission.teacher_comment }}</p>
+                    <p><small>Проверено: {{ submission.checked_at|date:"d.m.Y H:i" }}</small></p>
+                    {% endif %}
+                </div>
+            </div>
+            {% elif can_submit %}
+            <!-- Форма сдачи -->
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Сдать задание</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        <button type="submit" class="btn btn-success btn-block">
+                            <i class="fa fa-send"></i> Отправить
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

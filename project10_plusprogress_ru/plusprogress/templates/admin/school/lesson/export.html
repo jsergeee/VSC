@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Экспорт уроков - {{ title }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+            color: #333;
+        }
+        h1 {
+            color: #417690;
+            border-bottom: 2px solid #417690;
+            padding-bottom: 10px;
+        }
+        .export-info {
+            color: #666;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 13px;
+        }
+        th {
+            background: #417690;
+            color: white;
+            padding: 10px;
+            text-align: left;
+            font-weight: bold;
+        }
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        tr:hover {
+            background: #f1f1f1;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .status-scheduled { background: #007bff; color: white; }
+        .status-completed { background: #28a745; color: white; }
+        .status-cancelled { background: #dc3545; color: white; }
+        .status-overdue { background: #ffc107; color: #333; }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #666;
+            font-size: 11px;
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+        }
+        .summary {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .summary-item {
+            display: inline-block;
+            margin-right: 30px;
+        }
+        .summary-label {
+            font-weight: bold;
+            color: #417690;
+        }
+        @media print {
+            body { margin: 15px; }
+            th { background: #333 !important; }
+            .footer { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ title }}</h1>
+    <div class="export-info">
+        Дата экспорта: {{ export_date }}<br>
+        Всего записей: {{ lessons|length }}
+    </div>
+    
+    <!-- Краткая статистика -->
+    <div class="summary">
+        <span class="summary-item">
+            <span class="summary-label">Запланировано:</span> 
+            {{ lessons|dictsortreversed:"status"|dictsort:"status"|length }}
+        </span>
+        <span class="summary-item">
+            <span class="summary-label">Проведено:</span> 
+            {{ completed_count }}
+        </span>
+        <span class="summary-item">
+            <span class="summary-label">Отменено:</span> 
+            {{ cancelled_count }}
+        </span>
+        <span class="summary-item">
+            <span class="summary-label">Просрочено:</span> 
+            {{ overdue_count }}
+        </span>
+        <span class="summary-item">
+            <span class="summary-label">Общая сумма:</span> 
+            {{ total_cost|floatformat:2 }} ₽
+        </span>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Дата</th>
+                <th>Время</th>
+                <th>Учитель</th>
+                <th>Ученик</th>
+                <th>Предмет</th>
+                <th>Стоимость</th>
+                <th>Выплата учителю</th>
+                <th>Статус</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for lesson in lessons %}
+            <tr>
+                <td>{{ lesson.id }}</td>
+                <td>{{ lesson.date|date:"d.m.Y" }}</td>
+                <td>{{ lesson.start_time|time:"H:i" }}-{{ lesson.end_time|time:"H:i" }}</td>
+                <td>{{ lesson.teacher.user.get_full_name }}</td>
+                <td>{{ lesson.student.user.get_full_name }}</td>
+                <td>{{ lesson.subject.name }}</td>
+                <td style="text-align: right;">{{ lesson.cost|floatformat:2 }} ₽</td>
+                <td style="text-align: right;">{{ lesson.teacher_payment|floatformat:2 }} ₽</td>
+                <td>
+                    {% if lesson.status == 'scheduled' %}
+                        <span class="status-badge status-scheduled">Запланировано</span>
+                    {% elif lesson.status == 'completed' %}
+                        <span class="status-badge status-completed">Проведено</span>
+                    {% elif lesson.status == 'cancelled' %}
+                        <span class="status-badge status-cancelled">Отменено</span>
+                    {% elif lesson.status == 'overdue' %}
+                        <span class="status-badge status-overdue">Просрочено</span>
+                    {% else %}
+                        {{ lesson.get_status_display }}
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="9" style="text-align: center; padding: 30px;">
+                    Нет данных для экспорта
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="footer">
+        Сгенерировано в системе "Плюс Прогресс" • 
+        Всего записей: {{ lessons|length }} • 
+        Общая стоимость: {{ total_cost|floatformat:2 }} ₽ • 
+        Общая сумма выплат: {{ total_payment|floatformat:2 }} ₽
+    </div>
+</body>
+</html>

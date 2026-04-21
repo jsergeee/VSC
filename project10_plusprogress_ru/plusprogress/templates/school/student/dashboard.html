@@ -1,0 +1,583 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Личный кабинет ученика{% endblock %}
+
+{% block extra_css %}
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<style>
+    /* === СТИЛИ ДЛЯ БАЛАНСА === */
+    .balance-positive {
+        color: white !important;  /* положительный - белый */
+    }
+    
+    .balance-negative {
+        color: #dc3545 !important;  /* отрицательный - красный */
+        font-weight: bold !important;
+    }
+    
+    .balance-amount {
+        font-size: 48px !important;
+        font-weight: bold !important;
+        line-height: 1.2 !important;
+    }
+    
+    /* Стили карточки - ОДНО определение */
+    .balance-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+    
+    .balance-label {
+        font-size: 14px;
+        opacity: 0.9;
+        margin-bottom: 5px;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Приветствие -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>Здравствуйте, {{ user.first_name }}!</h2>
+            <p class="text-muted">Рады видеть вас в личном кабинете</p>
+        </div>
+    </div>
+
+    <!-- Баланс с цветовой индикацией -->
+    <div class="row">
+        <div class="col-12">
+            <div class="balance-card">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="balance-label">Текущий баланс</div>
+                        <div class="balance-amount {% if user.get_balance < 0 %}balance-negative{% else %}balance-positive{% endif %}">
+                        {{ user.get_balance }} ₽
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Быстрая статистика -->
+    <div class="quick-stats">
+        <div class="stat-card">
+            <div class="stat-number">{{ upcoming_lessons|length }}</div>
+            <div class="stat-label">Ближайших занятий</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ past_lessons|length }}</div>
+            <div class="stat-label">Пройдено занятий</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ teachers|length }}</div>
+            <div class="stat-label">Учителей</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ materials|length }}</div>
+            <div class="stat-label">Материалов</div>
+        </div>
+    </div>
+
+    <!-- Активные домашние задания -->
+    {% if recent_homeworks %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fa fa-book"></i> Активные домашние задания</h5>
+                    <a href="{% url 'student_homeworks' %}" class="btn btn-sm btn-light">Все задания →</a>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for homework in recent_homeworks %}
+                        <div class="col-md-6 mb-3">
+                            <div class="homework-item p-3 border rounded {% if homework.get_status == 'overdue' %}bg-light-danger{% endif %}">
+                                <div class="d-flex justify-content-between">
+                                    <h6 class="mb-1">
+                                        <a href="{% url 'student_homework_detail' homework.id %}" class="text-dark">
+                                            {{ homework.title }}
+                                        </a>
+                                    </h6>
+                                    <span class="badge badge-{{ homework.get_status }}">
+                                        {{ homework.get_status_display }}
+                                    </span>
+                                </div>
+                                <p class="mb-1 small text-muted">
+                                    <i class="fa fa-user"></i> {{ homework.teacher.user.get_full_name }} |
+                                    <i class="fa fa-calendar"></i> до {{ homework.deadline|date:"d.m.Y H:i" }}
+                                </p>
+                                {% if homework.get_status == 'submitted' %}
+                                <span class="badge badge-info">Ожидает проверки</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Навигационные вкладки -->
+    <ul class="nav nav-tabs-custom" id="myTab" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="schedule-tab" data-toggle="tab" href="#schedule" role="tab">
+                <i class="fa fa-calendar"></i> Расписание
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="homeworks-tab" data-toggle="tab" href="#homeworks" role="tab">
+                <i class="fa fa-book"></i> Домашние задания
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="teachers-tab" data-toggle="tab" href="#teachers" role="tab">
+                <i class="fa fa-users"></i> Мои учителя
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="materials-tab" data-toggle="tab" href="#materials" role="tab">
+                <i class="fa fa-file"></i> Методические материалы
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="history-tab" data-toggle="tab" href="#history" role="tab">
+                <i class="fa fa-history"></i> История занятий
+            </a>
+        </li>
+    </ul>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>Расписание</h4>
+        <div class="d-flex gap-2">
+            <form method="get" action="{% url 'export_calendar_pdf' %}" class="d-flex gap-2" target="_blank">
+                <input type="date" name="start_date" class="form-control form-control-sm" value="{{ now|date:'Y-m-01' }}">
+                <input type="date" name="end_date" class="form-control form-control-sm" value="{{ now|date:'Y-m-t' }}">
+                <button type="submit" class="btn btn-success btn-sm">
+                    📄 Экспорт
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Содержимое вкладок -->
+    <div class="tab-content">
+        <!-- Вкладка Расписание -->
+        <div class="tab-pane fade show active" id="schedule" role="tabpanel">
+            <div class="row">
+                <div class="col-12">
+                    <div id="calendar"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Вкладка Домашние задания -->
+        <div class="tab-pane fade" id="homeworks" role="tabpanel">
+            <div class="row mb-4">
+                <div class="col-12 d-flex justify-content-between align-items-center">
+                    <h4 class="section-title mb-0">Все домашние задания</h4>
+                    <a href="{% url 'student_homeworks' %}" class="btn btn-success">
+                        <i class="fa fa-book"></i> Перейти к заданиям
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="stats-grid">
+                        <div class="stat-card-small">
+                            <div class="stat-number">{{ stats.total|default:'0' }}</div>
+                            <div class="stat-label">Всего заданий</div>
+                        </div>
+                        <div class="stat-card-small">
+                            <div class="stat-number">{{ stats.pending|default:'0' }}</div>
+                            <div class="stat-label">Ожидают</div>
+                        </div>
+                        <div class="stat-card-small">
+                            <div class="stat-number">{{ stats.submitted|default:'0' }}</div>
+                            <div class="stat-label">На проверке</div>
+                        </div>
+                        <div class="stat-card-small">
+                            <div class="stat-number">{{ stats.checked|default:'0' }}</div>
+                            <div class="stat-label">Проверено</div>
+                        </div>
+                        <div class="stat-card-small">
+                            <div class="stat-number">{{ stats.overdue|default:'0' }}</div>
+                            <div class="stat-label">Просрочено</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    {% if homeworks %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Дата</th>
+                                    <th>Учитель</th>
+                                    <th>Предмет</th>
+                                    <th>Задание</th>
+                                    <th>Срок</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for homework in homeworks %}
+                                <tr>
+                                    <td>{{ homework.created_at|date:"d.m.Y" }}</td>
+                                    <td>{{ homework.teacher.user.get_full_name }}</td>
+                                    <td>{{ homework.subject.name }}</td>
+                                    <td>{{ homework.title|truncatechars:30 }}</td>
+                                    <td>{{ homework.deadline|date:"d.m.Y" }}</td>
+                                    <td>
+                                        {% with status=homework.get_status %}
+                                        {% if status == 'pending' %}
+                                        <span class="badge badge-warning">⏳ Ожидает</span>
+                                        {% elif status == 'submitted' %}
+                                        <span class="badge badge-info">📤 На проверке</span>
+                                        {% elif status == 'checked' %}
+                                        <span class="badge badge-success">✅ Проверено</span>
+                                        {% elif status == 'overdue' %}
+                                        <span class="badge badge-danger">⚠️ Просрочено</span>
+                                        {% endif %}
+                                        {% endwith %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'student_homework_detail' homework.id %}" class="btn btn-sm btn-primary">
+                                            <i class="fa fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center">
+                                        <div class="empty-state">
+                                            <i class="fa fa-book"></i>
+                                            <h5>Нет домашних заданий</h5>
+                                            <p>Задания появятся после занятий</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Вкладка Мои учителя -->
+        <div class="tab-pane fade" id="teachers" role="tabpanel">
+            <div class="row">
+                {% if teachers %}
+                {% for teacher in teachers %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="teacher-card">
+                        {% if teacher.user.photo %}
+                        <img src="{{ teacher.user.photo.url }}" class="teacher-photo" alt="{{ teacher.user.get_full_name }}">
+                        {% else %}
+                        <div class="teacher-photo bg-secondary d-flex align-items-center justify-content-center">
+                            <i class="fa fa-user fa-4x text-white"></i>
+                        </div>
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ teacher.user.get_full_name }}</h5>
+                            <p class="card-text">
+                                <small class="text-muted">
+                                    {% for subject in teacher.subjects.all %}
+                                    {{ subject.name }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </small>
+                            </p>
+                            <p class="card-text">
+                                <i class="fa fa-star text-warning"></i> Опыт: {{ teacher.experience }} лет
+                            </p>
+
+                            {% if teacher.rating_stats %}
+                            <div class="mb-2">
+                                <span class="rating-stars">
+                                    {% for i in "12345"|make_list %}
+                                    {% if forloop.counter <= teacher.rating_stats.average_rating %}★{% else %}☆{% endif%} {% endfor %} </span>
+                                        <small class="text-muted ml-1">({{ teacher.rating_stats.total_feedbacks }}
+                                            оценок)</small>
+                            </div>
+                            {% endif %}
+
+                            <a href="#" class="btn btn-outline-primary btn-sm" data-toggle="modal" data-target="#teacherModal{{ teacher.id }}">
+                                Подробнее
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Модальное окно учителя -->
+                <div class="modal fade" id="teacherModal{{ teacher.id }}" tabindex="-1" role="dialog">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">{{ teacher.user.get_full_name }}</h5>
+                                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        {% if teacher.user.photo %}
+                                        <img src="{{ teacher.user.photo.url }}" class="img-fluid rounded" alt="">
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-8">
+                                        <h6>О преподавателе:</h6>
+                                        <p>{{ teacher.bio|default:"Нет информации" }}</p>
+                                        <h6>Образование:</h6>
+                                        <p>{{ teacher.education|default:"Нет информации" }}</p>
+                                        <h6>Предметы:</h6>
+                                        <p>
+                                            {% for subject in teacher.subjects.all %}
+                                            <span class="badge badge-info">{{ subject.name }}</span>
+                                            {% endfor %}
+                                        </p>
+
+                                        {% if teacher.rating_stats %}
+                                        <h6>Рейтинг:</h6>
+                                        <div class="mb-3">
+                                            <div class="rating-stars mb-2">
+                                                {% for i in "12345"|make_list %}
+                                                {% if forloop.counter <= teacher.rating_stats.average_rating %}★{% else %}☆{% endif %} {% endfor %} <span class="ml-2">{{
+                                                    teacher.rating_stats.average_rating|floatformat:1 }} / 5</span>
+                                            </div>
+                                            <small class="text-muted">На основе {{ teacher.rating_stats.total_feedbacks
+                                                }} оценок</small>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="col-12">
+                    <div class="empty-state">
+                        <i class="fa fa-users"></i>
+                        <h5>У вас пока нет учителей</h5>
+                        <p>Скоро вам будет назначен преподаватель</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Вкладка Методические материалы -->
+        <div class="tab-pane fade" id="materials" role="tabpanel">
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="btn-group">
+                        <button class="btn btn-outline-primary" onclick="filterMaterials('all')">Все</button>
+                        <button class="btn btn-outline-primary" onclick="filterMaterials('file')">Файлы</button>
+                        <button class="btn btn-outline-primary" onclick="filterMaterials('link')">Ссылки</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                {% if materials %}
+                {% for material in materials %}
+                <div class="col-md-6 material-item" data-type="{{ material.material_type }}">
+                    <div class="material-card">
+                        <div class="d-flex align-items-start">
+                            <div class="material-icon">
+                                {% if material.material_type == 'file' %}
+                                <i class="fa fa-file-pdf-o text-danger"></i>
+                                {% else %}
+                                <i class="fa fa-link text-primary"></i>
+                                {% endif %}
+                            </div>
+                            <div style="flex: 1;">
+                                <h5>{{ material.title }}</h5>
+                                <p class="text-muted small">{{ material.description|truncatechars:100 }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="fa fa-calendar"></i> {{ material.created_at|date:"d.m.Y" }}
+                                    </small>
+                                    {% if material.material_type == 'file' %}
+                                    <a href="{{ material.file.url }}" class="btn btn-sm btn-success" download>
+                                        <i class="fa fa-download"></i> Скачать
+                                    </a>
+                                    {% else %}
+                                    <a href="{{ material.link }}" target="_blank" class="btn btn-sm btn-primary">
+                                        <i class="fa fa-external-link"></i> Перейти
+                                    </a>
+                                    {% endif %}
+                                </div>
+                                {% if material.subjects.exists %}
+                                <div class="mt-2">
+                                    {% for subject in material.subjects.all %}
+                                    <span class="badge badge-secondary">{{ subject.name }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="col-12">
+                    <div class="empty-state">
+                        <i class="fa fa-file"></i>
+                        <h5>Нет методических материалов</h5>
+                        <p>Учитель добавит материалы позже</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Вкладка История занятий -->
+        <div class="tab-pane fade" id="history" role="tabpanel">
+            <div class="row">
+                <div class="col-12">
+                    <h4 class="section-title">Проведенные занятия</h4>
+                    {% if past_lessons %}
+                    {% for lesson in past_lessons %}
+                    <a href="{% url 'lesson_detail' lesson.id %}" style="text-decoration: none; color: inherit;">
+                        <div class="lesson-item completed">
+                            <div class="row align-items-center">
+                                <div class="col-md-3">
+                                    <strong>{{ lesson.date|date:"d.m.Y" }}</strong><br>
+                                    <small class="text-muted">{{ lesson.start_time|time:"H:i" }}</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>{{ lesson.subject.name }}</strong><br>
+                                    <small class="text-muted">{{ lesson.teacher.user.get_full_name }}</small>
+                                </div>
+                                <div class="col-md-2">
+                                    <span class="badge badge-success">Проведено</span>
+                                </div>
+                                <div class="col-md-4 text-right">
+                                    {% if lesson.report %}
+                                    <span class="btn btn-sm btn-info disabled">
+                                        <i class="fa fa-file-text"></i> Отчет
+                                    </span>
+                                    {% endif %}
+
+                                    {% if lesson.feedback %}
+                                    <span class="feedback-badge">
+                                        <i class="fa fa-star text-warning"></i>
+                                        Ваша оценка:
+                                        <span class="rating-stars">
+                                            {% for i in "12345"|make_list %}
+                                            {% if forloop.counter <= lesson.feedback.rating %}★{% else %}☆{% endif %} {% endfor %} </span>
+                                        </span>
+                                        {% else %}
+                                        <span class="btn btn-sm btn-rating disabled">
+                                            <i class="fa fa-star"></i> Оценить урок
+                                        </span>
+                                        {% endif %}
+                                </div>
+                            </div>
+
+                            {% if lesson.feedback and lesson.feedback.comment %}
+                            <div class="row mt-2">
+                                <div class="col-12">
+                                    <div class="bg-light p-2 rounded">
+                                        <i class="fa fa-quote-left text-muted"></i>
+                                        {{ lesson.feedback.comment|truncatechars:100 }}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </a>
+                    {% endfor %}
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="fa fa-history"></i>
+                        <h5>Нет проведенных занятий</h5>
+                        <p>История появится после первых занятий</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/ru.js'></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    if (!calendarEl) return;
+
+    // Функция обновления ссылки с защитой от undefined
+    function updateExportLink(view) {
+        var btn = document.getElementById('exportPdfBtn');
+        if (!btn || !view || !view.currentStart) return;  // ← ЗАЩИТА!
+        
+        var date = view.currentStart.toISOString().split('T')[0];
+        btn.href = "{% url 'export_calendar_pdf' %}?view=" + view.type + "&date=" + date;
+        console.log('📅 Ссылка обновлена:', btn.href);
+    }
+
+    // Календарь
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        locale: 'ru',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        buttonText: {
+            today: 'Сегодня',
+            month: 'Месяц',
+            week: 'Неделя',
+            day: 'День'
+        },
+        events: {{ calendar_events|safe }},
+        
+        // Обновляем ссылку после полной загрузки
+        datesSet: function(info) {
+            // НЕБОЛЬШАЯ ЗАДЕРЖКА, чтобы календарь точно прогрузился
+            setTimeout(function() {
+                updateExportLink(info.view);
+            }, 100);
+        }
+    });
+
+    calendar.render();
+    
+    // Баланс
+    var balanceEl = document.querySelector('.balance-amount');
+    if (balanceEl) {
+        var balance = parseFloat('{{ user.get_balance }}');
+        if (balance < 0) {
+            balanceEl.style.color = '#dc3545';
+        }
+    }
+    
+    // Обновляем ссылку сразу после загрузки
+    setTimeout(function() {
+        if (calendar && calendar.view) {
+            updateExportLink(calendar.view);
+        }
+    }, 200);
+});
+</script>
+{% endblock %}

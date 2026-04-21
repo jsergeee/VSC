@@ -1,0 +1,18 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+
+{% block object-tools-items %}
+    {{ block.super }}
+    <li>
+        <a href="{% url 'import-teachers' %}" class="addlink" style="background: #28a745;">
+            ⬆️ Импорт учителей
+        </a>
+    </li>
+<!--    <li>
+        <a href="{% url 'download-teacher-template' %}" class="addlink" style="background: #17a2b8;">
+            📥 Шаблон Excel
+        </a>
+    </li>-->
+{% endblock %}
+
+

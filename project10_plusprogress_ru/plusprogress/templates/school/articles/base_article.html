@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ article_title }} - Плюс Прогресс{% endblock %}
+
+{% block content %}
+<section style="padding-top:200px; color: #071e55 !important;">
+    <div class="container">
+        <div class="jumbotron">
+            {% block article_content %}{% endblock %}
+
+
+        <p>Читайте также:</p>
+        <div class="col-sm-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Артикли в английском языке</h5>
+                    <p class="card-text">В чем трудность данной темы для изучающих английский в нашей стране? Только в том, что в русском языке им нет аналога. Именно поэтому многих пугает...</p>
+                    <a href="{% url 'article_artikli' %}" class="btn-red">Читать статью</a>
+                </div>
+            </div>
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title">Глагол to be в английском языке</h5>
+                    <p class="card-text">Очень важный и часто используемый глагол в английском языке. Он лежит в основе построения огромного количества грамматических конструкций...</p>
+                    <a href="{% url 'article_glagol' %}" class="btn-red">Читать статью</a>
+                </div>
+            </div>
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title">Количественные местоимения в английском языке</h5>
+                    <p class="card-text">Особое внимание придется уделить количественным местоимениям (quantifiers), так как имея одно и то же значение, употребляются они по-разному...</p>
+                    <a href="{% url 'article_kolichestvennye' %}" class="btn-red">Читать статью</a>
+                </div>
+            </div>
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title">Местоимения в английском языке</h5>
+                    <p class="card-text">Личные, притяжательные, вопросительные и указательные местоимения в английском языке...</p>
+                    <a href="{% url 'article_mestoimeniya' %}" class="btn-red">Читать статью</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
