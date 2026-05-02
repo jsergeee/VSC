@@ -462,51 +462,52 @@
 <section class="section-grey" id="articles">
     <div class="container">
         <div class="row">
-            <div class="col-12">
-                <h2 class="section-title text-center mb-5">Полезные статьи</h2>
+            <div class="col-12 text-center margin-bottom-10 wow fadeInUp">
+                <h2 class="section-title">Полезные статьи</h2>
+                <p class="text-muted">Полезные материалы по английскому языку, математике, русскому и другим предметам</p>
             </div>
         </div>
-        
-        <!-- Копируем содержимое list.html, но убираем паддинг-top и сайдбар -->
+
         <div class="row">
             {% if articles %}
                 {% for article in articles %}
-                <div class="col-md-4 mb-4">
-                    <div class="card article-card">
+                <div class="col-md-4 mb-4 wow fadeInUp" data-wow-delay="0.{{ forloop.counter }}s">
+                    <div class="main-services" style="background: white; padding: 0; text-align: left;">
                         {% if article.photo %}
-                        <img src="{{ article.photo.url }}" class="card-img-top" alt="{{ article.title }}" style="height: 200px; object-fit: cover;">
+                        <img src="{{ article.photo.url }}" class="img-fluid w-100" alt="{{ article.title }}" style="height: 200px; object-fit: cover; border-radius: 15px 15px 0 0;">
                         {% endif %}
-                        <div class="card-body">
-                            <div class="article-meta">
+                        <div style="padding: 1.5rem;">
+                            <div class="text-muted small mb-2">
                                 <i class="fa fa-calendar"></i> {{ article.created_at|date:"d.m.Y" }}
                                 <i class="fa fa-eye ms-2"></i> {{ article.views_count }}
                             </div>
-                            <h3 class="article-title">
-                                <a href="{% url 'article_detail' article.slug %}">{{ article.title }}</a>
-                            </h3>
-                            <div class="article-excerpt">
-                                {{ article.excerpt|default:article.content|striptags|truncatechars:120 }}
-                            </div>
-                            <a href="{% url 'article_detail' article.slug %}" class="price-tag__red">
-                                Читать далее <i class="read-more"></i>
+                            <h4 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem;">
+                                <a href="{% url 'article_detail' article.slug %}" class="text-dark text-decoration-none" style="transition: color 0.3s;">
+                                    {{ article.title|truncatechars:60 }}
+                                </a>
+                            </h4>
+                            <p class="text-muted" style="margin-bottom: 1rem; line-height: 1.5;">
+                                {{ article.excerpt|default:article.content|striptags|truncatechars:100 }}
+                            </p>
+                            <a href="{% url 'article_detail' article.slug %}">
+                                Читать далее
                             </a>
                         </div>
                     </div>
                 </div>
                 {% endfor %}
             {% else %}
-                <div class="col-12">
+                <div class="col-12 text-center">
                     <div class="alert alert-info">
                         <i class="fa fa-info-circle"></i> Статей пока нет. Скоро появятся!
                     </div>
                 </div>
             {% endif %}
         </div>
-        
-        <!-- Кнопка "Все статьи" -->
+
         <div class="row mt-4">
-            <div class="col-12 text-center">
-                <a href="{% url 'article_list' %}" class="btn btn-outline-primary btn-lg">
+            <div class="col-12 text-center wow fadeInUp">
+                <a href="{% url 'article_list' %}" class="price-tag__red">
                     Все статьи <i class="fa fa-arrow-right ms-2"></i>
                 </a>
             </div>

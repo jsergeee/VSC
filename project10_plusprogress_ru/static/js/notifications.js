@@ -1,3 +1,9 @@
+
+if (typeof jQuery === 'undefined') {
+    console.log('jQuery не загружен, пропускаем notifications.js');
+} else {
+
+}
 $(document).ready(function () {
   // Загружаем уведомления при загрузке страницы
   loadNotifications()

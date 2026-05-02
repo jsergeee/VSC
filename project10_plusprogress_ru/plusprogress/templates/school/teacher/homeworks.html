@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Домашние задания{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        padding: 20px;
+        color: white;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    .stats-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+    .filter-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .homework-card {
+        border-left: 4px solid;
+        transition: all 0.3s;
+        margin-bottom: 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .homework-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    .status-pending { border-left-color: #ffc107; }
+    .status-submitted { border-left-color: #17a2b8; }
+    .status-checked { border-left-color: #28a745; }
+    .status-overdue { border-left-color: #dc3545; }
+    .badge-pending { background: #fff3cd; color: #856404; }
+    .badge-submitted { background: #d1ecf1; color: #0c5460; }
+    .badge-checked { background: #d4edda; color: #155724; }
+    .badge-overdue { background: #f8d7da; color: #721c24; }
+    .btn-create {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 50px;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fa fa-book"></i> Домашние задания</h2>
+        <a href="?student=" class="btn btn-create">
+            <i class="fa fa-plus"></i> Создать задание
+        </a>
+    </div>
+
+    <!-- Статистика -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="stats-card">
+                <div class="stats-number">{{ stats.total }}</div>
+                <div>Всего</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stats-card" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);">
+                <div class="stats-number">{{ stats.pending }}</div>
+                <div>Ожидают</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stats-card" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);">
+                <div class="stats-number">{{ stats.submitted }}</div>
+                <div>На проверке</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stats-card" style="background: linear-gradient(135deg, #28a745 0%, #218838 100%);">
+                <div class="stats-number">{{ stats.checked }}</div>
+                <div>Проверено</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stats-card" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+                <div class="stats-number">{{ stats.overdue }}</div>
+                <div>Просрочено</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Фильтры -->
+    <div class="filter-card">
+        <form method="get" class="form-inline">
+            <div class="form-group mr-3">
+                <label class="mr-2">Ученик:</label>
+                <select name="student" class="form-control form-control-sm">
+                    <option value="">Все ученики</option>
+                    {% for student in students %}
+                    <option value="{{ student.id }}" {% if request.GET.student == student.id|stringformat:"i" %}selected{% endif %}>
+                        {{ student.user.get_full_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group mr-3">
+                <label class="mr-2">Статус:</label>
+                <select name="status" class="form-control form-control-sm">
+                    <option value="">Все статусы</option>
+                    <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Ожидает</option>
+                    <option value="submitted" {% if request.GET.status == 'submitted' %}selected{% endif %}>На проверке</option>
+                    <option value="checked" {% if request.GET.status == 'checked' %}selected{% endif %}>Проверено</option>
+                    <option value="overdue" {% if request.GET.status == 'overdue' %}selected{% endif %}>Просрочено</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fa fa-filter"></i> Применить
+            </button>
+        </form>
+    </div>
+
+    <!-- Список заданий -->
+    {% if homeworks %}
+        {% for homework in homeworks %}
+        <div class="homework-card status-{{ homework.get_status }} p-3">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <h5 class="mb-1">
+                        <a href="{% url 'teacher_homework_detail' homework.id %}" class="text-dark">
+                            {{ homework.title }}
+                        </a>
+                    </h5>
+                    <small class="text-muted">
+                        <i class="fa fa-user"></i> {{ homework.student.user.get_full_name }}
+                    </small>
+                </div>
+                <div class="col-md-2">
+                    <span class="badge badge-{{ homework.get_status }} p-2">
+                        {{ homework.get_status_display }}
+                    </span>
+                </div>
+                <div class="col-md-2">
+                    <small>
+                        <i class="fa fa-calendar"></i> Срок: {{ homework.deadline|date:"d.m.Y H:i" }}
+                    </small>
+                </div>
+                <div class="col-md-2">
+                    {% if homework.submission %}
+                        <small>
+                            <i class="fa fa-check-circle text-success"></i>
+                            Сдано: {{ homework.submission.submitted_at|date:"d.m.Y H:i" }}
+                        </small>
+                    {% endif %}
+                </div>
+                <div class="col-md-2 text-right">
+                    <a href="{% url 'teacher_homework_detail' homework.id %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fa fa-eye"></i> Подробнее
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-5">
+            <i class="fa fa-book fa-4x text-muted mb-3"></i>
+            <h5>Нет домашних заданий</h5>
+            <p class="text-muted">Создайте первое задание для ученика</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

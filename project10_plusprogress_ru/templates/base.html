@@ -407,7 +407,7 @@
                     <i class="fa fa-check-circle mr-2"></i>
                     Спасибо за ваш отзыв! Он появится на сайте после проверки модератором.
                 </p>
-                <form method="post" action="{% url 'home' %}" class="feedback-form" id="feedbackForm">
+                <form method="post" action="/api/feedback/" class="feedback-form" id="feedbackForm">
                     {% csrf_token %}
                     <input type="hidden" name="feedback_form" value="1">
 
@@ -493,7 +493,7 @@
     <script src="{% static 'js/bootstrap.min.js' %}"></script>
     <script src="{% static 'js/wow.js' %}"></script>
     <script>new WOW().init();</script>
-    <script src="{% static 'js/notifications.js' %}"></script>
+    {% comment %} <script src="{% static 'js/notifications.js' %}"></script> {% endcomment %}
     <script src="{% static 'js/jquery.scrollTo-min.js' %}"></script>
     <script src="{% static 'js/jquery.magnific-popup.min.js' %}"></script>
     <script src="{% static 'js/jquery.nav.js' %}"></script>
