@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Оценить урок{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Оцените урок</h4>
+                </div>
+                <div class="card-body">
+                    <div class="lesson-info mb-4 p-3 bg-light rounded">
+                        <h5>{{ lesson.subject.name }} с {{ lesson.teacher.user.get_full_name }}</h5>
+                        <p class="mb-1"><strong>Дата:</strong> {{ lesson.date|date:"d.m.Y" }} {{
+                            lesson.start_time|time:"H:i" }}</p>
+                        <p class="mb-0"><strong>Тема:</strong> {{ lesson.report.topic|default:"Не указана" }}</p>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">{{ form.rating.label }}</label>
+                            <div class="rating-options">
+                                {% for radio in form.rating %}
+                                <div class="form-check form-check-inline">
+                                    {{ radio.tag }}
+                                    <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                        {{ radio.choice_label }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if form.rating.errors %}
+                            <div class="text-danger">{{ form.rating.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">{{ form.comment.label }}</label>
+                            {{ form.comment }}
+                            <div class="form-text">{{ form.comment.help_text }}</div>
+                            {% if form.comment.errors %}
+                            <div class="text-danger">{{ form.comment.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="form-check">
+                                {{ form.is_public }}
+                                <label class="form-check-label" for="{{ form.is_public.id_for_label }}">
+                                    {{ form.is_public.label }}
+                                </label>
+                                <div class="form-text">{{ form.is_public.help_text }}</div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-star"></i> Отправить оценку
+                            </button>
+                            <a href="{% url 'student_dashboard' %}" class="btn btn-outline-secondary">
+                                Вернуться в кабинет
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .rating-options {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .rating-options .form-check {
+        padding: 10px 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        transition: all 0.3s;
+    }
+
+    .rating-options .form-check:hover {
+        background: #e9ecef;
+        border-color: #adb5bd;
+    }
+
+    .rating-options .form-check-input:checked+.form-check-label {
+        font-weight: bold;
+        color: #0d6efd;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "admin/change_form.html" %}
+{% load i18n static %}
+
+{% block after_field_sets %}
+{{ block.super }}
+
+{% if original %}
+<div class="module" style="margin-top: 20px;">
+    <h2>Информация о занятии</h2>
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr style="background: #f8f8f8;">
+            <th style="padding: 10px; text-align: left; width: 200px;">Предмет:</th>
+            <td style="padding: 10px;">{{ original.lesson.subject.name }}</td>
+        </tr>
+        <tr>
+            <th style="padding: 10px; text-align: left;">Учитель:</th>
+            <td style="padding: 10px;">{{ original.lesson.teacher.user.get_full_name }}</td>
+        </tr>
+        <tr style="background: #f8f8f8;">
+            <th style="padding: 10px; text-align: left;">Ученик:</th>
+            <td style="padding: 10px;">{{ original.lesson.student.user.get_full_name }}</td>
+        </tr>
+        <tr>
+            <th style="padding: 10px; text-align: left;">Дата и время:</th>
+            <td style="padding: 10px;">{{ original.lesson.date }} {{ original.lesson.start_time }} - {{ original.lesson.end_time }}</td>
+        </tr>
+        <tr style="background: #f8f8f8;">
+            <th style="padding: 10px; text-align: left;">Стоимость:</th>
+            <td style="padding: 10px;">{{ original.lesson.cost }} руб.</td>
+        </tr>
+        <tr>
+            <th style="padding: 10px; text-align: left;">Статус:</th>
+            <td style="padding: 10px;">
+                <span style="display: inline-block; padding: 4px 8px; border-radius: 4px; 
+                             {% if original.lesson.status == 'completed' %}background: #28a745; color: white;{% endif %}
+                             {% if original.lesson.status == 'overdue' %}background: #dc3545; color: white;{% endif %}">
+                    {{ original.lesson.get_status_display }}
+                </span>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div class="module" style="margin-top: 20px;">
+    <h2>Содержание отчета</h2>
+    
+    <div style="padding: 15px; background: #f8f8f8; border-radius: 4px;">
+        <h3 style="margin-top: 0;">Тема занятия</h3>
+        <p style="font-size: 16px;">{{ original.topic }}</p>
+        
+        <h3>Пройденный материал</h3>
+        <div style="background: white; padding: 15px; border-radius: 4px; border-left: 4px solid #79aec8;">
+            {{ original.covered_material|linebreaks }}
+        </div>
+        
+        <h3 style="margin-top: 20px;">Домашнее задание</h3>
+        <div style="background: white; padding: 15px; border-radius: 4px; border-left: 4px solid #ffc107;">
+            {{ original.homework|linebreaks }}
+        </div>
+        
+        <h3 style="margin-top: 20px;">Прогресс ученика</h3>
+        <div style="background: white; padding: 15px; border-radius: 4px; border-left: 4px solid #28a745;">
+            {{ original.student_progress|linebreaks }}
+        </div>
+        
+        {% if original.next_lesson_plan %}
+        <h3 style="margin-top: 20px;">План следующего занятия</h3>
+        <div style="background: white; padding: 15px; border-radius: 4px; border-left: 4px solid #17a2b8;">
+            {{ original.next_lesson_plan|linebreaks }}
+        </div>
+        {% endif %}
+        
+        <p style="margin-top: 20px; color: #666; font-size: 12px;">
+            Отчет создан: {{ original.created_at }}
+        </p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

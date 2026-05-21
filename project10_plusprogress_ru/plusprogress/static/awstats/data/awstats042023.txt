@@ -1,0 +1,2114 @@
+AWSTATS DATA FILE 7.7 (build 20180105)
+# If you remove this file, all statistics for date 202304 will be lost/reset.
+# Last config file used to build this data file was ./awstats.conf.
+
+# Position (offset in bytes) in this file for beginning of each section for
+# direct I/O access. If you made changes somewhere in this file, you should
+# also remove completely the MAP section (AWStats will rewrite it at next
+# update).
+BEGIN_MAP 28
+POS_GENERAL 1971                
+POS_TIME 2642                
+POS_VISITOR 52963               
+POS_DAY 62342               
+POS_DOMAIN 3476                
+POS_LOGIN 4026                
+POS_ROBOT 4181                
+POS_WORMS 5044                
+POS_EMAILSENDER 5175                
+POS_EMAILRECEIVER 5318                
+POS_SESSION 63124               
+POS_SIDER 63315               
+POS_FILETYPES 5453                
+POS_DOWNLOADS 5553                
+POS_OS 5601                
+POS_BROWSER 5877                
+POS_SCREENSIZE 7809                
+POS_UNKNOWNREFERER 7883                
+POS_UNKNOWNREFERERBROWSER 8753                
+POS_ORIGIN 9141                
+POS_SEREFERRALS 9281                
+POS_PAGEREFS 9449                
+POS_SEARCHWORDS 9597                
+POS_KEYWORDS 9749                
+POS_MISC 2306                
+POS_ERRORS 9808                
+POS_CLUSTER 3882                
+POS_SIDER_404 9925                
+END_MAP
+
+# LastLine    = Date of last record processed - Last record line number in last log - Last record offset in last log - Last record signature value
+# FirstTime   = Date of first visit for history file
+# LastTime    = Date of last visit for history file
+# LastUpdate  = Date of last update - Nb of parsed records - Nb of parsed old records - Nb of parsed new records - Nb of parsed corrupted - Nb of parsed dropped
+# TotalVisits = Number of visits
+# TotalUnique = Number of unique visitors
+# MonthHostsKnown   = Number of hosts known
+# MonthHostsUnKnown = Number of hosts unknown
+BEGIN_GENERAL 8
+LastLine 20230501013801 1 0 9931956739624
+FirstTime 20230401004011
+LastTime 20230430232518
+LastUpdate 20230502063549 1 0 0 0 0
+TotalVisits 287                 
+TotalUnique 236                 
+MonthHostsKnown 0                   
+MonthHostsUnknown 236                 
+END_GENERAL
+
+# Misc ID - Pages - Hits - Bandwidth
+BEGIN_MISC 10
+DirectorSupport 0 0 0
+QuickTimeSupport 0 0 0
+JavascriptDisabled 0 0 0
+TotalMisc 0 0 0
+AddToFavourites 0 0 0
+JavaEnabled 0 0 0
+PDFSupport 0 0 0
+RealPlayerSupport 0 0 0
+FlashSupport 0 0 0
+WindowsMediaPlayerSupport 0 0 0
+END_MISC
+
+# Hour - Pages - Hits - Bandwidth - Not viewed Pages - Not viewed Hits - Not viewed Bandwidth
+BEGIN_TIME 24
+0 25 25 1241954 299 361 680912
+1 16 16 853829 62 63 547766
+2 18 18 908913 91 98 1014973
+3 23 23 1075058 90 99 1092655
+4 19 19 796898 47 51 988631
+5 18 18 1001376 90 98 420940
+6 11 11 521153 29 80 514411
+7 16 16 834480 532 534 711234
+8 11 11 445197 150 153 473551
+9 26 26 1390800 588 589 542591
+10 6 6 333792 23 23 506709
+11 19 19 964545 350 352 563577
+12 14 14 630002 70 71 792267
+13 12 12 667584 156 156 937615
+14 14 14 778848 79 88 662048
+15 15 15 724109 91 92 663014
+16 11 11 557212 54 55 823296
+17 10 10 556320 83 86 980713
+18 12 12 611952 354 358 462545
+19 47 47 2614704 184 231 785706
+20 10 10 556320 147 153 729829
+21 19 19 964545 65 68 678957
+22 7 7 334684 52 55 949232
+23 10 10 556320 48 48 564557
+END_TIME
+
+# Domain - Pages - Hits - Bandwidth
+# The 10 first Pages must be first (order not required for others)
+BEGIN_DOMAIN 23
+us 188 188 10090869
+ru 72 72 3748236
+cn 17 17 778097
+se 16 16 890112
+it 16 16 443574
+in 13 13 723216
+jp 12 12 612844
+nl 11 11 463106
+de 11 11 501581
+gb 7 7 333792
+lt 1 1 55632
+gr 4 4 111264
+ve 4 4 222528
+no 1 1 55632
+il 2 2 111264
+be 4 4 222528
+pl 1 1 55632
+tr 1 1 55632
+cz 1 1 55632
+au 3 3 166896
+hn 1 1 55632
+ie 2 2 111264
+zz 1 1 55632
+END_DOMAIN
+
+# Cluster ID - Pages - Hits - Bandwidth
+BEGIN_CLUSTER 0
+END_CLUSTER
+
+# Login - Pages - Hits - Bandwidth - Last visit
+# The 10 first Pages must be first (order not required for others)
+BEGIN_LOGIN 0
+END_LOGIN
+
+# Robot ID - Hits - Bandwidth - Last visit - Hits on robots.txt
+# The 10 first Hits must be first (order not required for others)
+BEGIN_ROBOT 20
+yandex 109 5180053 20230430144533 0
+ahrefsbot 106 4976729 20230430221921 0
+bot[\s_+:,\.\;\/\\-] 53 1685062 20230429124551 0
+no_user_agent 24 1335168 20230430204012 0
+bingbot 17 71392 20230427104542 0
+googlebot 16 798197 20230429063109 0
+blexbot 12 369892 20230419191725 0
+dataprovider\.com 8 241563 20230410140106 0
+python 8 445056 20230420201712 0
+mail\.ru 6 113234 20230422134545 0
+spider 1 55632 20230422225915 0
+^mozilla\/5\.0$ 4 146796 20230406153636 0
+ips\-agent 3 130837 20230413102925 0
+crawl 1 55632 20230417190117 0
+mj12bot 1 55632 20230419173156 0
+favicon 1 55632 20230403083207 0
+netcraft 1 55632 20230408043128 0
+adsbot-google 2 111264 20230426114449 0
+dotbot 6 184946 20230420162157 0
+curl 2 111264 20230413130248 0
+END_ROBOT
+
+# Worm ID - Hits - Bandwidth - Last visit
+# The 5 first Hits must be first (order not required for others)
+BEGIN_WORMS 0
+END_WORMS
+
+# EMail - Hits - Bandwidth - Last visit
+# The 20 first Hits must be first (order not required for others)
+BEGIN_EMAILSENDER 0
+END_EMAILSENDER
+
+# EMail - Hits - Bandwidth - Last visit
+# The 20 first hits must be first (order not required for others)
+BEGIN_EMAILRECEIVER 0
+END_EMAILRECEIVER
+
+# Files type - Hits - Bandwidth - Bandwidth without compression - Bandwidth after compression
+BEGIN_FILETYPES 2
+html 385 19919702 0 0
+php 4 893 0 0
+END_FILETYPES
+
+# Downloads - Hits - Bandwidth
+BEGIN_DOWNLOADS 0
+END_DOWNLOADS
+
+# OS ID - Hits
+BEGIN_OS ID - Hits - Pages 16
+winxp 4 4
+macosx8 4 4
+ios_iphone 3 3
+linux 75 75
+macosx10 5 5
+Unknown 48 48
+linuxandroid 25 25
+macosx 21 21
+linuxubuntu 1 1
+macosx6 1 1
+macosx11 4 4
+macosx9 4 4
+ios_ipad 1 1
+win10 158 158
+win7 27 27
+win8.1 8 8
+END_OS
+
+# Browser ID - Hits - Pages
+BEGIN_BROWSER 93
+opera97.0.0.0 1 1
+chrome107.0.0.0 7 7
+chrome74.0.3729.169 1 1
+safari16.0 1 1
+chrome111.0.5563.146 1 1
+chrome90.0.4430.85 7 7
+firefox68.0 1 1
+chrome63.0.3239.132 1 1
+chrome81.0.4044.129 2 2
+Unknown 14 14
+chrome104.0.5112.79 1 1
+opera93.0.0.0 1 1
+edge44 5 5
+chrome95.0.4638.69 8 8
+firefox47.0 4 4
+chrome103.0.5060.114 2 2
+android 7 7
+firefox1.5.0.1 1 1
+firefox45.0 1 1
+msie7.0 3 3
+safari 2 2
+chrome302.0.2840.59 1 1
+chrome108.0.0.0 5 5
+chrome76.0.3809.132 4 4
+chrome83.0.4103.97 41 41
+firefox28.0 10 10
+chrome80.0.3987.149 21 21
+msie9.0 4 4
+firefox102.0 7 7
+firefox3.5.5 3 3
+chrome111.0.0.0 3 3
+firefox63.0 1 1
+safari11.0 1 1
+chrome90.0.4430.72 1 1
+chrome35.0.2117.157 1 1
+chrome88.0.4324.96 1 1
+chrome111.0.5563.147 1 1
+chrome59.0.3071.125 1 1
+chrome91.0.4472.114 12 12
+safari5.1 1 1
+chrome14.0.835.163 2 2
+chrome111.0.3770.0 1 1
+chrome13.0.782.41 1 1
+chrome106.0.0.0 1 1
+firefox3.6.12 1 1
+chrome83.0.4103.24 2 2
+chrome80.0.3987.162 1 1
+safari15.6 1 1
+firefox3.5.7 1 1
+chrome60.0.3112.113 5 5
+mozilla 32 32
+msie6.0 1 1
+chrome83.0.4102.0 2 2
+opera96.0.0.0 1 1
+firefox110.0 4 4
+chrome66.0.3359.181 2 2
+chrome100.0.4896.127 1 1
+chrome26.0.1410.65 3 3
+chrome86.0.4240.183 1 1
+chrome88.0.4240.193 9 9
+chrome55.0.2883.87 1 1
+chrome60.0.3112.107 12 12
+firefox111.0 4 4
+chrome55.0.2919.83 1 1
+chrome45.0.2454.85 3 3
+chrome35.0.1916.47 3 3
+chrome101.0.4951.61 1 1
+chrome84.0.4147.105 2 2
+chrome91.0.4472.106 3 3
+chrome105.0.0.0 13 13
+chrome54.0.2866.71 1 1
+chrome85.0.4183.121 1 1
+chrome89.0.4389.128 1 1
+firefox108.0 3 3
+chrome112.0.0.0 7 7
+sec\- 1 1
+opera11.50 1 1
+chrome109.0.0.0 1 1
+safari16.3 1 1
+chrome86.0.4240.198 4 4
+firefox101.0 4 4
+msie8.0 3 3
+chrome110.0.0.0 5 5
+chrome102.0.0.0 1 1
+chrome89.0.4389.114 8 8
+netscape5.0 2 2
+chrome84.0.4147.135 1 1
+chrome37.0.2049.0 4 4
+opera95.0.0.0 1 1
+chrome103.0.0.0 9 9
+chrome39.0.2171.95 2 2
+chrome78.0.3904.108 21 21
+chrome71.0.3578.98 2 2
+END_BROWSER
+
+# Screen size - Hits
+BEGIN_SCREENSIZE 0
+END_SCREENSIZE
+
+# Unknown referer OS - Last visit date
+BEGIN_UNKNOWNREFERER 13
+Mozilla/5.0_(compatible;_CensysInspect/1.1;__https://about.censys.io/) 20230429071007
+Go-http-client/2.0 20230411033029
+Mozilliqa'_print(9347655345-4954366)_' 20230429135420
+Mozilla/5.0_(compatible;_InternetMeasurement/1.0;__https://internet-measurement.com/) 20230429211008
+Mozilla/5.0_(compatible;_BackupLand/1.0;_https://go.backupland.com/;_Domain_check_for_viruses;) 20230427152128
+Mozilliqa'<?=print(9347655345-4954366);?>' 20230429135412
+Mozilliqa'{${print(9347655345-4954366)}}' 20230429135414
+Mozilla/5.0_(compatible;_http://a1b2.ru/) 20230425181749
+cpp-httplib/0.10.9 20230430073711
+SEC-SGHX820/1.0_NetFront/3.2_Profile/MIDP-2.0_Configuration/CLDC-1.1 20230409001203
+Mozilla/5.0_zgrab/0.x 20230411155953
+Go-http-client/1.1 20230430055647
+RestSharp/107.3.0.0 20230423055516
+END_UNKNOWNREFERER
+
+# Unknown referer Browser - Last visit date
+BEGIN_UNKNOWNREFERERBROWSER 7
+Go-http-client/2.0 20230411033029
+Mozilliqa'{${print(9347655345-4954366)}}' 20230429135414
+Mozilliqa'<?=print(9347655345-4954366);?>' 20230429135412
+RestSharp/107.3.0.0 20230423055516
+Go-http-client/1.1 20230430055647
+Mozilliqa'_print(9347655345-4954366)_' 20230429135420
+cpp-httplib/0.10.9 20230430073711
+END_UNKNOWNREFERERBROWSER
+
+# Origin - Pages - Hits 
+BEGIN_ORIGIN 6
+From0 298 298
+From1 16 16
+From2 23 23
+From3 0 0
+From4 52 52
+From5 0 0
+END_ORIGIN
+
+# Search engine referers ID - Pages - Hits
+BEGIN_SEREFERRALS 2
+google 14 14
+yandex 9 9
+END_SEREFERRALS
+
+# External page referers - Pages - Hits
+# The 10 first Pages must be first (order not required for others)
+BEGIN_PAGEREFS 0
+END_PAGEREFS
+
+# Search keyphrases - Number of search
+# The 10 first number of search must be first (order not required for others)
+BEGIN_SEARCHWORDS 0
+END_SEARCHWORDS
+
+# Search keywords - Number of search
+# The 10 first number of search must be first (order not required for others)
+BEGIN_KEYWORDS 0
+END_KEYWORDS
+
+# Errors - Hits - Bandwidth
+BEGIN_ERRORS 3
+403 41 6088
+404 3495 623868
+206 5 278160
+END_ERRORS
+
+# URL with 404 errors - Hits - Last URL referrer
+BEGIN_SIDER_404 1439
+/wp-includes/Text/ 1 -
+/back/ 1 -
+/ueditor1_4_3_1-utf8-net/net/controller.ashx 1 -
+/bbs/uedit/controller.ashx 1 -
+/assets/ 1 -
+/wp-content/ALFA_DATA/alfacgiapi 1 -
+/.well-known/leaf.php 2 -
+/wp-content/plugins/aspose-doc-exporter/aspose_doc_exporter_download.php 3 https://www.google.com/search
+/wp-admin/.wp-back.phP 2 -
+/new/ueditor/net/controller.ashx 1 -
+/wp-admin/network/ 1 -
+/goods.php 4 -
+/wp-content/files/ 1 -
+/user/login/ 1 -
+/script/editor/UEditor 1 -
+/wp-ad.php 3 -
+/wp-content/themes/classic/inc/ 1 -
+/wp-content/plugins/super-interactive-maps/sim-wp-admin/bonteuhxlc.csv.PhP 1 -
+/manage/UEditor 1 -
+//wp-content/themes/wp-pridmag/init.php 1 -
+/wp-admin/ALFA_DATA/alfacgiapi 1 -
+/wp-admin/js/wddx_packet_start.php 2 -
+/100.php 4 -
+/system/ueditor/net/controller.ashx 1 -
+/credentials/ 1 -
+/old/ 3 -
+/wp-mna.php 3 -
+/alexus-mailer.php 2 -
+/wp-config.php.7 3 https://www.google.com/search
+/wp-content/plugins/formcraft/file-upload/server/php/files/xpflatfetd.phtml 1 -
+//DKIZ.php 1 -
+/wp-config.php.bak 5 https://www.google.com/search
+/UEditor/ueditor/net/controller.ashx 1 -
+//wp-includes/1index.php 1 -
+/api/ueditor/net/controller.ashx 1 -
+/server/php/ 1 -
+/sym403.php 3 -
+/uedit/uedit/net/controller.ashx 1 -
+/.quarantine/ 1 -
+/rss/ 1 -
+/aspx/uedit/net/controller.ashx 1 -
+/ueditor/net/UEditor 1 -
+/graphql/ 1 -
+/wordpress/wp-login.php 1 -
+/images/f.php 2 -
+/configuration.php5 1 -
+/xl2023.php 3 www.google.com
+/vgidweet.php 1 www.google.com
+/wp-content/x.php 3 -
+/wp-admin/js/xxxxxxxxxxxxxxxxxxxxxxxxxxxx.php 2 -
+/wp-includes/IXR/hunt.php 2 -
+/beta/ 1 -
+/env.js 1 -
+/plugins/uedit/net/controller.ashx 1 -
+//admin.php 1 -
+/wp-content/upgrade/ 1 -
+/if.php 3 -
+/2021/ 1 -
+//wxo.php 1 -
+/api/js/ueditor/net/controller.ashx 1 -
+/tel:79272418211 4 http://linguaglobal.ru
+/nee.php 3 -
+//mass.php 1 -
+/wp-admin/xl2023.php 3 www.google.com
+/uploads/upload.php 2 -
+/wp-content/mu-plugins/db-safe-mode.php 2 -
+/ups.php 4 -
+/.env.php 2 -
+/yzszaxnq.php 1 www.google.com
+/lufix.php 3 -
+/configuration.php-dist 1 -
+/edu/wp-admin/ 1 -
+/administrator/templates/bluestork/error.php 2 -
+/1 2 -
+/.well-known/apple-app-site-association 2 -
+//404.php 1 -
+/w3llstore.php 3 -
+/lib/ueditor/UEditor 1 -
+/wp-content/uploads/2023/04/hfbdtnhcbv.php 1 -
+/api/jscript/ueditor/net/controller.ashx 1 -
+/components/ 1 -
+/tmp/ 1 -
+//xlt.php 1 -
+/wp-config.php.4 3 https://www.google.com/search
+//C.php 1 -
+/statics/plugins/ueditor/net/controller.ashx 1 -
+/wp-content/plugins/wp-support-plus-responsive-ticket-system/includes/admin/downloadAttachment.php 3 https://www.google.com/search
+/wp-includes/IXR/ 1 -
+/download.php 1 -
+/ads.txt 7 -
+/manager/controller.ashx 1 -
+/tmp/vuln.php 2 -
+//payout.php 1 -
+/alf.php 4 -
+/x.php 4 -
+/system/uedit/net/controller.ashx 1 -
+/xx.php 5 -
+//XxX.php 1 -
+/MARIJUANA.php 2 -
+/common/uedit/net/controller.ashx 1 -
+/news/ 1 -
+/image/ 1 -
+/xz.php 3 -
+/9.php 4 -
+/bala.php 6 -
+/wp-content/plugins/superlogoshowcase-wp/sls-wp-admin/pages/SSF_WP_UPLOADS_PATH/csv/import/vxdopknmmc.csv.phtml 1 -
+/wp-includes/certificates/ 1 -
+/.well-known/xxxxxxxxxxxxxxxxxxxxxxxxxxxx.php 2 -
+/jindex.php 4 -
+///wp-login.php 4 http://www.google.com.hk
+/unix.php 3 -
+/wp-content/db-cache.php 2 -
+/shop/wp-login.php 1 -
+//baindex.php 1 -
+/2020/wp-includes/wlwmanifest.xml 15 -
+/wp-includes/theme-cron.php 2 -
+/wp-includes/pomo/ENKI.php 2 -
+/s_e.php 3 -
+//srx.php 1 -
+/blog/wp-json/ 1 -
+/manager/ueditor/net/controller.ashx 1 -
+/dtptyvoi.php 1 www.google.com
+/wp-admin/includes/media-site.php 2 -
+/wp-content/uploads/small.php 2 -
+/ueditor222/net/controller.ashx 1 -
+/wp-content/plugins/html404/cry.php.pjpeg 2 -
+/sitio/ 1 -
+/mrjn.php 3 -
+/wp-content/xl2023.php 3 www.google.com
+/old-site/ 1 -
+/javascript/ueditor/net/controller.ashx 1 -
+/wp-includes/wp-class.php 4 -
+/SHOP/ 1 -
+/2017/ 1 -
+/wp-includes/wp_class_datlib.php 2 -
+/ueditor2/net/controller.ashx 1 -
+/manage/ue/net/controller.ashx 1 -
+/shx.php 4 -
+/.fk.php 3 -
+/wikindex.php 4 -
+//1.php 1 -
+/wp-content/plugins/superlogoshowcase-wp/sls-wp-admin/pages/import.php 3 -
+/lib/ueditor/net/UEditor 1 -
+/statics/ueditor/UEditor 1 -
+//xmlrqc.php 1 -
+/wp-content/admin/ 1 -
+//doc.php 1 -
+/wp-includes/PHPMailer/ 1 -
+/2.php 4 -
+/statics/ueditor/net/UEditor 1 -
+/wp-includes/css/xm.php 2 -
+//wp.php 1 -
+/user/ 1 -
+/manage/Handler/controller.ashx 1 -
+/plugins/ueditor/net/controller.ashx 1 -
+/mi.php 3 -
+/wp-admin/x.php 2 -
+/feed/ 10 -
+/wp-includes/pomo/2.php 2 -
+/wso1337.php 3 -
+/manager/ue/net/controller.ashx 1 -
+/cart 2 -
+/wso.php 4 -
+/wp-content/plugins/formcraft/file-upload/server/php/ 2 -
+/ueditor111/net/controller.ashx 1 -
+/wp-content/admin/views/tool-file-editor.php 3 -
+/bac/ 1 -
+/wp-content/uploads/2023/04/gqasdzbjpd.php 1 -
+/com/ueditor/net/controller.ashx 1 -
+/system/net/controller.ashx 1 -
+/uploads/contexmini.php 2 -
+/xmrlpc.php 3 -
+/wp-admin/alfa.php 2 -
+/sdhumand.php 1 www.google.com
+/jars/upload/ 1 -
+/wp-content/plugins/wp-file-manager/lib/php/connector.minimal.php 2 -
+/wp-content/radio.php 2 -
+/wp-content/plugins/superstorefinder-wp/ssf-wp-admin/pages/SSF_WP_UPLOADS_PATH/csv/import/vhtwiirqge.csv.php.TxT 1 -
+/WordPress/ 1 -
+/wp-content/tcihmfyu.php 2 -
+/UEditor/net 1 -
+/uploadfiles/uedit/net/controller.ashx 1 -
+/alfacgiapi 1 -
+/backup/ 2 -
+/configuration.php_bak 1 -
+/y.php 4 -
+/inc/UEditor 1 -
+/jquery.scrollTo-min.js 8 -
+/marijuana.php 1 -
+/wp-includes/images/media/wp-conflg.php 2 -
+/wp-content/uploads/aauygeujup.php 1 -
+/wp-includes/customize/class-wp-customize-nav-menu.php 2 -
+/wp-admin/fx.php 2 -
+/wp-includes/sitemaps/ 1 -
+/wp-admin/images/ 1 -
+/user/register/ 1 -
+/wp-admin/maint/about.php 3 -
+/wp-content/upgrade/lfgpoem.php 2 -
+/wp-content/cache/ 1 -
+/wp-config.php-original 4 https://www.google.com/search
+/wp-content/plugins/super-interactive-maps/sim-wp-admin/sxunaxyuvg.csv.phtml 1 -
+/wp-content/plugins/xichang/x.php 2 -
+/ueditor/1.4.3/net/controller.ashx 1 -
+/wp-content/xxxxxxxxxxxxxxxxxxxxxxxxxxxx.php 2 -
+/certificates/ 1 -
+/wp-includes/css/category.php 2 -
+/mysqladmin/ 1 -
+/debug/default/view/ 1 -
+/wp-includes/class-wp-block-list.php 2 -
+/owl.php 3 -
+/c99.php 4 -
+/wp-content/themes/churchope/lib/downloadlink.php 3 https://www.google.com/search
+/plugs/net/controller.ashx 1 -
+/fox.php 4 -
+/tool/uedit/net/controller.ashx 1 -
+/Admin/Plugins/UEdit/net/controller.ashx 1 -
+/modules/xxxxxxxxxxxxxxxxxxxxxxxxxxxx.php 2 -
+/jscript/UEditor 1 -
+/archivarix.cms.php 2 -
+/plug/ueditor/UEditor 1 -
+/wp-content/plugins/html404/wso25.php 2 -
+/wp-content/plugins/easy-wp-smtp/ 2 -
+/wp-content/plugins/apikey/apikey.php 3 http://linguaglobal.ru/
+/ueditor22/net/controller.ashx 1 -
+/mailer.php 3 -
+/wp-content/index.php 1 www.google.com
+/api/UEditor 1 -
+/alfacgiapi/perl.alfa 10 www.google.com
+/0.php 4 -
+/xxxss 4 -
+/wp-config.php_new 3 https://www.google.com/search
+/api/plug/ueditor/net/controller.ashx 1 -
+//pi.php 1 -
+/script/lib/uedit/net/controller.ashx 1 -
+/ALFA_DATA/ 1 -
+//wp_logx.php 1 -
+/sh.php 4 -
+/assets/ueditor/net/controller.ashx 1 -
+/css/ALFA_DATA/alfacgiapi 1 -
+/wp-admin/maint/ 1 -
+/editor/UEditor 1 -
+//uploads/up.php 1 -
+/main/ 1 -
+/am.php 3 -
+/Script/lib/Ueditor/net/controller.ashx 1 -
+/DKIZ.php 3 -
+/wp-confiig.php 2 -
+//ini.php 1 -
+/wp-content/themes/NativeChurch/download/download.php 3 https://www.google.com/search
+/blog/wp-login.php 1 -
+/wp-includes/css/modules.php 2 -
+/wp-content/plugins/seoplugins/index.php 1 -
+/new/uedit/controller.ashx 1 -
+/tool/ueditor/net/controller.ashx 1 -
+/upload/uedit/net/controller.ashx 1 -
+/bc/ 1 -
+/plug/uedit/net/controller.ashx 1 -
+//wp-admin/setup-config.php 1 -
+/sym.php 3 -
+/cgialfa/ 1 -
+/wi.php 3 -
+/credentials/credentials/ 1 -
+//wp-blog.php 1 -
+/wp-includes/css/buttons.css 1 -
+/mysql/ 1 -
+/bbs/ueditor/net/controller.ashx 1 -
+/wp-confirm.php 2 -
+/article/wp-json/ 1 -
+/wp-content/uploads/2023/04/bzzjqyjwet.php 1 -
+/lib/uedit/net/controller.ashx 1 -
+/content/uedit/net/controller.ashx 1 -
+/wp-content/flagallery/ 1 -
+/cms/adMInhtml_page/ 1 -
+/home 1 -
+/Handler/UEditor 1 -
+/wp-content/plugins/superstorefinder-wp/ssf-wp-admin/pages/SSF_WP_UPLOADS_PATH/csv/import/xcbhamjgvo.csv.PhP 1 -
+/files/ALFA_DATA/alfacgiapi 1 -
+/editor/umditor/net/controller.ashx 1 -
+/sysadm/uedit/net/controller.ashx 1 -
+/system/Script/UeDitor/net/controller.ashx 1 -
+/beta/wp-admin/ 1 -
+/uploads/ 5 binance.com
+/api/js/ueditor/controller.ashx 1 -
+/blog/uedit/controller.ashx 1 -
+/Js/umeditor/net/controller.ashx 1 -
+/wp-content/uploads/acsknedvfp.php 2 -
+/js/ueditor1.3.6/net/controller.ashx 1 -
+/2018/ 1 -
+/8.php 3 -
+/umeditor/net/controller.ashx 1 -
+//c.php 1 -
+/web/wp-login.php 1 -
+/uoldgtjr.php 1 www.google.com
+/view/ueditor/net/controller.ashx 1 -
+/wp-includes/.wp-back.phP 2 -
+/posts/wp-json/ 1 -
+//lock360.php 1 -
+/wp-info.php 4 -
+//good.php 1 -
+/1337.php 4 -
+/wp-includes/fonts/ 1 -
+/tinc/ 1 -
+/olux.php 3 -
+/wp-config.php.save 4 https://www.google.com/search
+/js/net/UEditor 1 -
+//fw.php 1 -
+/case/controller.ashx 1 -
+/content.php 4 -
+/wp/xxxxxxxxxxxxxxxxxxxxxxxxxxxx.php 2 -
+/templates/beez5/index.php 3 -
+/uploadfiles/ueditor/net/controller.ashx 1 -
+/wp-content/gallery/ 1 -
+/test/wp-includes/wlwmanifest.xml 29 -
+/wp-content/cgialfa 1 -
+/wp-content/plugins/super-interactive-maps/sim-wp-admin/pages/SSF_WP_UPLOADS_PATH/csv/import/bmfnwjrkwn.csv.php 1 -
+/vnjemluv.php 1 www.google.com
+//ups.php 1 -
+/articles/wp-json/ 1 -
+/wp-content/uploads/2023/01/zgepd_oddsd.php 1 http://linguaglobal.ru/
+/javascript/uedit/net/controller.ashx 1 -
+/uploads/xxxxxxxxxxxxxxxxxxxxxxxxxxxx.php 2 -
+//marijuana.php 1 -
+/templates/ja_purity/index.php 2 -
+/administrator/templates/hathor/index.php 2 -
+/phpinfo/ 1 -
+/configuration.php4 1 -
+/script/uedit/net/controller.ashx 1 -
+/customers/1/ 1 -
+//wso.php 1 -
+/wp-content/plugins/fighter/fk.php 2 -
+/bqepfpwt.php 1 www.google.com
+/wp-content/themes/config.bak.php 2 -
+/aws/config/ 1 -
+/fw.php 4 -
+/bitrix/admin/htmleditor2/aipkey.php 2 http://linguaglobal.ru/
+/tools/uedit/net/controller.ashx 1 -
+/wp-signin.php 2 -
+/upel.php 3 -
+/ALFA_DATA/alfacgiapi/perl.alfa 10 www.google.com
+/wp-includes/style.php 1 -
+/wp-includes/rest-api/ 1 -
+/wp-includes/random_compat/ 1 -
+/6.php 3 -
+/wp-includes/pomo/wp-cli.php 2 -
+/dev/ 1 -
+/small.php 4 -
+/UserControls/ueditor/net/controller.ashx 1 -
+/system/Script/uedit/net/controller.ashx 1 -
+/search 2 -
+/wp-old/ 1 -
+/login/ueditor/controller.ashx 1 -
+/humans.txt 3 -
+/wp-admin/includes/readindex.php 2 -
+/upload.php 4 -
+/wp2/wp-includes/wlwmanifest.xml 21 -
+/wp-json/wp/v2/users/ 1 -
+/net/UEditor 1 -
+/website/blog/ 1 -
+/sites/all/themes/views/views.php 2 http://linguaglobal.ru/
+/wp-admin/wso.php 2 -
+/wp-content/plugins/ninja-forms/ 1 -
+/wp-includes/pomo/config.php 2 -
+/configuration.php6 1 -
+/.tmb/ 1 -
+/plugins/content/apismtp/apismtp.php 2 http://linguaglobal.ru/
+/wp-content/uploads/2022/11/zgepd_oddsd.php 1 http://linguaglobal.ru/
+/wp-includes/images/media/local1.php 2 -
+/wp-content/plugins/ioptimization/IOptimize.php 10 -
+/Content/js/plugins/uedit/net/controller.ashx 1 -
+/up/ 1 -
+/wp-content/uploads/wp-stream.php 2 -
+/wp-admin/includes/class-wp-pagebuilders-2myLvx.php 2 -
+/upfile/ueditor/net/controller.ashx 1 -
+/alexuse.php 3 -
+/oldsite/ 1 -
+/configuration.bckp 1 -
+/forums/ 1 -
+/demo328/xxxxxxxxxxxxxxxxxxxxxxxxxxxx.php 2 -
+//old-index.php 1 -
+/web/ 1 -
+/wp-content/plugins/ccx/index.php 8 -
+/wp-includes/ALFA_DATA/ 1 -
+/v.php 4 -
+/wp-config.phporiginal 3 https://www.google.com/search
+/wp-content/plugins/widget-logic/mini.php 2 -
+/wp-config.bak 3 https://www.google.com/search
+/fonts/ 1 -
+/wp-includes/css/wp-config.php 2 -
+/wp-content/themes/seotheme/db.php 26 -
+/site/wp-includes/wlwmanifest.xml 29 -
+/blog/wp-includes/wlwmanifest.xml 29 -
+/mini.php 4 -
+/Admin/PlugIn/uedit/net/controller.ashx 1 -
+/wp-content/plugins/super-interactive-maps/sim-wp-admin/pages/SSF_WP_UPLOADS_PATH/csv/import/sxunaxyuvg.csv.phtml 1 -
+/wp-content/force-download.php 2 https://www.google.com/search
+/configuration.php.txt 1 -
+/wp-admin/css/media.php 2 -
+/Company/ueditor/net/controller.ashx 1 -
+/Plugs/uedit/net/controller.ashx 1 -
+/2021/wp-includes/wlwmanifest.xml 9 -
+/utf8-net/net/controller.ashx 1 -
+/wp-content/wp-admin.php 2 -
+/tools/UEditor 1 -
+/UEditor-utf8-net/net/controller.ashx 1 -
+/view/uedit/net/controller.ashx 1 -
+/api/ajax/ueditor/net/controller.ashx 1 -
+/configuration.php3 1 -
+/wp-admin/includes/tablepress_controllers.php 2 -
+/wp-includes/style-engine/ 1 -
+//01.php 1 -
+/ohayo.php 3 -
+/templates/beez3/error.php 2 -
+/files/ 1 -
+/wp-admin/includes/block-line.php 2 -
+/error.php 5 -
+/2018/wp-includes/wlwmanifest.xml 14 -
+/wp-content/about.php 3 -
+/administrator/templates/isis/error.php 2 -
+/wp-content/plugins/upspy/index.php 2 -
+/lib/Ueditor/net/controller.ashx 1 -
+/system/controller.ashx 1 -
+/sh3ll.php 3 -
+/wp-includes/blocks/ 1 -
+/wp-includes/assets/ 1 -
+/Editor/uedit/net/controller.ashx 1 -
+/wp-content/shell.php 2 -
+/textarea/ueditor/net/controller.ashx 1 -
+/wp-admin/maint/fw.php 2 -
+//0z.php 1 -
+/database.php 1 -
+/yuuki.php 3 -
+/nhnqnzxd.php 1 www.google.com
+/images/xxxxxxxxxxxxxxxxxxxxxxxxxxxx.php 2 -
+//upload.php 2 -
+/wp-admin/wp-login.php 1 -
+/manage/ueditor123/net/controller.ashx 1 -
+/news/wp-includes/wlwmanifest.xml 21 -
+/plugins/content/apismtp.php 1 http://linguaglobal.ru/
+//wp-admin/priv8.php 1 -
+/templates/beez_20/error.php 2 -
+/configuration.php.new~ 1 -
+/portal/ 1 -
+/ajaz/UEditor 1 -
+/87.php 3 -
+//wp-2022.php 1 -
+/new.php 4 -
+/system/ue/net/controller.ashx 1 -
+/configuration.php_new 1 -
+/4.php 4 -
+/cms/wp-includes/wlwmanifest.xml 29 -
+/GJb16RCZeaGlh6L 1 -
+/edit/uedit/net/controller.ashx 1 -
+//wp-2019.php 1 -
+/11index.php 4 -
+/indeeex.php 3 -
+/wp-includes/alfacgiapi/ 1 -
+/c.php 4 -
+/blog/xxxxxxxxxxxxxxxxxxxxxxxxxxxx.php 2 -
+/jquery-3.3.1.min.js 12 -
+/OLD/ 1 -
+/wp-admin/admin-ajax.php 25 https://www.google.com/search
+/wp-content/plugins/ez-done-file-manager/llkfjthdsq.php 1 -
+/wp-admin/css/modern/colors.css.php 2 -
+/js/plugins/ueditor/net/controller.ashx 1 -
+/wp-content/ngg/ 1 -
+/wp-includes/bala.php 2 -
+/hello.php 4 -
+/wp-includes/images/media/shellwso.php 2 -
+//up.php 1 -
+/wp-content/themes/ThisWay/includes/uploadify/upload_settings_image.php 1 -
+//radio.php 1 -
+/netcat/modules/filemanager/admin.php 1 http://linguaglobal.ru/
+/2index.php 4 -
+/wp-config.php.backup 3 https://www.google.com/search
+/uploadfile/uedit/net/controller.ashx 1 -
+/wp-config.inc 1 -
+/configuration.php.bkp 1 -
+/wp-config.php.original 4 https://www.google.com/search
+/upload/ 1 -
+/bk/ 1 -
+/7index.php 3 -
+/wp-includes/sys.php 2 -
+/uedit1/net/controller.ashx 1 -
+/Admin/PlugIn/Ueditor/net/controller.ashx 1 -
+/wp-admin/alfacgiapi 1 -
+/houtai/ueditor/controller.ashx 1 -
+/new/ueditor/controller.ashx 1 -
+/old 20 -
+/wp-content/plugins/db-backup/download.php 3 https://www.google.com/search
+/wp-includes/customize/ 1 -
+/wp-admin/includes/maint/wp-cron.php 2 -
+/home/ 1 -
+/blog/wp-content/themes/seotheme/mar.php 2 -
+//google.php 1 -
+//4price.php 1 -
+/wp-includes/blocksupports/ 1 -
+//alfa.php 1 -
+/ne.php 3 -
+/wordpress 22 -
+/wp-config.php.a 3 https://www.google.com/search
+/.ftpconfig 1 -
+/blog/fw.php 3 -
+//wp-2020.php 1 -
+/wp-content/plugins/google-mp3-audio-player/direct_download.php 3 https://www.google.com/search
+/777.php 3 -
+/wp-includes/pomo/repair.php 2 -
+/wp-admin/wp.php 2 -
+/security.txt 1 -
+//mc.yandex.ru/metrika/tag.js 13 -
+/administrator/index.php 8 -
+/xleet.php 4 -
+/staging/rss/ 1 -
+/JScript/uedit/net/controller.ashx 1 -
+/lf.php 3 -
+/xxx.php 4 -
+/ueditor/controller.ashx 1 -
+/bbs/ueditor/controller.ashx 1 -
+/wp-config.php.8 4 https://www.google.com/search
+/wp-content/bala.php 2 -
+/users/sign_in/ 1 -
+/manage/Script/UeDitor/net/controller.ashx 1 -
+/wp-admin/wso112233.php 2 -
+/wp-includes/sodium_compat/ 1 -
+/fskmtavz.php 1 www.google.com
+/wp-content/themes/ 1 -
+/tmps/ 1 -
+/wp-content/plugins/mygallery/myfunctions/mygallerybrowser.php 3 https://www.google.com/search
+/templates/+theme+/error.php 2 -
+/alfacgiapi/ 1 -
+/ueditor/ueditor1_4_3-utf8-net/net/controller.ashx 1 -
+//wp-includes/customize/class-wp-customize-nav-menu.php 1 -
+/uedit111/net/controller.ashx 1 -
+//use.fontawesome.com/4f804a51bb.js 12 -
+/GbC7mlTf7mKxN6EHrj 1 -
+/block-supports/ 1 -
+/wp-content/alfacgiapi/ 1 -
+/priv8.php 4 -
+/wp-admin/shell.php 2 -
+/wp-includes/images/media/xwsoooo.php 2 -
+/wordpress/wp-content/themes/seotheme/mar.php 2 -
+/wp-config.php.cust 3 https://www.google.com/search
+/Scripts/ueditor/net/controller.ashx 1 -
+/emergency.php 1 -
+/wp-content/plugins/superstorefinder-wp/ssf-wp-admin/pages/SSF_WP_UPLOADS_PATH/csv/import/ssvltbtnyb.csv.php 1 -
+/lmftuylr.php 1 www.google.com
+/wp-includes/pomo/ex.php 2 -
+/stindex.php 3 -
+/script/umditor/net/controller.ashx 1 -
+/inc/editor/controller.ashx 1 -
+/api/lib/ueditor/net/controller.ashx 1 -
+/wp-admin/bala.php 2 -
+/e.php 4 -
+/wp-config.php~ 5 https://www.google.com/search
+/wls-wsat/CoordinatorPortType/ 1 -
+/administrator/ 1 -
+/wp/wp-content/themes/seotheme/mar.php 2 -
+/bc 1 -
+/wp-admin/js/widgets/wp-login.php 3 -
+/wp-includes/shell20211028.php 1 -
+/wp-content/plugins/superstorefinder-wp/ssf-wp-admin/xcbhamjgvo.csv.PhP 1 -
+/siteadmin/ueditor/net/controller.ashx 1 -
+/wp-content/plugins/super-interactive-maps/sim-wp-admin/bmfnwjrkwn.csv.php 1 -
+/wp-content/plugins/ubh/up.php 2 -
+/SdUeditor/controller.ashx 1 -
+/p.php 4 -
+/wp-includes/class-wp-query.php 2 -
+/wp-content/shell20211028.php 1 -
+/force-download.php 3 https://www.google.com/search
+/test/ 3 -
+/LUEditor/net/controller.ashx 1 -
+/1.4.3/controller.ashx 1 -
+/data.php 3 -
+/olu.php 3 -
+/test 19 -
+/xmlrpcs.php 3 -
+/images/indexalt.php 2 -
+/wp-content/alfa.php 2 -
+/ueditor1_4_3/net/controller.ashx 1 -
+/wp-includes/css/wp.php 2 -
+/snd.php 3 -
+/manage/ueditor1/net/controller.ashx 1 -
+/uedit/net/controller.ashx 1 -
+/phpmyadmin/ 1 -
+/wp-content/uploads/jcjjjjcjjc.php 2 -
+//wp-2018.php 1 -
+//wp-x.php 1 -
+/banomctd.php 1 www.google.com
+/haxor.php 4 -
+/assets/ueditor1_4_3/net/controller.ashx 1 -
+/new/ 3 -
+/htmleditor//uedit/net/controller.ashx 1 -
+/components/com_b2jcontact/izoc.php 2 -
+/configuration.php2 1 -
+/wp-includes/SimplePie/ 1 -
+/tmb/ 1 -
+/configuration.php.old 1 -
+/wp-admin/meta/ 1 -
+/wp-includes/wp-red.php 2 -
+/wp-config.php.6 3 https://www.google.com/search
+/TEST/ 1 -
+/amember/admin-users/ 1 -
+/manager/Script/UeDitor/net/controller.ashx 1 -
+/ueditorgbk/net/controller.ashx 1 -
+/templates/protostar/index.php 2 -
+/Handler/net/controller.ashx 1 -
+/V3.php 3 -
+/Plugins/ueditor1_4_3_3-utf8-net/utf8-net/net/controller.ashx 1 -
+/wp-admin/css/colors/ocean/template.php 2 -
+/nbuuripy.php 1 www.google.com
+/wp-admin/style.php 5 -
+/Site/ 1 -
+/rss.php 4 -
+/new/wp-login.php 1 -
+/js/UEditor 1 -
+/wp-content/wso.php 2 -
+/newsite/ 2 -
+/wp-includes/widgets/class-wp-widget-tags.php 2 -
+/wueditor/net/controller.ashx 1 -
+/content/umeditor1_2_2-utf8-net/net/controller.ashx 1 -
+/Assets/Plugins/UEdit/net/controller.ashx 1 -
+/info/wp-admin/ 1 -
+/assets/js/ueditor1_4_3/net/controller.ashx 1 -
+/demo/ 1 -
+/app-ads.txt 1 -
+/js/uedit/net/controller.ashx 1 -
+/configuration.orig 1 -
+/.env/ 1 -
+/wp-config.old 1 -
+/wp-plain.php 26 www.google.com
+/wp-content/uploads/wp-blockdown.php 2 -
+/xxxxfsfsfsfadsafdafdfdaasffasf.txt 1 -
+/Plug/ueditor/net/controller.ashx 1 -
+/Article/SdUeditor/net/controller.ashx 1 -
+/wp-content/updates.php 5 www.google.com
+//ALFA_DATA/alfacgiapi/ups.php 1 -
+/configuration.bak 1 -
+/send.php 3 -
+/test/wp-includes/css/buttons.css 1 -
+/wp-content/plugins/wp-file-manager/lib/php/connector.minimals.php 2 -
+/xmlrpc.php 29 -
+//403.php 1 -
+//small.php 1 -
+/Company/uedit/net/controller.ashx 1 -
+/wp-config.php.inc 1 -
+/Assets/js/ueditor/net/controller.ashx 1 -
+/wp-content/plugins/ait-csv-import-export/admin/upload-handler.php 1 -
+/wow.js 13 -
+/4index.php 3 -
+/editor/umeditor/net/controller.ashx 1 -
+/wp-content/plugins/config.bak.php 2 -
+/data/admin/allowurl.txt 5 -
+/wp-content/plugins/mini-mail-dashboard-widgetwp-mini-mail.php 3 https://www.google.com/search
+/wp-includes/radio.php 2 -
+/wso2.php 4 -
+/blog.php 4 -
+/content/Ueditor/net/controller.ashx 1 -
+/images/vuln.php 2 -
+/leaf_mailer.php 2 -
+/editor/Ueditor/net/controller.ashx 1 -
+/wp-content/plugins/superstorefinder-wp/ssf-wp-admin/pages/import.php 3 -
+/wp-blog.php 4 -
+/aspx/ueditor/net/controller.ashx 1 -
+/shop/ 1 -
+/5index.php 3 -
+/wp-content/plugins/recent-backups/download-file.php 3 https://www.google.com/search
+/ws.php 4 -
+/wp-content/plugins/ungallery/source_vuln.php 3 https://www.google.com/search
+//x.php 1 -
+/site/wp-login.php 1 -
+/js/net/controller.ashx 1 -
+/includes/ 1 -
+/m.php 4 -
+/pma/ 1 -
+/wordpress/wp-includes/wlwmanifest.xml 29 -
+/vuln.php 4 -
+/js/plugins/uedit/net/controller.ashx 1 -
+/demo328/fw.php 2 -
+/wp-blog-post.php 2 -
+/d.php 3 -
+/lib/UEditor 1 -
+/RxR.php 3 -
+/filemanager/dialog.php 1 -
+/upload/image/ 1 -
+/common/ueditor/net/controller.ashx 1 -
+/shop/wp-includes/wlwmanifest.xml 29 -
+/old/wp-includes/css/buttons.css 1 -
+/wp-content/plugins/google-document-embedder/libs/pdf.php 3 https://www.google.com/search
+//uploads/xleet.php 1 -
+/wp-includes/cgialfa/ 1 -
+/404.php 6 -
+/3301.php 3 -
+/include/net/controller.ashx 1 -
+/wp-config.php_bak 4 https://www.google.com/search
+/wp-includes/pomo/wp_class_datalib.php 2 -
+/uedit/controller.ashx 1 -
+/wp-config.php.3 2 https://www.google.com/search
+/wp-content/plugins/super-interactive-maps/sim-wp-admin/pages/SSF_WP_UPLOADS_PATH/csv/import/bonteuhxlc.csv.PhP 1 -
+/blogs/wp-json/ 1 -
+/rss/order/new/ 1 -
+/editor/ueditor1.3.6/net/controller.ashx 1 -
+/Editor/wueditor/net/controller.ashx 1 -
+/wp-admin/js/widgets/ 1 -
+/xleet-shell.php 7 -
+/wp-includes/images/ 1 -
+/wp-includes/pomo/class-wp-sitemap-mna.php 2 -
+/wp-config.php.new 4 https://www.google.com/search
+/wp-content/plugins/ubh/index.php 2 -
+//autoload_classmap.php 1 -
+/statics/plugins/com/ueditor/net/controller.ashx 1 -
+/templates/beez3/index.php 2 -
+/TP/public/index.php 1 -
+//image/screenshot_1.php 1 -
+/wp-config.php.0 2 https://www.google.com/search
+/wp-one.php 3 -
+/ueditor1_4_3_3-utf8-net/utf8-net/net/controller.ashx 1 -
+/wp-content/theme/seotheme/db.php 1 -
+/wp-includes/pomo/wp-atom.php 2 -
+/wp-content/plugins/ 1 -
+/plugins/umditor/net/controller.ashx 1 -
+/s_ne.php 3 -
+/wp/ 2 -
+/config/ 1 -
+/t.php 3 -
+/plugins/net/controller.ashx 1 -
+/wp-admin/blog/ 1 -
+/wp-config.php.old 5 https://www.google.com/search
+/testing 19 -
+/blog 20 -
+/7yn.php 3 -
+/g.php 4 -
+/tools/ueditor/net/controller.ashx 1 -
+/downloader/ 1 -
+/wp-includes/css/css.php 4 -
+/Sendemail.php 2 -
+/Backoffice/ 1 -
+/members/ueditor/controller.ashx 1 -
+/images/alfacgiapi 1 -
+/bk 1 -
+/kk.php 3 -
+/gank.php.PhP 2 -
+/3index.php 3 -
+/1975.php 3 -
+/Utility/uedit/net/controller.ashx 1 -
+/ahecfuqu.php 1 www.google.com
+/NEW/ 1 -
+//wp-god.php 1 -
+/pdf/ 1 -
+//1h6j5.php 1 -
+/wp-admin/user/ 1 -
+/members/uedit/controller.ashx 1 -
+/include/ueditor/net/controller.ashx 1 -
+/ms.php 3 -
+//2index.php 2 -
+/.tmb/cache/shz.php 2 -
+//images/vuln.php 1 -
+/static/wp-admin/ 1 -
+/01.php 4 -
+//reminder.php 1 -
+/www/ 1 -
+/Gel.php 3 -
+/api/js/uedit/net/controller.ashx 1 -
+/backup 1 -
+/wp-content/plugins/wp-db-ajax-made/wp-ajax.php 2 -
+/nhavayty.php 1 www.google.com
+/4price.php 3 -
+/net/controller.ashx 1 -
+/wp-content/plugins/superstorefinder-wp/ssf-wp-admin/ssvltbtnyb.csv.php 1 -
+/widwsisw/ 1 -
+/Plugin/uedit/net/controller.ashx 1 -
+/symlink.php 3 -
+/wp-config.php.1 3 https://www.google.com/search
+/engine/modules/helpp/helpp.php 1 http://linguaglobal.ru/
+/Tmp/ 1 -
+/up.php 4 -
+/mt/pekok.php 2 -
+/wp-content/plugins/wp-file-manager/lib/files/jpvhmwvdzw.php 1 -
+/edit/ueditor/net/controller.ashx 1 -
+/radio.php 4 -
+/img/ 1 -
+/wp-includes/pomo/ 1 -
+/manager/net/controller.ashx 1 -
+/wp-load.php 3 -
+/Ueditor/net/controller.ashx 1 -
+/wp-includes/css/1.phtml 2 -
+/wp-content/litespeed/ 1 -
+/wp-content/uploads/ 1 -
+//wp-content/upload.php 1 -
+/news/uedit/controller.ashx 1 -
+/new_license.php 2 -
+/content/ueditor/net/controller.ashx 1 -
+//wp-admin/fx.php 1 -
+/misc/ajax.js 4 -
+//screenshot_1.php 1 -
+/manager/ueditor123/net/controller.ashx 1 -
+/wp-includes/widgets/ 1 -
+/administrator/templates/isis/index.php 2 -
+/wp-content/languages/sidwso.php 2 -
+/old/rss/ 1 -
+/wp2.php 4 -
+/wp-includes/pomo/xwsoooo.php 2 -
+//new-index.php 1 -
+/wp-admin/setup-config.php 2 -
+/wp-content/uploads/2022/12/zgepd_oddsd.php 1 http://linguaglobal.ru/
+/sql/ 1 -
+/server.php 3 -
+/wp-content/mu-plugins-old/iimzloqncz.php 2 -
+/wpx.php 3 -
+/htmleditor//ueditor/net/controller.ashx 1 -
+/rahma.php 3 -
+/UserControls/uedit/net/controller.ashx 1 -
+/uploads/l.php 2 -
+/siteadmin/uedit/net/controller.ashx 1 -
+/pW4v1uDlfy 1 -
+/wp-includes/ID3/module.tag.id3v1-cron.php 2 -
+/.well-known/ 5 binance.com
+/wp-includes/about.php 3 -
+/images/about.php 3 -
+/wp-content/plugins/wpstorecart/php/upload.php 1 -
+/images/c99.php 2 -
+/.wp-cache.php 2 -
+/store/rss/ 1 -
+/ueditor1.3.6/net/controller.ashx 1 -
+/wp-content/plugins/css-ready/file.php 2 -
+/ok.php 4 -
+/media-admin.php 2 -
+/AJAX/controller.ashx 1 -
+/wp.php 6 -
+/server-status/ 1 -
+/alwso.php 4 -
+/wp-file.php 4 -
+/wp-admin/fw.php 3 -
+/data/admin/ver.txt 1 -
+/manage/controller.ashx 1 -
+/wp-content/plugins/superlogoshowcase-wp/sls-wp-admin/pages/SSF_WP_UPLOADS_PATH/csv/import/gkkszhhqnk.csv.PhP 1 -
+/wp-admin/ALFA_DATA/ 1 -
+/leaf_php.php 2 -
+/components/xxxxxxxxxxxxxxxxxxxxxxxxxxxx.php 2 -
+/manage/ueditor/net/controller.ashx 1 -
+/gl/UEditor 1 -
+/wp-config.php_1 3 https://www.google.com/search
+/include/ 1 -
+/plus/mytag_js.php 1 -
+/098.php 3 -
+/Plugs/ueditor/net/controller.ashx 1 -
+/ueditor/net/controller.ashx 1 -
+/wp-content/plugins/admin/views/vypfahswav.php 1 -
+/vxqrlehd.php 1 www.google.com
+//wp-content/themes/seotheme/db.php 11 -
+/plugin/umeditor/net/controller.ashx 1 -
+/case/ueditor/net/controller.ashx 1 -
+/system_log.php 2 -
+/wp-content/plugins/wp-file-manager/lib/files/ltlkwjzhtj.php 1 -
+/Utility/ueditor/net/controller.ashx 1 -
+/tonyxkek.php 1 www.google.com
+/blog/ueditor/controller.ashx 1 -
+/wp-content/ 4 -
+/kn.php 3 -
+/Control/ueditor/net/controller.ashx 1 -
+/BLOG/ 1 -
+/wp-content/maintenaince/ 1 -
+/fx.php 4 -
+/MYzoomsounds/ 1 -
+//apps.elfsight.com/p/platform.js 11 -
+/leafmailer2.8.php 2 -
+/plugin/umditor/net/controller.ashx 1 -
+/sites/default/files/ 5 binance.com
+//mini.php 1 -
+/bootstrap.min.js 10 -
+/blog/feed/ 1 -
+/wso112233.php 7 -
+/wp-includes/wso112233.php 2 -
+/api/controller.ashx 1 -
+/script/editor/net/UEditor 1 -
+/3.php 4 -
+/wp-config.php.swn 4 https://www.google.com/search
+/wp-includes/images/wlw/shellwso.php 2 -
+/post/wp-json/ 1 -
+/wp-includes/pomo/1.php 2 -
+/wp-content/plugins/ez-done-file-manager/xwppahlltr.csv.phtml 1 -
+/wp-content/mu-plugins-old/ 1 -
+/ueditor1_3_5-utf8-net/net/controller.ashx 1 -
+/plugins.js 14 -
+/configuration.php1 1 -
+/wp-includes/ID3/license.txt 5 -
+/textarea/uedit/net/controller.ashx 1 -
+/plug/ueditor/net/UEditor 1 -
+/plug/ueditor/net/controller.ashx 1 -
+/ueditor123/net/controller.ashx 1 -
+/8index.php 3 -
+//media-admin.php 1 -
+/yvzvndgh.php 1 www.google.com
+/Admin/Article/SdUeditor/net/controller.ashx 1 -
+/wp-json/oembed/ 1 -
+/z.php 4 -
+/nasgor.php 3 -
+/phpinfo 2 -
+/blocks/ 1 -
+/fa.php 3 -
+/docs/ 1 -
+/uedit2/net/controller.ashx 1 -
+/editor/controller.ashx 1 -
+/alfa123.php 3 -
+/wp-content/plugins/woocommerce-payments/dist/blocks-checkout.css 1 -
+/bypass.php 4 -
+/.wp-cli/ 1 -
+/configuration.php.new 1 -
+/wp-login.php 40 -
+/wp-config.php.9 4 https://www.google.com/search
+/shell.php 4 -
+/autoload_classmap.php 3 -
+/.wp-back.phP 3 -
+/wp-class.php 3 -
+/ueditor/UEditor 1 -
+/xox.php 3 -
+/new 21 -
+/wp-config.php.swo 3 https://www.google.com/search
+/wp1/wp-includes/wlwmanifest.xml 29 -
+/public/UEditor 1 -
+/sgyykpfl.php 1 www.google.com
+/database/ 1 -
+/api/index.php/v1/config/application 2 -
+/l.php 4 -
+/.well-known/radio.php 2 -
+/service/extdirect/ 1 -
+/wp-content/up.php 2 -
+/viber://chat 2 http://linguaglobal.ru
+/wp-admin/js/ 1 -
+/xhell.php 3 -
+/wp-content/plugins/augmented-reality/file_manager/izocin.php 1 -
+/site/wp-content/themes/seotheme/mar.php 2 -
+/uploads/s4.phtml 2 -
+/custom.js 13 -
+/wp-content/plugins/uploader/uploadify/uploadify.php 1 -
+/doc.php 4 -
+/tools/controller.ashx 1 -
+/wp-config.php.b 2 https://www.google.com/search
+/WP/ 1 -
+/htgl/ue/net/controller.ashx 1 -
+/sendmail.php 3 -
+/api/ueditor/controller.ashx 1 -
+/manage/umeditor/net/controller.ashx 1 -
+/s.php 4 -
+/wp-config.php.disabled 4 https://www.google.com/search
+/old-index.php 3 -
+//wp-content/plugins//masterx/wpx.php 1 -
+/minimo.php 3 -
+/wp-content/plugins/super-interactive-maps/sim-wp-admin/pages/import.php 3 -
+/wp-content/themes/ALFA_DATA/alfacgiapi 1 -
+/wp-includes/991176.php 3 -
+/kzmnxcbj.php 1 www.google.com
+/beence.php 3 -
+/r.php 4 -
+/carbuyaction.php 1 -
+/css/album.css 1 -
+/tqemeuqx.php 1 www.google.com
+/qindex.php 3 -
+/9index.php 3 -
+/static/ 1 -
+/about.php 4 -
+/block-patterns/ 1 -
+/libraries/joomla/css.php 2 -
+/moduless.php 2 -
+/plug-in/ueditor/net/controller.ashx 1 -
+/images/sym.php 2 -
+/plugins/umeditor/net/controller.ashx 1 -
+/file/ 1 -
+/wp-includes/Requests/ 1 -
+/configuration.php.original 1 -
+/sito/ 1 -
+/0z.php 4 -
+/ashx/controller.ashx 1 -
+/ueditor1_4_3-utf8-net/net/controller.ashx 1 -
+/statics/ueditor/net/controller.ashx 1 -
+/coqcjnsf.php 1 www.google.com
+/WSO.php 1 -
+/wp-admin/js/acces.php 2 -
+/Utility/UEditor 1 -
+//mad.php 1 -
+/bb.php 3 -
+//xwxx.php 1 -
+/wp-content/uploads/2021/12/up.php 2 -
+/wp-config.php_orig 3 https://www.google.com/search
+/wp-config.php.2 2 https://www.google.com/search
+/w.php 4 -
+/xxxxxxxxxxxxxxxxxxxxxxxxxxxx.php 2 -
+/jscripts/net/controller.ashx 1 -
+/xindex.php 3 -
+/1.4.3/net/controller.ashx 1 -
+/lol.php 3 -
+/images/tahe.php 2 -
+/lib/ueditor/net/controller.ashx 1 -
+/Themes/uedit/net/controller.ashx 1 -
+/wp-admin/js/widgets/wp-contact.php 2 -
+/new/media/system/js/core.js 1 -
+/file-manager.php 2 -
+/n.php 4 -
+/ueditorgbk/controller.ashx 1 -
+/login/wp-login.php 1 -
+/7.php 3 -
+/upload/ueditor/net/controller.ashx 1 -
+/kiss.php 3 -
+/wp-admin/css/ 5 binance.com
+/wp-content/plugins/admin/views/krjcrmffnu.csv.phtml 1 -
+/2020/ 1 -
+/wp-admin/images/atomlib.php 2 -
+/js/ueditor/net/controller.ashx 1 -
+/wp-includes/xxxxxxxxxxxxxxxxxxxxxxxxxxxx.php 2 -
+/wp-content/plugins/ppus/up.php 2 -
+/wp-includes/images/wlw/wp-signup.php 2 -
+/UMditor/net/controller.ashx 1 -
+/uploadfile/ueditor/net/controller.ashx 1 -
+/alfaindex.php 2 -
+/wp-content/plugins/cekidot/alf.php 2 -
+/upfile/uedit/net/controller.ashx 1 -
+/wp-content/plugins/contact-form-7/bzzjqyjwet.php 1 -
+//crypted.php 1 -
+/wp-configer.php 2 -
+/i.php 4 -
+/wp-content/languages/ 1 -
+/jscript/net/controller.ashx 1 -
+/view-source: 5 -
+/templates/protostar/error.php 2 -
+/public/_ignition/health-check/ 1 -
+/wp-includes/ID3/ 1 -
+/wp-content/plugins/vwcleanerplugin/bump.php 2 -
+//utchiha.php 1 -
+/wp-content/includes/uploads/Va.php 2 -
+/Admin/UEdit/net/controller.ashx 1 -
+/wp-config.php_ 3 https://www.google.com/search
+/wp-content/plugins/seoplugins/db.php 1 -
+/wp-admin/radio.php 3 -
+/members/login/ 1 -
+/magento_version/ 1 -
+/umeditor1_2_2-utf8-net/net/controller.ashx 1 -
+/wp-content/style.php 1 -
+/wp-admin/includes/edit-tag-menu.php 2 -
+/info.php 1 -
+/wp-content/upgrade/wp-signup.php 2 -
+//wp-content/plugins/easybusy/wp-blog.php 1 -
+/assets/filemanager/dialog.php 1 -
+/wp-admin/includes/maint/repair-bak.php 2 -
+/wp-includes/block-patterns/ 1 -
+/41.php 3 -
+/mari.php 4 -
+//wp-2021.php 1 -
+/lab.php 3 -
+/wp-admin/includes/class-wp-pagebuilders-9LlwKf.php 2 -
+/wp-includes/images/wlw/local1.php 2 -
+/wp-includes/sitemaps/providers/ 1 -
+/kindex.php 3 -
+/libraries/xxxxxxxxxxxxxxxxxxxxxxxxxxxx.php 2 -
+/wp-content/plugins/cherry-plugin/admin/import-export/download-content.php 3 https://www.google.com/search
+/Themes/ueditor/net/controller.ashx 1 -
+/temp/ 1 -
+/wp-content/plugins/ALFA_DATA 1 -
+/UEditor 1 -
+/wp-content/uploads/readindex.php 2 -
+/lib/ueditor/utf8-net/net/controller.ashx 1 -
+/jquery.nav.js 16 -
+/wp-content/wso112233.php 2 -
+/root.php 4 -
+//priv8.php 1 -
+/wp-admin/ 1 -
+/wp-admin/admin.php 5 https://www.google.com/search
+/cpanel/ 1 -
+/wp-content/plugins/ez-done-file-manager/admin.php 3 -
+/script/lib/ueditor/net/controller.ashx 1 -
+/wp-includes/class-wp-block-type-ajax-response.php 2 -
+/inc/net/UEditor 1 -
+/zifpyabw.php 1 www.google.com
+/phpinfo.php 3 -
+/net 1 -
+/users/uedit/controller.ashx 1 -
+//02.php 1 -
+/member/uedit/controller.ashx 1 -
+/V5.php 3 -
+/templates/beez3/ALFA_DATA 1 -
+/plugin/net/UEditor 1 -
+/wp-content/mu-plugins/ 1 -
+/category/feed/ 1 -
+/date.php 4 -
+/libraries/joomla/jmails.php 2 -
+/.well-known/ALFA_DATA/alfacgiapi 1 -
+/2016/ 1 -
+//wp_wrong_datlib.php 1 -
+/wp-includes/fw.php 2 -
+/wp-contentxxxxxxxxxxxxxxxxxxxxxxxxxxxx.php 2 -
+/configuration.php~ 1 -
+/.vscode/sftp.json 2 -
+//up-kon.php 1 -
+/srx.php 3 -
+/new-index.php 2 -
+/Cpanel.php 3 -
+/shell20220621.php 2 -
+/wp-content/themes/gaukingo/db.php 4 -
+/wp-includes/php-compat/ 1 -
+/wp-content/plugins/theme-configurator/mini.php 2 -
+/ueditor11/net/controller.ashx 1 -
+/manager/Ueditor/net/controller.ashx 1 -
+/ue/net/controller.ashx 1 -
+/wso1.php 4 -
+/templates/atomic/index.php 2 -
+/js/ueditor1_4_3/net/controller.ashx 1 -
+/2019/wp-includes/wlwmanifest.xml 28 -
+/wp-content/plugins/backup_index.php 2 -
+/wp-includes/css/ 1 -
+/templates/rhuk_milkyway/index.php 2 -
+/alfa.php 4 -
+/ueditor3/net/controller.ashx 1 -
+/wp-admin/images/preg_class.php 2 -
+/FoxWSO.php 4 -
+/plugins/net/UEditor 1 -
+/wp-includes/Text/sidwso.php 2 -
+/editor/net/controller.ashx 1 -
+/Uti1ity/UEditor/net 1 -
+/wp/rahma.php 3 -
+/houtai/uedit/controller.ashx 1 -
+/cgi-bin/alfacgiapi 1 -
+/templates/beez_20/index.php 2 -
+/b.php 4 -
+/manage/uedit/net/controller.ashx 1 -
+/edit-form.php 3 -
+/wp-content/plugins/css-ready-sel/file.php 2 -
+/cms/ 1 -
+/xltavrat.php 3 -
+/wp-license.php 3 https://www.google.com/search
+/wp 22 -
+/lib/ueditor/1.4.3/net/controller.ashx 1 -
+/wp-admin/css/fw.php 3 -
+/wp-config.php.txt 1 -
+/13.php 4 -
+/wp-content/alfacgiapi 1 -
+/f.php 4 -
+/wp-wso.php 3 -
+/Editor/ueditor/net/controller.ashx 2 -
+/modules/mod_simplefileuploadv1.3/elements/udd.php 2 -
+/configuration.php.save 1 -
+//1337.php 1 -
+/sitemap 5 -
+/configuration.php.swp 2 -
+/templates/beez3/ 1 -
+/public/403.php 1 -
+/wp-config.php_original 3 https://www.google.com/search
+/wp-admin/includes/fw.php 2 -
+//shell.php 1 -
+/adminer.php 1 -
+/swm.php 3 -
+//Deadcode1975xxxxxxxxxxxxxxxxxxxxxxxxxxxx.php 1 -
+/users/ueditor/controller.ashx 1 -
+/templates/+theme+/index.php 2 -
+/plugs/UEditor 1 -
+/blog/wp-includes/css/buttons.css 1 -
+/jscript/net/UEditor 1 -
+/wp-content/ALFA_DATA/ 1 -
+/wp-includes/images/wp-blog.php 2 -
+//wpx.php 1 -
+/wp-includes/images/css.php 2 -
+/alfashell.php 3 -
+/member/ueditor/controller.ashx 1 -
+/wp_wrong_datlib.php 3 -
+/wp-content/plugins/admin/views/gtrazolmjo.php 1 -
+/configuration.php_old 1 -
+/manage/net/controller.ashx 1 -
+/case/editor/net/controller.ashx 1 -
+//vendor/phpunit/phpunit/phpunit.xsd 2 -
+/Assets/js/uedit/net/controller.ashx 1 -
+/JScript/ueditor/net/controller.ashx 1 -
+/Content/js/plugins/ueditor/net/controller.ashx 1 -
+/wp-content/fx.php 2 -
+/vita.php 3 -
+/catalogsearch/result/ 1 -
+/wp-content/plugins/elementor-pro/assets/css/preview.css 1 -
+/libraries/joomla/jmail.php 2 -
+//haxor.php 1 -
+/plugins/ 1 -
+/2019/ 1 -
+/news/ueditor/net/controller.ashx 1 -
+/style.php 7 -
+/wp-admin/cgialfa/ 1 -
+/u.php 4 -
+/q.php 4 -
+/wp-content/uploads/gqasdzbjpd.php 1 -
+/sito/wp-includes/wlwmanifest.xml 21 -
+/aa.php 3 -
+/manage/Script/uedit/net/controller.ashx 1 -
+/license.php 4 -
+//wp-easy.php 1 -
+/wp-includes/wlwmanifest.xml 27 -
+/wp-content/plugins/superlogoshowcase-wp/sls-wp-admin/gkkszhhqnk.csv.PhP 1 -
+/wp/wp-login.php 1 -
+/wp-content/plugins/tera-charts/charts/treemap.php 3 https://www.google.com/search
+/login/uedit/controller.ashx 1 -
+/configuration.php.old~ 1 -
+/Scripts/uedit/net/controller.ashx 1 -
+/WaH9zrWBJpzRPJ 1 -
+/sitemap.txt 5 -
+/wp-content/plugins/three-column-screen-layout/db.php 2 -
+/wp-config.php.bak1 3 https://www.google.com/search
+/configuration.php.bak 1 -
+/www.php 3 -
+/rss/catalog/ 1 -
+/statics/UEditor 1 -
+/api/jscripts/ueditor/net/controller.ashx 1 -
+//xl.php 2 -
+/tuco.php 3 -
+/files/image.php 2 -
+/main 20 -
+/plugin/UEditor 1 -
+/wp-content/cgialfa/ 1 -
+/wp-content/uploads/ALFA_DATA/alfacgiapi 1 -
+/blog/wp-admin/ 1 -
+/Marvins.php 3 -
+/mt/ 1 -
+/h.php 4 -
+/wp/wp-admin/ 1 -
+/alexus.php 3 -
+/conn/ueditor/net/controller.ashx 1 -
+/manager/UEditor 1 -
+/includes/ueditor/net/controller.ashx 1 -
+/test/wp-content/themes/seotheme/mar.php 2 -
+/wp-content/plugins/mac-dock-gallery/macdownload.php 3 https://www.google.com/search
+/wp-content/plugins/superlogoshowcase-wp/sls-wp-admin/vxdopknmmc.csv.phtml 1 -
+/wp-config-good 3 https://www.google.com/search
+//lufix.php 1 -
+/plugins/UEditor 1 -
+/feeds/posts/default/ 1 -
+/wp-admin/network/wp-footer.php 2 -
+/shells.php 3 -
+/ueditor/1.4.3/controller.ashx 1 -
+/wp-admin/alfacgiapi/ 1 -
+//3x.php 1 -
+/mpdnrecu.php 1 www.google.com
+/a.php 4 -
+/wp-admin/xxxxxxxxxxxxxxxxxxxxxxxxxxxx.php 2 -
+/wp-admin/css/index.php 2 -
+/configuration.php.swo 1 -
+/wp-content/themes/seotheme/mar.php 10 -
+//wp-content/fw.php 1 -
+/6index.php 3 -
+/administrator/xxxxxxxxxxxxxxxxxxxxxxxxxxxx.php 2 -
+/wp-admin.php 4 -
+/j.php 3 -
+/wp-content/woocommerce/ 1 -
+/index.php 9 -
+//mininew.php 1 -
+/wp-config.php.bk 3 https://www.google.com/search
+/0byte.php 4 -
+/wp-content/vuln.php 2 -
+/ff.php 2 -
+/dr.php 3 -
+/sindex.php 3 -
+/Plugin/ueditor/net/controller.ashx 2 -
+/wp-content/plugins/simple-image-manipulator/controller/download.php 3 https://www.google.com/search
+/ueditor1/net/controller.ashx 1 -
+/wp-includes/fx.php 2 -
+/baindex.php 3 -
+/crxzmxwf.php 1 www.google.com
+/export.php 3 -
+/leafmailer.php 2 -
+/wp-content/plugins/contact-form-7/modules/file.php 1 -
+/wp-json/wp/v2/posts 1 -
+/wp-content/plugins/seoplugins/mar.php 11 -
+/e/data/js/ajax.js 5 -
+/wp-includes/css/class.enhanced.php 2 -
+/manager/ueditor1/net/controller.ashx 1 -
+/ALFA_DATA/alfacgiapi 1 -
+/bduedit/net/controller.ashx 1 -
+/wp-content/plugins/superlogoshowcase-wp/sls-wp-admin/pages/SSF_WP_UPLOADS_PATH/csv/import/rqavzrdttp.csv.php 1 -
+/wp-config.php.orig 4 https://www.google.com/search
+/cms.php 3 -
+/Controls/ueditor/net/controller.ashx 1 -
+//xml.php 1 -
+/xo.php 3 -
+/wp-includes/pomo/radiowso.php 2 -
+/anone.php 3 -
+/wp-content/uploads/2021/12/fw.php 2 -
+/wp-content/plugins/html404/xccc.php%20 2 -
+/admin.php 3 -
+/ueditor/utf8-net/net/controller.ashx 1 -
+/magento/rss/ 1 -
+/modules/modules/modules.php 2 -
+/mar.php 4 -
+/.well-known/security.txt 1 -
+//xleet.php 1 -
+/Admin/uedit/uedit/net/controller.ashx 1 -
+/wp-content/plugins/woocommerce-payments/changelog.txt 1 www.google.com
+/api/plugins/ueditor/net/controller.ashx 1 -
+/2022/ 1 -
+/wp-content/plugins/formcraft/file-upload/server/php/files/mgzvyhlzlm.php 1 -
+/wp-content/.wp-back.phP 2 -
+/contacts.php 2 -
+/wp-admin/includes/xxxxxxxxxxxxxxxxxxxxxxxxxxxx.php 2 -
+/ujiuqdsa.php 1 www.google.com
+/wp-admin/includes/ 1 -
+/customers/ 1 -
+//wp-admin/xleet.php 1 -
+/wp-config.php.5 3 https://www.google.com/search
+//wp-includes/assets/pi.php 1 -
+/wp-content/wp.php 3 -
+/jquery.magnific-popup.min.js 11 -
+/wp/wp-includes/wlwmanifest.xml 29 -
+/website/wp-includes/wlwmanifest.xml 21 -
+/k.php 4 -
+/db/ 1 -
+/umeditor1_2_2-utf8-net/controller.ashx 1 -
+/1.php 4 -
+/apple-app-site-association 2 -
+/views/uedit/net/controller.ashx 1 -
+/alex.php 3 -
+/inc/uedit/net/controller.ashx 1 -
+/wp-config-sample.php,/wp-config.php,/wp-config.php.txt 1 https://www.google.com/search
+/script/ueditor/net/controller.ashx 1 -
+/wp-config.php_Old 4 https://www.google.com/search
+/Controls/Ueditor/net/controller.ashx 1 -
+/Public/controller.ashx 1 -
+/97bwag/ 1 -
+/shop/rss/ 1 -
+/wp-content/uploads/wp-conflg.php 2 -
+/Assets/Admin/Plugins/UEdit/net/controller.ashx 1 -
+/Admin/UEditor/ueditor/net/controller.ashx 1 -
+/inc/net/controller.ashx 1 -
+/wp-content/plugins/zedd/1.php 2 -
+/wp-content/plugins/augmented-reality/vendor/elfinder/php/connector.minimal.php 2 -
+/10.php 4 -
+/it.php 3 -
+/leaf.php 3 -
+/news/ueditor/controller.ashx 1 -
+/wp-commentin.php 3 -
+/wp-includes/css/wp-atom.php 2 -
+//3index.php 1 -
+/include/UEditor 1 -
+/administrator/templates/hathor/error.php 2 -
+/Script/lib/uedit/net/controller.ashx 1 -
+/blog/ 3 -
+/wp-content/think.php 2 -
+//wp-22.php 1 -
+//ALFA_DATA/alfacgiapi/ 1 -
+/wp-admin/includes/maint/wp-readindex.php 2 -
+/1index.php 4 -
+/legion.php 3 -
+/alexusmailer%202.0.php 2 -
+/wp-config.php.dist 1 -
+/uploader.php 1 -
+/templates/beez5/error.php 2 -
+/cp.php 3 -
+/lnnmpkrh.php 1 www.google.com
+/5.php 4 -
+/aws/credentials/ 1 -
+/wp-content/fw.php 3 -
+/script/umeditor/net/controller.ashx 1 -
+/FoxWSOv1.php 2 -
+/wp-content/themes/pridmag/db.php 7 -
+/gif.php 3 -
+/wp-content/plugins/adaptive-images/adaptive-images-script.php 2 https://www.google.com/search
+/gel4y.php 3 -
+/wp-admin/css/colors/coffee/fw.php 2 -
+/Plugins/UEditor-utf8-net/net/controller.ashx 1 -
+/wp-includes/wp-atom.php 2 -
+/templates/xxxxxxxxxxxxxxxxxxxxxxxxxxxx.php 2 -
+/wp-admin/includes/mar.php 2 -
+/wp-includes/ 1 -
+/Alfa.php 1 -
+/__MACOSX/ 1 -
+/wp-config.php.swp 4 https://www.google.com/search
+/network/ 1 -
+/web/wp-includes/wlwmanifest.xml 29 -
+/o.php 4 -
+/wp-includes/alfacgiapi 1 -
+/Assets/UEdit/net/controller.ashx 1 -
+/wp-beckup.php 2 -
+/includes/uedit/net/controller.ashx 1 -
+/indoxploit.php 2 -
+/modules/ 1 -
+//about.php 1 -
+/editor/net/UEditor 1 -
+//wikindex.php 2 -
+/Handler/controller.ashx 1 -
+/SdUeditor/net/controller.ashx 1 -
+/xl.php 4 -
+/wp_class_datalib.php 2 -
+//1index.php 2 -
+/.cgi/cache/index.php 2 -
+/hfbdtnhcbv.php 1 -
+/forum/ 2 http://linguaglobal.ru/forum/
+/plug/UEditor 1 -
+/site/ 1 -
+/images/403.php 2 -
+/wp-content/wp-logins.php 2 -
+/wordpress/ 2 -
+/.env.save 2 -
+/wp-includes/xl2023.php 3 www.google.com
+/bak/ 1 -
+/1xleet.php 3 -
+/status/ 1 -
+/case/net/controller.ashx 1 -
+/templates/atomic/error.php 2 -
+/sysadm/ueditor/net/controller.ashx 1 -
+/inc/ueditor/net/controller.ashx 1 -
+/controller.ashx 1 -
+/defau1t.php 3 -
+/manager/uedit/net/controller.ashx 1 -
+/wp-content/uploads/2022/10/zgepd_oddsd.php 1 http://linguaglobal.ru/
+/images/fx.php 2 -
+/inc/editor/net/controller.ashx 1 -
+/plesk-stat/ 1 -
+/403.php 4 -
+/wp-json/ 1 -
+/modules/image_gif/gif.jpg 1 http://linguaglobal.ru/
+/GL/Handler/controller.ashx 1 -
+//hehe.php 1 -
+/images/pushy.php 2 -
+/wp-includes/images/wlw/lfx.php 2 -
+/wp-config.php-bak 4 https://www.google.com/search
+/Uploader.php 2 -
+//wp-info.php 1 -
+/configuration.txt 1 -
+/wp-includes/js/ 1 -
+/myadmin/ 1 -
+/templates/beez/index.php 2 -
+//wp-admin/rss.php 1 -
+/statics/js/plugins/ueditor/net/controller.ashx 1 -
+/gallery/ 1 -
+/Makhdamx.php 2 -
+//wp-content/plugins/fighter/fk.php 1 -
+/wp-content/plugins/superlogoshowcase-wp/sls-wp-admin/rqavzrdttp.csv.php 1 -
+/wp-includes/pomo/shellwso.php 2 -
+/uploads/up.php 3 -
+/images/ave.php 2 -
+/wp-admin/includes/class-wp-media-list-data.php 3 -
+/wp-content/plugins/sniplets/modules/syntax_highlight.php 3 https://www.google.com/search
+/media/wp-includes/wlwmanifest.xml 14 -
+/mailer1.php 3 -
+/ALFA_DATA/alfacgiapi/ 1 -
+/wp-content/ALFA_DATA/alfacgiapi/ 1 -
+/ashx/UEditor 1 -
+/.alf.php 3 -
+/wp-uploads.php 3 -
+/views/ueditor/net/controller.ashx 1 -
+/manager/Script/uedit/net/controller.ashx 1 -
+END_SIDER_404
+
+# Host - Pages - Hits - Bandwidth - Last visit date - [Start date of last visit] - [Last page of last visit]
+# [Start date of last visit] and [Last page of last visit] are saved only if session is not finished
+# The 10 first Hits must be first (order not required for others)
+BEGIN_VISITOR 236
+185.12.124.78 12 12 667584 20230427152128
+212.102.33.167 6 6 184946 20230414001926
+159.65.15.55 6 6 333792 20230419173752
+139.99.219.246 6 6 333792 20230417132911
+212.102.33.171 6 6 184946 20230414124729
+20.173.88.32 6 6 333792 20230429124648
+46.101.161.207 5 5 129314 20230405030530
+49.83.207.39 5 5 166145 20230406084541
+43.134.107.131 5 5 278160 20230420202328
+23.111.204.42 5 5 278160 20230430232518
+13.38.27.158 1 1 55632 20230420161351
+167.248.133.188 1 1 55632 20230409055028
+89.117.58.87 1 1 55632 20230430165220
+139.59.15.238 3 3 166896 20230404125317
+34.216.232.230 1 1 55632 20230430212823
+18.236.182.158 1 1 55632 20230414192609
+34.213.179.96 1 1 55632 20230402193740
+194.99.26.187 1 1 55632 20230424092458
+34.209.176.187 1 1 55632 20230430212508
+129.226.203.166 1 1 55632 20230427200522
+34.210.230.47 1 1 55632 20230401192223
+183.136.225.44 2 2 111264 20230409024613
+103.108.229.75 2 2 111264 20230411033029
+213.87.158.139 1 1 55632 20230425195741
+15.235.143.165 3 3 166896 20230415181921
+52.33.222.100 1 1 55632 20230417200215
+194.163.155.246 1 1 55632 20230408170904
+3.231.219.126 1 1 55632 20230430193244
+18.141.239.130 2 2 1784 20230417165602
+158.160.26.14 4 4 222528 20230418010023
+31.13.127.34 1 1 55632 20230403223700
+185.105.90.27 2 2 111264 20230418070321
+52.27.40.180 1 1 55632 20230408191404
+35.162.238.135 1 1 55632 20230402193923
+193.235.141.158 1 1 55632 20230430212507
+54.186.119.128 1 1 55632 20230422193008
+159.65.130.174 1 1 55632 20230402032456
+103.83.81.125 3 3 166896 20230407000252
+167.248.133.191 1 1 55632 20230415001356
+169.150.201.10 1 1 55632 20230405150118
+188.68.110.59 1 1 55632 20230425181749
+20.204.30.82 1 1 55632 20230421024506
+34.219.75.70 1 1 55632 20230401192313
+43.135.144.145 3 3 166896 20230421003607
+51.77.111.99 1 1 55632 20230412110351
+173.249.56.171 3 3 166896 20230429092646
+79.173.83.132 1 1 55632 20230401172133
+91.227.68.183 1 1 55632 20230409165340
+23.80.167.231 1 1 55632 20230401090353
+45.126.125.72 1 1 55632 20230429101045
+34.236.154.139 1 1 55632 20230409001203
+139.162.56.212 3 3 166896 20230426091515
+35.160.56.72 1 1 55632 20230414192638
+51.142.146.242 3 3 166896 20230414054950
+167.248.133.34 3 3 166896 20230417042806
+44.214.96.75 1 1 55632 20230418061020
+54.200.130.120 1 1 55632 20230430212528
+35.88.93.0 1 1 55632 20230418152756
+185.39.144.147 1 1 55632 20230418030451
+20.219.195.153 1 1 55632 20230415071115
+188.68.110.45 1 1 55632 20230401004011
+167.248.133.186 1 1 55632 20230411185608
+216.218.163.109 1 1 0 20230429041316
+185.220.100.255 1 1 55632 20230418152104
+93.158.90.163 1 1 55632 20230428010347
+89.187.163.206 1 1 55632 20230416184748
+34.219.12.45 1 1 55632 20230416192249
+88.83.200.170 1 1 55632 20230424064819
+93.159.230.88 1 1 55632 20230412185147
+169.150.201.20 3 3 166896 20230413213420
+51.15.131.129 1 1 0 20230415211751
+69.171.251.7 1 1 55632 20230425042856
+142.202.240.55 1 1 55632 20230430055647
+20.230.18.235 1 1 55632 20230408145055
+146.59.69.71 1 1 55632 20230430073711
+94.25.168.182 1 1 55632 20230403002522
+185.246.86.178 2 2 55632 20230423092454
+134.209.117.216 3 3 166896 20230419092738
+193.235.141.127 1 1 55632 20230409110751
+154.6.88.8 2 2 111264 20230420202408
+185.56.83.83 1 1 55632 20230421134731
+35.89.222.55 1 1 55632 20230411193634
+194.35.117.226 1 1 55632 20230409091926
+109.237.97.227 4 4 222528 20230411020232
+35.90.161.172 1 1 55632 20230408191354
+109.237.98.235 4 4 222528 20230408111253
+103.161.119.193 3 3 166896 20230420032403
+35.85.48.175 1 1 55632 20230402194111
+54.184.147.157 1 1 55632 20230411193711
+194.26.135.17 1 1 55632 20230407145559
+193.235.141.45 1 1 55632 20230422191716
+193.235.141.157 2 2 111264 20230425113026
+116.62.246.170 1 1 55632 20230417103129
+77.222.52.60 1 1 55632 20230421113747
+46.48.13.161 1 1 55632 20230405061253
+109.239.58.107 1 1 55632 20230415211343
+101.68.211.2 1 1 55632 20230422230208
+93.159.230.89 1 1 55632 20230428061241
+5.182.110.137 1 1 55632 20230423180710
+44.210.123.40 1 1 55632 20230413071006
+20.197.3.65 3 3 166896 20230430221859
+54.185.156.67 1 1 55632 20230428045350
+180.130.255.46 1 1 55632 20230409021527
+46.228.199.158 1 1 55632 20230424063651
+52.32.228.236 1 1 55632 20230401192342
+31.172.67.26 1 1 55632 20230401104301
+87.236.176.63 1 1 55632 20230429211008
+18.237.111.146 1 1 55632 20230416192356
+34.221.43.129 1 1 55632 20230428045405
+35.90.201.94 1 1 55632 20230401192215
+170.106.172.254 1 1 892 20230401062923
+79.173.92.155 1 1 55632 20230419025609
+109.184.90.240 1 1 55632 20230401172631
+47.93.7.75 1 1 55632 20230417133913
+167.94.138.36 1 1 55632 20230429071007
+20.127.229.35 2 2 111264 20230425135203
+34.216.239.1 1 1 55632 20230411193636
+89.163.132.170 1 1 892 20230422222054
+52.172.253.215 2 2 111264 20230423053147
+43.134.231.13 3 3 166896 20230428013211
+193.235.141.19 2 2 111264 20230406191307
+116.198.207.91 1 1 0 20230412112126
+91.132.95.11 4 4 111264 20230427042244
+18.220.153.30 5 5 278160 20230419003027
+199.244.88.228 1 1 55632 20230427104210
+192.30.139.131 1 1 55632 20230419042059
+34.210.121.123 1 1 55632 20230416192316
+188.170.196.197 1 1 18801 20230413114458
+104.244.74.6 1 1 55632 20230411155953
+183.136.225.45 1 1 55632 20230427012344
+167.248.133.124 1 1 55632 20230413033416
+185.195.233.248 1 1 55632 20230404063452
+34.228.54.231 1 1 55632 20230419064005
+52.32.97.127 1 1 55632 20230422193003
+79.173.92.17 1 1 55632 20230418142045
+54.163.50.109 1 1 55632 20230419213210
+34.125.235.117 2 2 111264 20230403051315
+93.100.133.195 4 4 222528 20230420191624
+34.91.123.24 3 3 166896 20230401013803
+31.173.127.117 1 1 55632 20230423055516
+3.140.194.249 5 5 278160 20230405035558
+5.100.255.107 2 2 111264 20230415113743
+18.237.125.50 1 1 55632 20230402194059
+80.82.63.73 1 1 55632 20230409214501
+95.29.246.202 1 1 55632 20230409083425
+3.67.134.168 3 3 166896 20230413140729
+188.68.113.13 1 1 55632 20230419172619
+52.35.129.54 1 1 55632 20230422193011
+158.255.3.138 3 3 111264 20230427072824
+37.139.53.30 4 4 113355 20230405210951
+20.46.48.50 1 1 55632 20230404050314
+38.97.116.244 1 1 55632 20230428064429
+188.68.99.71 1 1 55632 20230411221943
+34.218.77.129 1 1 55632 20230401193314
+185.220.101.25 1 1 55632 20230427004542
+78.111.99.98 1 1 55632 20230421151220
+45.61.187.81 4 4 222528 20230429135420
+54.245.51.206 1 1 55632 20230430214343
+87.236.176.137 1 1 55632 20230411080745
+149.56.160.138 1 1 55632 20230410140046
+20.125.112.223 2 2 111264 20230426122709
+162.243.8.116 1 1 55632 20230423110924
+182.92.149.84 2 2 111264 20230418021929
+193.235.141.146 1 1 55632 20230420025931
+79.126.50.239 1 1 55632 20230425031213
+35.89.89.40 1 1 55632 20230408191817
+95.161.221.104 1 1 55632 20230401222736
+94.25.229.28 1 1 55632 20230424150818
+54.185.40.101 1 1 55632 20230402192826
+162.142.125.14 1 1 55632 20230415033559
+37.204.69.145 1 1 55632 20230417003612
+193.235.141.135 1 1 55632 20230428041805
+185.225.74.114 3 3 166896 20230427145006
+172.245.254.203 2 2 111264 20230423091155
+20.150.218.12 1 1 55632 20230415133449
+143.244.47.100 4 4 222528 20230420195715
+83.220.236.65 1 1 55632 20230414232502
+34.219.29.217 1 1 55632 20230414192619
+193.84.249.180 1 1 55632 20230422190542
+100.26.203.24 1 1 55632 20230413223524
+4.227.254.95 3 3 166896 20230426105033
+103.83.81.45 3 3 166896 20230416050835
+52.36.121.170 1 1 55632 20230415033216
+66.220.149.21 1 1 55632 20230418010709
+193.235.141.90 1 1 55632 20230412024546
+54.185.179.215 1 1 55632 20230414192643
+159.69.243.185 1 1 55632 20230427195520
+192.42.116.193 1 1 55632 20230407030346
+130.61.117.240 3 3 166896 20230425042603
+167.248.133.185 1 1 55632 20230409140416
+5.180.242.0 3 3 111265 20230404155044
+34.220.242.171 1 1 55632 20230422193028
+34.220.131.169 1 1 55632 20230428045404
+162.142.125.11 2 2 111264 20230429055747
+34.219.43.55 1 1 55632 20230401192143
+62.113.118.18 1 1 55632 20230402163349
+35.162.162.184 1 1 55632 20230417194825
+87.236.176.22 1 1 55632 20230406190308
+31.13.127.22 1 1 55632 20230410231555
+185.209.196.207 1 1 55632 20230409182923
+213.252.140.118 1 1 55632 20230405023508
+213.219.228.78 1 1 55632 20230423052137
+47.96.230.8 1 1 55632 20230412125905
+69.167.12.18 1 1 0 20230429183708
+52.255.135.187 1 1 55632 20230428212135
+20.224.100.188 1 1 55632 20230401162558
+146.70.166.232 1 1 55632 20230404153847
+74.249.60.71 2 2 111264 20230428091804
+20.169.195.106 1 1 55632 20230420173327
+188.227.32.96 1 1 55632 20230412173830
+35.80.15.215 1 1 55632 20230429225711
+143.198.200.144 3 3 166896 20230429231914
+193.235.141.17 1 1 55632 20230401114951
+151.55.21.183 4 4 73682 20230401042236
+87.236.176.207 1 1 55632 20230416012351
+34.220.119.83 1 1 55632 20230416192927
+54.188.168.230 1 1 55632 20230402193940
+47.98.131.103 1 1 55632 20230413074439
+35.89.93.133 1 1 55632 20230417194758
+74.125.210.21 2 2 111264 20230411005619
+213.189.216.27 2 2 111264 20230424162552
+34.220.107.241 1 1 55632 20230411193921
+20.201.123.217 1 1 55632 20230404052326
+43.135.140.11 1 1 892 20230420084915
+156.146.56.133 1 1 55632 20230424144503
+3.86.52.146 2 2 111264 20230423090515
+204.12.219.140 1 1 55632 20230429215532
+103.118.43.228 1 1 55632 20230402155516
+35.160.5.229 1 1 55632 20230402193815
+186.179.40.207 1 1 55632 20230428091742
+193.235.141.3 1 1 55632 20230417111237
+35.211.248.167 2 2 74433 20230407021741
+15.207.88.64 1 1 0 20230418034234
+34.222.117.171 1 1 55632 20230430212510
+176.74.192.85 2 2 111264 20230418214526
+162.14.115.238 1 1 55632 20230418042842
+END_VISITOR
+
+# Date - Pages - Hits - Bandwidth - Visits
+BEGIN_DAY 30
+20230401 22 22 1020318 17
+20230402 12 12 667584 12
+20230403 4 4 222528 3
+20230404 12 12 611953 8
+20230405 17 17 687725 8
+20230406 8 8 333041 4
+20230407 7 7 352593 4
+20230408 10 10 556320 7
+20230409 14 14 778848 14
+20230410 7 7 389424 6
+20230411 17 17 945744 14
+20230412 10 10 445056 9
+20230413 13 13 686385 9
+20230414 21 21 870580 9
+20230415 16 16 834480 12
+20230416 11 11 557212 9
+20230417 15 15 779740 13
+20230418 20 20 1057008 15
+20230419 17 17 945744 9
+20230420 21 21 1113532 12
+20230421 8 8 445056 6
+20230422 11 11 557212 11
+20230423 10 10 500688 8
+20230424 10 10 556320 10
+20230425 10 10 556320 8
+20230426 7 7 389424 4
+20230427 15 15 723216 10
+20230428 15 15 834480 12
+20230429 17 17 834480 12
+20230430 12 12 667584 12
+END_DAY
+
+# Session range - Number of visits
+BEGIN_SESSION 5
+0s-30s 282
+5mn-15mn 1
+2mn-5mn 1
+30s-2mn 1
+15mn-30mn 2
+END_SESSION
+
+# URL - Pages - Bandwidth - Entry - Exit
+# The 10 first Pages must be first (order not required for others)
+BEGIN_SIDER 8
+/ 357 19471200 278 269
+/kolichestvennye-mestoimeniya-v-anglijskom-yazyke.html 7 131607 2 5
+/artikli-v-anglijskom-yazyke.html 6 117438 1 1
+/mestoimeniya-v-anglijskom-yazyke.html 6 116094 1 3
+/glagol-to-be-v-anglijskom-yazyke.html 5 79795 0 1
+/admin/controller/extension/extension/ 4 3568 4 4
+/php/register.php 3 1 0 3
+/admin/controller/extension/module/lpinfo.php 1 892 1 1
+END_SIDER

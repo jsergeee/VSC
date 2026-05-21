@@ -1,0 +1,146 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+<!-- Полностью переопределяем блок object-tools-items, чтобы убрать стандартные кнопки -->
+{% block object-tools-items %}
+<!-- Ничего не выводим - стандартные кнопки скрыты -->
+{% endblock %}
+{% block content %}
+<div id="content-main">
+    <!-- Наше кастомное меню действий -->
+    <div style="margin-bottom: 10px; text-align: right;">
+        <div style="display: inline-block; position: relative;">
+            <button onclick="toggleActions()" style="background: #417690; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">
+                ⚡ Действия <span id="actionsIcon">▼</span>
+            </button>
+            <div id="actionsMenu" style="display: none; position: absolute; right: 0; top: 100%; background: white; border: 1px solid #ddd; border-radius: 4px; margin-top: 5px; z-index: 1000; min-width: 200px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <ul style="list-style: none; margin: 0; padding: 0;">
+                    <li style="border-bottom: 1px solid #eee;">
+                        <a href="{% url 'admin:school_teacher_add' %}" style="display: block; padding: 10px 15px; text-decoration: none; color: #333;">
+                            ➕ Добавить учителя
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'import-teachers' %}" class="addlink" style="background: #28a745;">
+                            ⬆️ Импорт учителей
+                        </a>
+                    </li>
+                    <!--    <li>
+                            <a href="{% url 'download-teacher-template' %}" class="addlink" style="background: #17a2b8;">
+                                📥 Шаблон Excel
+                            </a>
+                        </li>-->
+                </ul>
+            </div>
+        </div>
+    </div>
+    <!-- Фильтр по периоду - свернутый по умолчанию -->
+    <div class="module" style="margin-bottom: 20px; border-radius: 5px;">
+        <div style="padding: 10px 15px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px 5px 0 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="toggleFilter()">
+            <h3 style="margin: 0;">Фильтр по периоду <span style="font-size: 0.9rem; color: #6c757d;">(нажмите, чтобы развернуть)</span>
+            </h3>
+            <span id="filterToggleIcon" style="font-size: 1.2rem;">▼</span>
+        </div>
+        <div id="filterContent" style="display: none; padding: 15px; background: #f8f9fa; border: 1px solid #dee2e6; border-top: none;">
+            <form method="get" class="form-inline">
+                <!-- Сохраняем существующие параметры -->
+                {% for key, value in request.GET.items %}
+                {% if key != 'start_date' and key != 'end_date' and key != 'e' %}
+                <input type="hidden" name="{{ key }}" value="{{ value }}">
+                {% endif %}
+                {% endfor %}
+                <div style="display: flex; gap: 15px; align-items: flex-end;">
+                    <div>
+                        <label>Дата с:</label>
+                        <input type="date" name="start_date" value="{{ start_date|default:'' }}" class="vTextField">
+                    </div>
+                    <div>
+                        <label>Дата по:</label>
+                        <input type="date" name="end_date" value="{{ end_date|default:'' }}" class="vTextField">
+                    </div>
+                    <div>
+                        <button type="submit" class="button" style="background: #417690; color: white;">Применить
+                        </button>
+                        <a href="{% url 'admin:school_teacher_changelist' %}" class="button" style="background: #6c757d;">Сброс</a>
+                    </div>
+                </div>
+            </form>
+            {% if teachers_data %}
+            <div style="margin-top: 20px;">
+                <h4>Статистика за период {{ start_date }} - {{ end_date }}</h4>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                    <tr>
+                        <th style="padding: 8px; border-bottom: 2px solid #dee2e6;">Учитель</th>
+                        <th style="padding: 8px; border-bottom: 2px solid #dee2e6;">Оплачено учащимся</th>
+                        <th style="padding: 8px; border-bottom: 2px solid #dee2e6;">Начислено учителю</th>
+                        <th style="padding: 8px; border-bottom: 2px solid #dee2e6;">Выплачено</th>
+                        <th style="padding: 8px; border-bottom: 2px solid #dee2e6;">Комиссия школы</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for teacher in teachers_data %}
+                    <tr>
+                        <td style="padding: 8px;">{{ teacher.teacher.user.get_full_name }}</td>
+                        <td style="padding: 8px; color: #28a745;">{{ teacher.earnings.total_payments|floatformat:2 }}
+                            ₽
+                        </td>
+                        <td style="padding: 8px; color: #ffc107;">{{ teacher.earnings.total_salaries|floatformat:2 }}
+                            ₽
+                        </td>
+                        <td style="padding: 8px; color: #17a2b8;">{{ teacher.earnings.paid_salary|default:0|floatformat:2 }} ₽
+                        </td>
+                        <td style="padding: 8px; font-weight: bold; color: #17a2b8;">
+                            {% if teacher.earnings.commission %}
+                            {{ teacher.earnings.commission|floatformat:2 }} ₽
+                            {% else %}
+                            0.00 ₽
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+        {{ block.super }}
+    </div>
+    <script>
+        function toggleFilter() {
+            var content = document.getElementById('filterContent');
+            var icon = document.getElementById('filterToggleIcon');
+
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.innerHTML = '▲';
+            } else {
+                content.style.display = 'none';
+                icon.innerHTML = '▼';
+            }
+        }
+
+        function toggleActions() {
+            var menu = document.getElementById('actionsMenu');
+            var icon = document.getElementById('actionsIcon');
+
+            if (menu.style.display === 'none') {
+                menu.style.display = 'block';
+                icon.innerHTML = '▲';
+            } else {
+                menu.style.display = 'none';
+                icon.innerHTML = '▼';
+            }
+        }
+
+        // Закрываем меню при клике вне его
+        document.addEventListener('click', function(event) {
+            var menu = document.getElementById('actionsMenu');
+            var button = event.target.closest('button');
+
+            if (!button || !button.innerText.includes('⚡ Действия')) {
+                menu.style.display = 'none';
+                document.getElementById('actionsIcon').innerHTML = '▼';
+            }
+        });
+    </script>
+    {% endblock %}

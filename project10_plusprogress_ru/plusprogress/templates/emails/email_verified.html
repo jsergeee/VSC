@@ -1,0 +1,46 @@
+<!-- templates/emails/email_verified.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #28a745; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f8f9fc; }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer { text-align: center; padding: 20px; color: #858796; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Email подтвержден!</h1>
+        </div>
+        <div class="content">
+            <h2>Здравствуйте, {{ user.get_full_name|default:user.username }}!</h2>
+
+            <p>Ваш email успешно подтвержден. Теперь вы можете полноценно пользоваться всеми возможностями нашей платформы.</p>
+
+            <div style="text-align: center;">
+                <a href="{{ site_url }}/dashboard/" class="button">Перейти в личный кабинет</a>
+            </div>
+
+            <p>Если у вас возникли вопросы, свяжитесь с нами:</p>
+            <p>Email: support@plusprogress.ru<br>
+            Телефон: +7 (999) 123-45-67</p>
+        </div>
+        <div class="footer">
+            <p>© {% now "Y" %} Онлайн-школа "Плюс Прогресс". Все права защищены.</p>
+        </div>
+    </div>
+</body>
+</html>
