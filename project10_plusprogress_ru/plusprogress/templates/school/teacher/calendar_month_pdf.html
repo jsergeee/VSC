@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Календарь учителя {{ month_name }} {{ year }}</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 1cm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 3px;
+            font-weight: normal;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 8px;
+            font-size: 11px;
+        }
+        .calendar {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .calendar th {
+            background: #28a745;
+            color: white;
+            padding: 5px;
+            text-align: center;
+            font-weight: normal;
+            font-size: 11px;
+        }
+        .calendar td {
+            border: 1px solid #ddd;
+            vertical-align: top;
+            height: 70px;
+            padding: 3px;
+        }
+        .day-number {
+            font-weight: bold;
+            margin-bottom: 2px;
+            color: #333;
+            font-size: 11px;
+        }
+        .other-month .day-number {
+            color: #ccc;
+        }
+        .lesson-item {
+            font-size: 8px;
+            padding: 1px 2px;
+            margin-bottom: 1px;
+            background: #f0f8ff;
+            border-radius: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .group-lesson {
+            background: #fff3cd;
+        }
+        .footer {
+            margin-top: 10px;
+            text-align: center;
+            color: #666;
+            font-size: 8px;
+        }
+        .stats {
+            text-align: center;
+            margin-bottom: 8px;
+            font-size: 10px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-size: 7px;
+            margin-left: 2px;
+        }
+        .badge-individual {
+            background: #e3f2fd;
+            color: #0d47a1;
+        }
+        .badge-group {
+            background: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <h1>Расписание занятий</h1>
+    <div class="subtitle">
+        {{ teacher.user.get_full_name }} • {{ month_name|capfirst }} {{ year }}
+    </div>
+
+    <div class="stats">
+        Занятий: <strong>{{ lessons_count }}</strong>
+    </div>
+
+    <table class="calendar">
+        <thead>
+            <tr>
+                <th>Пн</th>
+                <th>Вт</th>
+                <th>Ср</th>
+                <th>Чт</th>
+                <th>Пт</th>
+                <th>Сб</th>
+                <th>Вс</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for week in calendar_days %}
+            <tr>
+                {% for day in week %}
+                <td class="{% if not day.is_current_month %}other-month{% endif %}">
+                    <div class="day-number">{{ day.day }}</div>
+                    {% for lesson in day.lessons %}
+                    <div class="lesson-item {% if lesson.type == 'group' %}group-lesson{% endif %}"
+                         title="{{ lesson.full }}">
+                        {{ lesson.time }} {{ lesson.subject }}
+                        {% if lesson.type == 'group' %}👥{% endif %}
+                        - {{ lesson.students_count }} уч.
+                    </div>
+                    {% endfor %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Школа "Плюс Прогресс" • {{ export_date }}
+    </div>
+</body>
+</html>

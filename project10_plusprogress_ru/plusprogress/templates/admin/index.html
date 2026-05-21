@@ -1,0 +1,70 @@
+{% extends "admin/index.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div id="content-main">
+    <!-- Кастомный блок для расчета выплат -->
+    <div class="module" style="margin-bottom: 20px;">
+        <h2 style="background: #28a745; color: white;">💰 ФИНАНСЫ</h2>
+        <table style="width: 100%;">
+            <tr>
+                <td style="padding: 15px; background: #f8f9fa; border-bottom: 1px solid #eee;">
+                    <a href="{% url 'teacher-payments-dashboard' %}"
+                        style="font-size: 16px; font-weight: bold; color: #28a745; text-decoration: none; display: block;">
+                        📊 Расчет выплат учителям
+                    </a>
+                    <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9em;">
+                        Расчет и экспорт выплат за выбранный период
+                    </p>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 15px; background: #f8f9fa;">
+                    <a href="#"
+                        style="font-size: 16px; font-weight: bold; color: #17a2b8; text-decoration: none; display: block;">
+                        📈 Отчет по ученикам
+                    </a>
+                    <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9em;">
+                        Детальный отчет по успеваемости (в разработке)
+                    </p>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    {% include "admin/app_list.html" with app_list=app_list show_changelinks=True %}
+</div>
+{% endblock %}
+
+{% block sidebar %}
+<div id="content-related">
+    <div class="module" id="recent-actions-module">
+        <h2>{% translate 'Recent actions' %}</h2>
+        <h3>{% translate 'My actions' %}</h3>
+        {% load log %}
+        {% get_admin_log 10 as admin_log for_user user %}
+        {% if not admin_log %}
+        <p>{% translate 'None available' %}</p>
+        {% else %}
+        <ul class="actionlist">
+            {% for entry in admin_log %}
+            <li
+                class="{% if entry.is_addition %}addlink{% endif %}{% if entry.is_change %}changelink{% endif %}{% if entry.is_deletion %}deletelink{% endif %}">
+                {% if entry.is_deletion or not entry.get_admin_url %}
+                {{ entry.object_repr }}
+                {% else %}
+                <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+                {% endif %}
+                <br>
+                {% if entry.content_type %}
+                <span class="mini quiet">{% filter capfirst %}{{ entry.content_type.name }}{% endfilter %}</span>
+                {% else %}
+                <span class="mini quiet">{% translate 'Unknown content' %}</span>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

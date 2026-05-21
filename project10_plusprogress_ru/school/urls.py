@@ -88,6 +88,7 @@ urlpatterns = [
     path('admin/school/student/<int:student_id>/report/', views.student_report, name='admin-student-report'),
     path('lesson/<int:lesson_id>/', views.lesson_detail, name='lesson_detail'),
     path('lesson/<int:lesson_id>/feedback/', views.lesson_feedback, name='lesson_feedback'),
+    path('api/feedback/', views.feedback_ajax, name='feedback_ajax'),
     path('log-video-entry/<int:lesson_id>/', log_video_entry, name='log_video_entry'),
 
     # Teacher URLs

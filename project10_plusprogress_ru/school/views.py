@@ -6338,3 +6338,45 @@ def article_detail(request, slug):
         'page_title': article.title,
     }
     return render(request, 'school/articles/detail.html', context)
+
+
+from django.views.decorators.csrf import csrf_exempt
+import json
+
+@csrf_exempt
+@require_POST
+def feedback_ajax(request):
+    """AJAX обработка отзыва"""
+    try:
+        name = request.POST.get('name', '').strip()
+        text = request.POST.get('text', '').strip()
+        rating = request.POST.get('rating', 5)
+        role = request.POST.get('role', '').strip()
+        
+        if not name or not text:
+            return JsonResponse({'error': 'Заполните имя и отзыв'}, status=400)
+        
+        feedback = Feedback.objects.create(
+            name=name,
+            text=text,
+            rating=int(rating),
+            role=role,
+            is_active=False,
+            is_on_main=False
+        )
+        
+        # Уведомление админу
+        admin_users = User.objects.filter(is_superuser=True)
+        for admin in admin_users:
+            Notification.objects.create(
+                user=admin,
+                title='✍️ Новый отзыв',
+                message=f'Новый отзыв от {feedback.name} ожидает модерации',
+                notification_type='system',
+                link=f'/admin/school/feedback/{feedback.id}/change/'
+            )
+        
+        return JsonResponse({'status': 'ok', 'message': 'Спасибо за отзыв!'})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

@@ -5146,3 +5146,16 @@ margin: auto auto auto auto;
     background-position: center;
     vertical-align: middle;
 }
+
+
+.search-form-block {
+    height: 39px;
+    
+
+
+}
+
+.btn-search-article {
+    margin: 0px 0px 0px 10px !important;
+    
+}

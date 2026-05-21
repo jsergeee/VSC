@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Настройки Telegram{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4>Настройки Telegram уведомлений</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h5>🤖 Как получить Chat ID:</h5>
+                        <p>{{ instruction|linebreaks }}</p>
+                        <p>Бот: <strong>@{{ bot_username }}</strong></p>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label">Telegram Chat ID</label>
+                            {{ form.telegram_chat_id }}
+                            <div class="form-text">Вставьте сюда ваш ID из ответа Telegram</div>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            {{ form.telegram_notifications }}
+                            <label class="form-check-label">
+                                Получать уведомления в Telegram
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa fa-save"></i> Сохранить
+                        </button>
+                        <a href="{% url 'profile' %}" class="btn btn-secondary">
+                            Назад
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
