@@ -4647,12 +4647,12 @@ def teacher_create_schedule(request):
                 )
                 print(f"✅ Внутреннее уведомление учителю создано")
 
-                # Telegram уведомление
-                try:
-                    notify_new_lesson(lesson)
-                    print(f"✅ Telegram уведомление отправлено для урока {lesson.id}")
-                except Exception as e:
-                    print(f"❌ Ошибка отправки Telegram: {e}")
+                # # Telegram уведомление
+                # try:
+                #     notify_new_lesson(lesson)
+                #     print(f"✅ Telegram уведомление отправлено для урока {lesson.id}")
+                # except Exception as e:
+                #     print(f"❌ Ошибка отправки Telegram: {e}")
 
             print(f"{'=' * 50}\n")
 

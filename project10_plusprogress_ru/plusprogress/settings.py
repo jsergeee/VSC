@@ -54,6 +54,7 @@ MIDDLEWARE = [
     'school.middleware.StudentProfileMiddleware',
     'school.middleware.EmailVerificationMiddleware',
     'school.middleware.OverdueLessonsMiddleware',
+    'school.middleware.PageViewLoggingMiddleware',
 ]
 
 ROOT_URLCONF = 'plusprogress.urls'
