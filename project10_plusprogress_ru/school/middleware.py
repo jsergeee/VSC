@@ -12,6 +12,9 @@ import logging
 from .models import User
 from django.utils import timezone
 from .models import Lesson
+from django.utils.deprecation import MiddlewareMixin
+from .models import UserActionLog
+from .utils import get_client_ip
 
 
 class StudentProfileMiddleware(MiddlewareMixin):
@@ -143,3 +146,37 @@ class UserActionLogMiddleware:
             # Логирование входа будет в views.py после успешной аутентификации
             pass
         return None
+    
+
+class PageViewLoggingMiddleware(MiddlewareMixin):
+    """Логирование просмотров страниц"""
+    
+    def process_response(self, request, response):
+        # Игнорируем статику, админку, API и AJAX
+        if request.path.startswith(('/static/', '/admin/', '/api/')):
+            return response
+        
+        # Игнорируем файлы и медиа
+        if request.path.startswith('/media/'):
+            return response
+        
+        # Только для авторизованных пользователей
+        if request.user.is_authenticated:
+            try:
+                # Создаём запись в логе
+                UserActionLog.objects.create(
+                    user=request.user,
+                    action_type='page_view',
+                    description=f'Просмотр страницы: {request.path}',
+                    ip_address=get_client_ip(request),
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+                    url=request.path,
+                    additional_data={
+                        'method': request.method,
+                        'referer': request.META.get('HTTP_REFERER', '')
+                    }
+                )
+            except Exception as e:
+                print(f"Ошибка логирования: {e}")
+        
+        return response
