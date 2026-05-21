@@ -25,6 +25,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Roboto+Slab:wght@600&display=swap" rel="stylesheet">
     <link rel="shortcut icon" type="image/png" href="{% static 'favicon.ico' %}" />
     <style>
+    .wow {
+    visibility: hidden;
+        }
+    #articles .wow.animated {
+    visibility: visible !important;
+        }
         /* Временные стили для кнопки */
         .btn-application {
             position: fixed !important;
@@ -757,6 +763,36 @@
             });
             console.log('✅ Обработчик ссылок с якорями загружен');
         });
+
+// Анимация для секции статей
+document.addEventListener('DOMContentLoaded', function() {
+    // Функция активации анимации
+    function animateArticles() {
+        const elements = document.querySelectorAll('#articles .wow');
+        elements.forEach(el => {
+            const rect = el.getBoundingClientRect();
+            const winHeight = window.innerHeight;
+            
+            // Если элемент в зоне видимости или рядом
+            if (rect.top < winHeight - 50) {
+                if (!el.classList.contains('animated')) {
+                    el.classList.add('animated');
+                    // Принудительно делаем видимым
+                    el.style.visibility = 'visible';
+                }
+            }
+        });
+    }
+    
+    // Запускаем сразу
+    animateArticles();
+    
+    // Запускаем при скролле
+    window.addEventListener('scroll', animateArticles);
+    
+    // Запускаем с небольшой задержкой для надежности
+    setTimeout(animateArticles, 200);
+});
     </script>
     {% block extra_js %}{% endblock %}
 </body>

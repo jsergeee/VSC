@@ -1,0 +1,315 @@
+// ========== ПЕРЕМЕННЫЕ ==========
+// Цвета
+$primary-color: #3498db
+$secondary-color: #2ecc71
+$danger-color: #e74c3c
+$dark-color: #2c3e50
+$light-color: #ecf0f1
+$text-color: #333333
+
+// Типографика
+$font-family-base: 'Arial', sans-serif
+$font-size-base: 16px
+$line-height-base: 1.5
+
+// Отступы
+$spacing-unit: 16px
+$border-radius: 4px
+
+// Брейкпоинты
+$breakpoint-mobile: 576px
+$breakpoint-tablet: 768px
+$breakpoint-desktop: 1024px
+
+// ========== МИКСИНЫ ==========
+=flex-center
+  display: flex
+  justify-content: center
+  align-items: center
+
+=transition($property: all, $duration: 0.3s)
+  transition: $property $duration ease-in-out
+
+=media-mobile
+  @media (max-width: $breakpoint-mobile)
+    @content
+
+=media-tablet
+  @media (max-width: $breakpoint-tablet)
+    @content
+
+
+=media-desktop
+  @media (min-width: $breakpoint-desktop)
+    @content
+
+// ========== СБРОС СТИЛЕЙ ==========
+*
+  margin: 0
+  padding: 0
+  box-sizing: border-box
+
+html
+  font-size: $font-size-base
+
+body
+  font-family: $font-family-base
+  font-size: $font-size-base
+  line-height: $line-height-base
+  color: $text-color
+  background-color: $light-color
+
+// ========== УТИЛИТЫ ==========
+.container
+  max-width: 1200px
+  margin: 0 auto
+  padding: 0 $spacing-unit
+
+  +media-tablet
+    padding: 0 $spacing-unit / 2
+
+.text-center
+  text-align: center
+
+.mt-1
+  margin-top: $spacing-unit
+
+.mt-2
+  margin-top: $spacing-unit * 2
+
+.mb-1
+  margin-bottom: $spacing-unit
+
+.mb-2
+  margin-bottom: $spacing-unit * 2
+
+// ========== КНОПКИ ==========
+.btn
+  display: inline-block
+  padding: $spacing-unit / 2 $spacing-unit
+  border: none
+  border-radius: $border-radius
+  font-size: 1rem
+  cursor: pointer
+  +transition
+
+  &-primary
+    background-color: $primary-color
+    color: white
+
+    &:hover
+      background-color: darken($primary-color, 10%)
+
+  &-secondary
+    background-color: $secondary-color
+    color: white
+
+    &:hover
+      background-color: darken($secondary-color, 10%)
+
+  &-danger
+    background-color: $danger-color
+    color: white
+
+    &:hover
+      background-color: darken($danger-color, 10%)
+
+// ========== НАВИГАЦИЯ ==========
+.navbar
+  background-color: $dark-color
+  padding: $spacing-unit
+
+  &-menu
+    list-style: none
+    display: flex
+    gap: $spacing-unit
+
+    +media-mobile
+      flex-direction: column
+      gap: $spacing-unit / 2
+
+  &-item
+    a
+      color: white
+      text-decoration: none
+      +transition
+
+      &:hover
+        color: $primary-color
+
+// ========== КАРТОЧКИ ==========
+.card
+  background-color: white
+  border-radius: $border-radius
+  padding: $spacing-unit
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1)
+  +transition
+
+  &:hover
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15)
+
+  &-image
+    width: 100%
+    height: auto
+    margin-bottom: $spacing-unit
+
+  &-title
+    font-size: 1.25rem
+    margin-bottom: $spacing-unit / 2
+
+  &-text
+    color: lighten($text-color, 20%)
+
+// ========== ФОРМЫ ==========
+.form
+  &-group
+    margin-bottom: $spacing-unit
+
+  &-label
+    display: block
+    margin-bottom: $spacing-unit / 2
+    font-weight: bold
+
+  &-input
+    width: 100%
+    padding: $spacing-unit / 2
+    border: 1px solid #ddd
+    border-radius: $border-radius
+    font-size: 1rem
+    +transition
+
+    &:focus
+      outline: none
+      border-color: $primary-color
+
+  &-error
+    color: $danger-color
+    font-size: 0.875rem
+    margin-top: $spacing-unit / 4
+
+// ========== СЕТКА ==========
+.grid
+  display: grid
+  grid-template-columns: repeat(12, 1fr)
+  gap: $spacing-unit
+
+  +media-mobile
+    gap: $spacing-unit / 2
+
+  &-col
+    &-6
+      grid-column: span 6
+
+    &-4
+      grid-column: span 4
+
+    &-3
+      grid-column: span 3
+
+  +media-mobile
+    &-col-6,
+    &-col-4,
+    &-col-3
+      grid-column: span 12
+
+// ========== АНИМАЦИИ ==========
+@keyframes fadeIn
+  from
+    opacity: 0
+  to
+    opacity: 1
+
+@keyframes slideIn
+  from
+    transform: translateY(20px)
+    opacity: 0
+  to
+    transform: translateY(0)
+    opacity: 1
+
+.fade-in
+  animation: fadeIn 0.5s ease-in
+
+.slide-in
+  animation: slideIn 0.5s ease-out
+
+
+//==========Body=======
+
+body
+  background-image: url("../../typeawaynumerodos.jpg")   
+  background-repeat: no-repeat
+.body 
+  position: absolute
+  background-color: rgba(222, 222, 236, 0.5)
+  z-index: 10 
+  min-height: 100vh 
+  width: 100%
+    
+
+
+    
+    
+
+
+//==========Main=======
+
+
+
+//==========Header=======
+.header
+  display: flex !important
+  justify-content: center
+  margin: auto
+  border-radius: 50px
+  background-color: white
+  border: 1px solid white
+  // margin: 0px 20px auto 20px
+  z-index: 10 
+  margin-top: 50px
+  position: absolute
+  top: 50px
+  width: 95%
+  max-width: 100hv
+  +media-tablet
+    justify-content: flex-start
+    
+.head_container
+  width: 100%
+  display: flex
+  justify-content: space-between
+  align-content: center
+
+
+.logo
+  border-radius: 50px
+  background-position: center
+  background-image: url("../../logo_white.png")
+  background-size: cover
+  height: 100px
+  width: 100px
+  margin-left: 0px
+  min-width: 50px
+  +media-tablet
+    justify-content: left
+
+
+.nav
+  display: flex
+  justify-content: space-between
+  margin-left: 200px
+  align-items: center
+  max-width: 100%
+
+  +media-tablet
+    display: none
+  
+  ul 
+    display: flex
+  li 
+    margin-right: 10px
+    list-style: none
+    display: flex
+    
+
+//==========bottom=======
