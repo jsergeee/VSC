@@ -4647,12 +4647,12 @@ def teacher_create_schedule(request):
                 )
                 print(f"✅ Внутреннее уведомление учителю создано")
 
-                # # Telegram уведомление
-                # try:
-                #     notify_new_lesson(lesson)
-                #     print(f"✅ Telegram уведомление отправлено для урока {lesson.id}")
-                # except Exception as e:
-                #     print(f"❌ Ошибка отправки Telegram: {e}")
+                # Telegram уведомление
+#                try:
+#                    notify_new_lesson(lesson)
+#                    print(f"✅ Telegram уведомление отправлено для урока {lesson.id}")
+#                except Exception as e:
+#                    print(f"❌ Ошибка отправки Telegram: {e}")
 
             print(f"{'=' * 50}\n")
 
@@ -5559,7 +5559,9 @@ def trial_request_ajax(request):
         email = request.POST.get('email', '').strip()
         phone = request.POST.get('phone', '').strip()
         subject = request.POST.get('subject', '').strip()
-        
+        #проверка honeypot
+        if request.POST.get('honeypot', ''):
+            return JsonResponse({'status': 'ok'}, status=200) #Молча игнорируем бота
         # Валидация
         if not name:
             return JsonResponse({'error': 'Укажите имя'}, status=400)
