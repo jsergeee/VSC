@@ -187,3 +187,13 @@ def log_user_action(request, action_type, description, object_id=None, object_ty
     except Exception as e:
         print(f"❌ ОШИБКА при создании лога: {e}")
         return None
+    
+    
+def get_client_ip(request):
+    """Получение реального IP пользователя"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
