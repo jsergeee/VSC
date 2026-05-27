@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Мои задачи</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .task {
+            border: 1px solid #ccc;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .new {
+            background: #e3f2fd;
+        }
+
+        .in_progress {
+            background: #fff3e0;
+        }
+
+        .done {
+            background: #e8f5e9;
+        }
+
+        .status-buttons {
+            margin: 10px 0;
+        }
+
+        button {
+            margin: 2px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        .delete {
+            background: #ffebee;
+            color: #c62828;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Мои задачи</h1>
+
+    <a href="{% url 'tasks:task_create' %}">+ Новая задача</a>
+
+    <div class="status-buttons">
+        <a href="{% url 'tasks:task_list' %}">Все</a>
+    </div>
+
+    {% for task in tasks %}
+    <div class="task {{ task.status }}">
+        <h3>{{ task.title }}</h3>
+        <p>{{ task.description|default:"—" }}</p>
+        <p>Статус: {{ task.get_status_display }}</p>
+        <p>Создана: {{ task.created_at|date:"d.m.Y H:i" }}</p>
+
+        {% if task.status != 'done' %}
+        <a href="{% url 'tasks:task_update_status' task.pk %}?status=done">✓ Готово</a>
+        {% endif %}
+        {% if task.status == 'new' %}
+        <a href="{% url 'tasks:task_update_status' task.pk %}?status=in_progress">▶ В работу</a>
+        {% endif %}
+
+        <a href="{% url 'tasks:task_delete' task.pk %}" class="delete" onclick="return confirm('Удалить?')">🗑 Удалить</a>
+    </div>
+    {% empty %}
+    <p>Нет задач. <a href="{% url 'tasks:task_create' %}">Создайте первую</a></p>
+    {% endfor %}
+</body>
+
+</html>

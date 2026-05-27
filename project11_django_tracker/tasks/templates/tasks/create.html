@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Новая задача</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        a {
+            margin-left: 10px;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Новая задача</h1>
+
+    <form method="post">
+        {% csrf_token %}
+        <label>Название:</label>
+        <input type="text" name="title" required>
+
+        <label>Описание (необязательно):</label>
+        <textarea name="description" rows="5"></textarea>
+
+        <button type="submit">Создать</button>
+        <a href="{% url 'tasks:task_list' %}">Отмена</a>
+    </form>
+</body>
+
+</html>
