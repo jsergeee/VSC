@@ -48,6 +48,7 @@ urlpatterns = [
     path('logout/', views.user_logout, name='logout'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('profile/', views.profile, name='profile'),
+    path('requisites/', views.requisites, name='requisites'),
 
     # Email verification
     path('verify-email/<str:token>/', views.verify_email, name='verify_email'),
@@ -161,8 +162,6 @@ urlpatterns = [
     path('teacher/materials/<int:material_id>/edit/', views.teacher_material_edit, name='teacher_material_edit'),
     path('teacher/materials/<int:material_id>/delete/', views.teacher_material_delete, name='teacher_material_delete'),
     path('material/<int:material_id>/', views.material_detail, name='material_detail'),
-
-
     path('team/', views.teachers_team, name='teachers_team'),
     path('team/<int:teacher_id>/', views.teacher_detail, name='teacher_detail'),
 
@@ -184,5 +183,10 @@ urlpatterns = [
         # Sitemap
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='sitemap'),
     path('robots.txt', robots_txt),
-
+    
+    # Платежи через Альфа-Банк
+    path('payment/', views.payment_page, name='payment_page'),
+    path('payment/initiate/', views.initiate_payment, name='initiate_payment'),
+    path('payment/callback/', views.payment_callback, name='payment_callback'),
+     
 ]

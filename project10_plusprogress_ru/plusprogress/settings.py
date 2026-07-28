@@ -188,3 +188,10 @@ TELEGRAM_BOT_TOKEN = '8391902139:AAGHIcvya9Zk1ZlsDFBkn6WJEBxE5TyK02Y'
 TELEGRAM_CHAT_ID = '1226934902'
 
 BASE_URL = 'https://www.plusprogress.ru'
+
+
+# Альфа-Банк
+ALFA_BANK_LOGIN = 'r-plusprogress-api'
+ALFA_BANK_PASSWORD = '=8a=QA%4xaJTATs'
+
+ALFA_PAYMENT_URL = 'https://payment.alfabank.ru/sc/uMTDjjSaQHbYLUFH'

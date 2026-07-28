@@ -51,22 +51,25 @@
         </div>
     </div>
 
-    <!-- Баланс с цветовой индикацией -->
-    <div class="row">
-        <div class="col-12">
-            <div class="balance-card">
-                <div class="row align-items-center">
-                    <div class="col-md-6">
-                        <div class="balance-label">Текущий баланс</div>
-                        <div class="balance-amount {% if user.get_balance < 0 %}balance-negative{% else %}balance-positive{% endif %}">
-                        {{ user.get_balance }} ₽
-                        </div>
+<!-- Баланс с цветовой индикацией -->
+<div class="row">
+    <div class="col-12">
+        <div class="balance-card">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="balance-label">Текущий баланс</div>
+                    <div class="balance-amount {% if user.get_balance < 0 %}balance-negative{% else %}balance-positive{% endif %}">
+                    {{ user.get_balance }} ₽
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
+<a href="{{ payment_url }}" target="_blank" class="btn btn-success btn-lg">
+    <i class="fa fa-credit-card"></i> Пополнить баланс
+</a>
     <!-- Быстрая статистика -->
     <div class="quick-stats">
         <div class="stat-card">
