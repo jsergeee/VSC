@@ -4,15 +4,10 @@ from django.contrib import messages
 from .models import Student
 from django.shortcuts import redirect
 from django.urls import reverse
-from django.contrib import messages
-from django.shortcuts import redirect
-from django.urls import reverse
-from django.contrib import messages
 import logging
 from .models import User
 from django.utils import timezone
 from .models import Lesson
-from django.utils.deprecation import MiddlewareMixin
 from .models import UserActionLog
 from .utils import get_client_ip
 
@@ -22,14 +17,10 @@ class StudentProfileMiddleware(MiddlewareMixin):
 
     def process_request(self, request):
         if request.user.is_authenticated and request.user.role == 'student':
-            # Проверяем наличие профиля ученика
             try:
-                # Просто проверяем существование
                 profile = request.user.student_profile
             except:
-                # Если профиля нет, создаем его
                 Student.objects.create(user=request.user)
-                # Добавляем сообщение в сессию, чтобы показать при следующем запросе
                 request.session['profile_recreated'] = True
 
 
@@ -41,7 +32,6 @@ class EmailVerificationMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # Список разрешенных URL для неподтвержденных пользователей
         allowed_paths = [
             '/logout/',
             '/login/',
@@ -72,31 +62,23 @@ class OverdueLessonsMiddleware:
         self.last_check = None
 
     def __call__(self, request):
-        from datetime import datetime
-        from django.utils import timezone
-        from school.models import Lesson
-
         now = timezone.now()
 
-        # Проверяем раз в час
         if self.last_check is None or (now - self.last_check).seconds > 3600:
             today = now.date()
             current_time = now.time()
 
-            # Уроки с прошедшей датой
             past_lessons = Lesson.objects.filter(
                 status='scheduled',
                 date__lt=today
             )
 
-            # Уроки сегодня, но время уже прошло
             today_past = Lesson.objects.filter(
                 status='scheduled',
                 date=today,
                 start_time__lt=current_time
             )
 
-            # Обновляем статусы
             if past_lessons.exists():
                 past_lessons.update(status='overdue')
 
@@ -109,16 +91,13 @@ class OverdueLessonsMiddleware:
 
 
 import threading
-from .models import UserActionLog
 
 class UserActionLogMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
-        # Сохраняем информацию о входе/выходе в потоке
         self._current_user = threading.local()
 
     def __call__(self, request):
-        # Сохраняем информацию о запросе
         if request.user.is_authenticated:
             request.user_action_log = {
                 'user': request.user,
@@ -141,42 +120,37 @@ class UserActionLogMiddleware:
         return ip
 
     def process_view(self, request, view_func, view_args, view_kwargs):
-        """Логирование входа/выхода"""
-        if request.path.endswith('/login/') and request.method == 'POST':
-            # Логирование входа будет в views.py после успешной аутентификации
-            pass
         return None
-    
+
 
 class PageViewLoggingMiddleware(MiddlewareMixin):
     """Логирование просмотров страниц"""
-    
+
     def process_response(self, request, response):
-        # Игнорируем статику, админку, API и AJAX
+        # Игнорируем статику, админку, API
         if request.path.startswith(('/static/', '/admin/', '/api/')):
             return response
-        
+
         # Игнорируем файлы и медиа
         if request.path.startswith('/media/'):
             return response
-        
-        # Только для авторизованных пользователей
-        if request.user.is_authenticated:
-            try:
-                # Создаём запись в логе
-                UserActionLog.objects.create(
-                    user=request.user,
-                    action_type='page_view',
-                    description=f'Просмотр страницы: {request.path}',
-                    ip_address=get_client_ip(request),
-                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
-                    url=request.path,
-                    additional_data={
-                        'method': request.method,
-                        'referer': request.META.get('HTTP_REFERER', '')
-                    }
-                )
-            except Exception as e:
-                print(f"Ошибка логирования: {e}")
-        
+
+        # Логируем всех (включая гостей)
+        try:
+            UserActionLog.objects.create(
+                user=request.user if request.user.is_authenticated else None,
+                action_type='page_view',
+                description=f'Просмотр страницы: {request.path}',
+                ip_address=get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+                url=request.path,
+                additional_data={
+                    'method': request.method,
+                    'referer': request.META.get('HTTP_REFERER', ''),
+                    'is_authenticated': request.user.is_authenticated
+                }
+            )
+        except Exception as e:
+            print(f"Ошибка логирования: {e}")
+
         return response

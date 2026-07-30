@@ -890,9 +890,21 @@ def calculate_payments(self, request, queryset):
 
 # ==================== STUDENT ADMIN ====================
 
+# school/admin.py - замените существующий класс StudentAdmin на этот
+
 class StudentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user_link', 'parent_name', 'parent_phone',
-                    'get_teachers_count', 'last_lesson', 'balance_display', 'get_telegram_status')
+    list_display = (
+        'id', 
+        'user_link', 
+        'parent_name', 
+        'parent_phone',
+        'get_teachers_names',      # 🔥 НОВЫЙ СТОЛБЕЦ: ФИО всех учителей
+        'get_student_prices',      # 🔥 НОВЫЙ СТОЛБЕЦ: Цены по предметам
+        'get_teachers_count',
+        'last_lesson', 
+        'balance_display', 
+        'get_telegram_status'
+    )
     search_fields = ('user__first_name', 'user__last_name', 'user__email', 'parent_name')
     filter_horizontal = ('teachers',)
     list_filter = ('teachers',)
@@ -914,6 +926,58 @@ class StudentAdmin(admin.ModelAdmin):
             'classes': ('wide',),
         }),
     )
+
+    # ===== НОВЫЕ МЕТОДЫ ДЛЯ СТОЛБЦОВ =====
+
+    @admin.display(description='Учителя (ФИО)')
+    def get_teachers_names(self, obj):
+        """Возвращает список всех учителей ученика с ФИО"""
+        teachers = obj.teachers.select_related('user').all()
+        if teachers:
+            names = []
+            for teacher in teachers:
+                full_name = teacher.user.get_full_name()
+                # Сокращаем до "Иванов И.И."
+                parts = full_name.split()
+                if len(parts) >= 2:
+                    short_name = f"{parts[0]} {parts[1][0]}."
+                    if len(parts) >= 3:
+                        short_name += f"{parts[2][0]}."
+                    names.append(short_name)
+                else:
+                    names.append(full_name)
+            return ", ".join(names)
+        return "—"
+
+    @admin.display(description='Цены по предметам')
+    def get_student_prices(self, obj):
+        """Возвращает все индивидуальные цены ученика по предметам"""
+        from school.models import StudentSubjectPrice
+        
+        prices = StudentSubjectPrice.objects.filter(
+            student=obj,
+            is_active=True
+        ).select_related('subject', 'teacher__user').order_by('subject__name')
+        
+        if prices:
+            result = []
+            for p in prices:
+                teacher_name = p.teacher.user.get_full_name() if p.teacher else "—"
+                # Сокращаем имя учителя
+                parts = teacher_name.split()
+                if len(parts) >= 2:
+                    teacher_short = f"{parts[0]} {parts[1][0]}."
+                    if len(parts) >= 3:
+                        teacher_short += f"{parts[2][0]}."
+                else:
+                    teacher_short = teacher_name
+                    
+                result.append(f"{p.subject.name}: {p.cost:.0f}₽ ({teacher_short})")
+            return ", ".join(result)
+        return "—"
+
+    # ===== СУЩЕСТВУЮЩИЕ МЕТОДЫ (оставляем как есть) =====
+
     def get_telegram_status(self, obj):
         if obj.user.telegram_chat_id:
             return f"✅ {obj.user.telegram_chat_id}"
@@ -923,12 +987,10 @@ class StudentAdmin(admin.ModelAdmin):
     def user_link(self, obj):
         url = f'/admin/school/user/{obj.user.id}/change/'
         return format_html('<a href="{}">{}</a>', url, obj.user.get_full_name())
-
     user_link.short_description = 'Ученик'
 
     def get_teachers_count(self, obj):
         return obj.teachers.count()
-
     get_teachers_count.short_description = 'Кол-во учителей'
 
     def last_lesson(self, obj):
@@ -937,16 +999,13 @@ class StudentAdmin(admin.ModelAdmin):
             return format_html('<a href="/admin/school/lesson/{}/change/">{} {}</a>',
                                last.id, last.date.strftime('%d.%m.%Y'), last.subject)
         return '-'
-
     last_lesson.short_description = 'Последний урок'
 
     def balance_display(self, obj):
         """Отображение баланса с цветом"""
         try:
-            # Используем правильный расчет баланса
             balance = float(obj.user.balance_calculated)
         except (AttributeError, TypeError, ValueError):
-            # Если что-то пошло не так
             from django.db.models import Sum
             from school.models import Payment, LessonAttendance
 
@@ -962,7 +1021,6 @@ class StudentAdmin(admin.ModelAdmin):
 
             balance = float(total_deposits - attended_cost)
 
-        # Форматируем число
         balance_str = f"{balance:.2f} ₽"
 
         if balance < 0:
@@ -971,9 +1029,7 @@ class StudentAdmin(admin.ModelAdmin):
             return format_html('<span style="color: #28a745; font-weight: bold;">{}</span>', balance_str)
         else:
             return format_html('<span style="color: #6c757d;">{}</span>', balance_str)
-
     balance_display.short_description = 'Баланс'
-
 
     # ⚡⚡⚡ МЕТОД ДЛЯ ОБРАБОТКИ СПИСКА СО СТАТИСТИКОЙ ⚡⚡⚡
     def changelist_view(self, request, extra_context=None):
@@ -988,41 +1044,25 @@ class StudentAdmin(admin.ModelAdmin):
             start_date = request.session.get('student_filter_start')
             end_date = request.session.get('student_filter_end')
 
-        print("\n" + "=" * 80)
-        print("🔍 STUDENT ADMIN CHANGELIST VIEW")
-        print(f"📅 start_date: {start_date}")
-        print(f"📅 end_date: {end_date}")
-        print("=" * 80)
-
         if start_date and end_date:
             try:
                 from datetime import datetime
                 start = datetime.strptime(start_date, '%Y-%m-%d').date()
                 end = datetime.strptime(end_date, '%Y-%m-%d').date()
 
-                print(f"\n✅ Период преобразован: {start} - {end}")
-
                 extra_context = extra_context or {}
                 students_data = []
 
-                # Для подсчета итогов
                 total_lessons = 0
                 total_cost = 0
                 total_balance = 0
 
-                # Получаем всех учеников
                 students = self.get_queryset(request)
-                print(f"\n👥 Всего учеников: {students.count()}")
 
                 for student in students:
-                    print(f"\n{'─' * 50}")
-                    print(f"👨‍🎓 Обработка ученика: {student.user.get_full_name()} (ID: {student.id})")
-
-                    # Получаем статистику по урокам за период
                     from django.db.models import Sum, Count
                     from school.models import LessonAttendance
 
-                    # Уроки за период со статусом 'attended'
                     attended_lessons = LessonAttendance.objects.filter(
                         student=student,
                         status='attended',
@@ -1044,19 +1084,12 @@ class StudentAdmin(admin.ModelAdmin):
                         created_at__date__lte=end
                     ).aggregate(Sum('amount'))['amount__sum'] or 0
 
-                    # Группировка по предметам
                     subjects_stats = attended_lessons.values(
                         'lesson__subject__name'
                     ).annotate(
                         count=Count('id'),
                         total=Sum('cost')
                     ).order_by('-total')
-
-                    print(f"📊 Статистика:")
-                    print(f"   уроков: {lessons_count}")
-                    print(f"   сумма: {student_total_cost}")
-                    for subj in subjects_stats:
-                        print(f"   - {subj['lesson__subject__name']}: {subj['count']} ур. = {subj['total']}₽")
 
                     students_data.append({
                         'student': student,
@@ -1065,10 +1098,9 @@ class StudentAdmin(admin.ModelAdmin):
                         'subjects_stats': subjects_stats,
                         'balance': student_balance,
                         'total_deposits': total_deposits,
-                        'total_deposits_period': student_deposits_period,  # Пополнения за период
+                        'total_deposits_period': student_deposits_period,
                     })
 
-                    # Добавляем к итогам
                     total_lessons += lessons_count
                     total_cost += student_total_cost
                     total_balance += student_balance
@@ -1080,18 +1112,10 @@ class StudentAdmin(admin.ModelAdmin):
                 extra_context['total_cost'] = total_cost
                 extra_context['total_balance'] = total_balance
 
-                print(f"\n✅ students_data создан, размер: {len(students_data)}")
-                print(f"📊 ИТОГО: уроков={total_lessons}, сумма={total_cost}, баланс={total_balance}")
-
             except Exception as e:
                 print(f"❌ ОШИБКА в changelist_view: {e}")
-                import traceback
-                traceback.print_exc()
 
-        print("=" * 80 + "\n")
         return super().changelist_view(request, extra_context)
-
-
 
     actions = ['export_students_excel', 'show_finance_report']
 
@@ -1107,7 +1131,7 @@ class StudentAdmin(admin.ModelAdmin):
         ws.title = "Ученики"
 
         headers = ['ID', 'Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон',
-                   'Родитель', 'Телефон родителя', 'Баланс', 'Учителя']
+                   'Родитель', 'Телефон родителя', 'Баланс', 'Учителя', 'Цены по предметам']
 
         header_font = Font(bold=True, color="FFFFFF")
         header_fill = PatternFill(start_color="417690", end_color="417690", fill_type="solid")
@@ -1119,9 +1143,17 @@ class StudentAdmin(admin.ModelAdmin):
             cell.alignment = Alignment(horizontal='center')
 
         for row, student in enumerate(queryset, start=2):
+            # Учителя
             teachers = ", ".join([t.user.get_full_name() for t in student.teachers.all()[:3]])
             if student.teachers.count() > 3:
                 teachers += f" и еще {student.teachers.count() - 3}"
+
+            # Цены по предметам
+            prices = StudentSubjectPrice.objects.filter(
+                student=student,
+                is_active=True
+            ).select_related('subject', 'teacher__user')
+            prices_str = ", ".join([f"{p.subject.name}: {p.cost:.0f}₽" for p in prices])
 
             ws.cell(row=row, column=1, value=student.id)
             ws.cell(row=row, column=2, value=student.user.last_name)
@@ -1133,8 +1165,9 @@ class StudentAdmin(admin.ModelAdmin):
             ws.cell(row=row, column=8, value=student.parent_phone)
             ws.cell(row=row, column=9, value=float(student.user.get_balance()))
             ws.cell(row=row, column=10, value=teachers)
+            ws.cell(row=row, column=11, value=prices_str)
 
-        column_widths = [8, 15, 15, 15, 25, 15, 20, 15, 12, 30]
+        column_widths = [8, 15, 15, 15, 25, 15, 20, 15, 12, 30, 40]
         for i, width in enumerate(column_widths, 1):
             ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
 
@@ -1146,7 +1179,6 @@ class StudentAdmin(admin.ModelAdmin):
 
         wb.save(response)
         return response
-
     export_students_excel.short_description = "📥 Экспорт выбранных учеников в Excel"
 
     def show_finance_report(self, request, queryset):
@@ -1156,10 +1188,13 @@ class StudentAdmin(admin.ModelAdmin):
             return redirect(f'/admin/school/student/{student.id}/report/')
         else:
             self.message_user(request, 'Выберите одного ученика для просмотра отчета', level='WARNING')
-
     show_finance_report.short_description = "📊 Финансовый отчет"
 
-
+    # ⚡ Оптимизация запросов
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('user').prefetch_related('teachers__user')
+    
 # ==================== LESSON FORMAT ADMIN ====================
 
 class LessonFormatAdmin(admin.ModelAdmin):

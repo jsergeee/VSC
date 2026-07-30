@@ -59,21 +59,7 @@ from django.contrib import messages
 import openpyxl
 from datetime import datetime
 import traceback
-import requests
-from django.conf import settings
-from django.shortcuts import redirect
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.urls import reverse
-import uuid
-import time
-import requests
-from django.conf import settings
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect
-from decimal import Decimal
-from .models import Payment
+
 
 
 # Импорты моделей
@@ -442,6 +428,22 @@ def create_lesson_with_prices(teacher, student, subject, date, start_time, end_t
 # ============================================
 # ЧАСТЬ 3: ОСНОВНЫЕ VIEWS (рефакторинг ключевых функций)
 # ============================================
+
+
+def about(request):
+    return render(request, 'school/about.html')
+
+def requisites(request):
+    return render(request, 'school/requisites.html')
+
+def privacy_policy(request):
+    return render(request, 'school/privacy_policy.html')
+
+def offer(request):
+    return render(request, 'school/offer.html')
+
+def user_agreement(request):
+    return render(request, 'school/user_agreement.html')
 
 def home(request):
     """
@@ -839,7 +841,6 @@ def student_dashboard(request):
 
         # Пополнения
         'recent_deposits': recent_deposits,
-        'payment_url': settings.ALFA_PAYMENT_URL,
 
         # Уроки
         'upcoming_lessons': upcoming_lessons_list,
@@ -6399,166 +6400,5 @@ def feedback_ajax(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-# ============================================
-# ЧАСТЬ 14: ОПЛАТА
-# ============================================
-
-@login_required
-def payment_page(request):
-    """Страница оплаты"""
-    if request.user.role != 'student':
-        messages.error(request, 'Доступ запрещен')
-        return redirect('dashboard')
-    
-    return render(request, 'school/payment.html', {'user': request.user})
-
-@login_required
-def initiate_payment(request):
-    """Инициация платежа через Альфа-Банк"""
-    if request.method != 'POST':
-        return redirect('student_dashboard')
-    
-    # Проверяем, что это ученик
-    if request.user.role != 'student':
-        messages.error(request, 'Доступ запрещен')
-        return redirect('dashboard')
-    
-    amount = request.POST.get('amount')
-    try:
-        amount = int(float(amount))
-        if amount < 100:
-            messages.error(request, 'Минимальная сумма пополнения 100 ₽')
-            return redirect('student_dashboard')
-    except (ValueError, TypeError):
-        messages.error(request, 'Введите корректную сумму')
-        return redirect('student_dashboard')
-    
-    # Генерируем уникальный номер заказа
-    order_number = f"PAY-{request.user.id}-{int(time.time())}"
-    
-    # Данные для API Альфа-Банка
-    if settings.DEBUG:
-        # Для тестовой среды
-        api_url = "https://alfa.rbsuat.com/payment/rest/register.do"
-    else:
-        # Для продуктивной (боевой) среды
-        api_url = "https://payment.alfabank.ru/payment/rest/register.do"
-    
-    # Получите эти данные от банка
-    login = settings.ALFA_BANK_LOGIN
-    password = settings.ALFA_BANK_PASSWORD
-    
-    back_url = request.build_absolute_uri(reverse('payment_callback'))
-    fail_url = request.build_absolute_uri(reverse('student_dashboard'))
-    
-    payload = {
-        'userName': login,
-        'password': password,
-        'orderNumber': order_number,
-        'amount': amount * 100,  # Сумма в копейках!
-        'returnUrl': back_url,
-        'failUrl': fail_url,
-        'description': f'Пополнение баланса ученика {request.user.get_full_name()}',
-        'email': request.user.email,
-    }
-    
-    try:
-        response = requests.post(api_url, data=payload, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        
-        if data.get('errorCode') == 0:
-            # Сохраняем информацию о платеже в сессию или БД
-            request.session['payment_order_id'] = data.get('orderId')
-            request.session['payment_amount'] = amount
-            
-            # Перенаправляем на страницу оплаты
-            payment_url = f"https://pay.alfabank.ru/payment/merchant/payment?orderId={data.get('orderId')}"
-            return redirect(payment_url)
-        else:
-            error_message = data.get('errorMessage', 'Неизвестная ошибка')
-            messages.error(request, f'Ошибка создания платежа: {error_message}')
-            return redirect('student_dashboard')
-            
-    except requests.exceptions.RequestException as e:
-        messages.error(request, f'Ошибка соединения с платежной системой: {str(e)}')
-        return redirect('student_dashboard')
-    
-    
-    
 
 
-@login_required
-def payment_callback(request):
-    """Обработка возврата после оплаты (callback от Альфа-Банка)"""
-    
-    # Получаем параметры от банка
-    order_id = request.GET.get('orderId')
-    
-    if not order_id:
-        messages.error(request, 'Некорректный запрос от платежной системы')
-        return redirect('student_dashboard')
-    
-    # Проверяем статус платежа через API Альфа-Банка
-    if settings.DEBUG:
-        api_url = "https://alfa.rbsuat.com/payment/rest/getOrderStatus.do"
-    else:
-        api_url = "https://payment.alfabank.ru/payment/rest/getOrderStatus.do"
-    
-    payload = {
-        'userName': settings.ALFA_BANK_LOGIN,
-        'password': settings.ALFA_BANK_PASSWORD,
-        'orderId': order_id,
-    }
-    
-    try:
-        response = requests.post(api_url, data=payload, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        
-        # Статус 2 означает "Успешно оплачен"
-        if data.get('OrderStatus') == 2:
-            # Получаем сумму из сессии или из ответа
-            amount = request.session.get('payment_amount')
-            
-            if not amount:
-                # Если сумма не сохранилась — берем из ответа
-                amount = Decimal(data.get('Amount', 0)) / 100  # Из копеек в рубли
-            
-            # Создаем запись о платеже
-            Payment.objects.create(
-                user=request.user,
-                amount=amount,
-                payment_type='income',
-                description=f'Пополнение баланса через Альфа-Банк (заказ #{order_id})'
-            )
-            
-            # Пополняем баланс пользователя
-            request.user.balance += amount
-            request.user.save()
-            
-            messages.success(request, f'Баланс успешно пополнен на {amount} ₽!')
-            
-            # Очищаем сессию
-            request.session.pop('payment_amount', None)
-            request.session.pop('payment_order_id', None)
-            
-        elif data.get('OrderStatus') == 0:
-            messages.warning(request, 'Платеж еще не оплачен. Проверьте позже.')
-        elif data.get('OrderStatus') == 1:
-            messages.warning(request, 'Платеж отменен.')
-        else:
-            messages.error(request, f'Неизвестный статус платежа: {data.get("OrderStatus")}')
-            
-    except requests.exceptions.RequestException as e:
-        messages.error(request, f'Ошибка проверки статуса платежа: {str(e)}')
-    
-    return redirect('student_dashboard')
-
-
-
-
-
-def requisites(request):
-    """Страница с реквизитами"""
-    return render(request, 'school/requisites.html')

@@ -2062,6 +2062,7 @@ class UserActionLog(models.Model):
         ('report_view', '📊 Просмотр отчета'),
         ('other', '📌 Другое'),
         ('page_view', '👁️ Просмотр страницы'),
+
     )
 
     user = models.ForeignKey(
