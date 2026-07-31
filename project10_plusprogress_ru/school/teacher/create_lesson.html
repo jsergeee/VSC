@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Создать урок{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fa fa-plus-circle"></i>
+                        Создать новое занятие
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'teacher_create_lesson' %}">
+                        {% csrf_token %}
+
+                        <div class="form-group mb-3">
+                            <label for="student">Ученик <span class="text-danger">*</span></label>
+                            <select class="form-control" id="student" name="student" required>
+                                <option value="">Выберите ученика...</option>
+                                {% for student in students %}
+                                <option value="{{ student.id }}">{{ student.user.get_full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="subject">Предмет <span class="text-danger">*</span></label>
+                            <select class="form-control" id="subject" name="subject" required>
+                                <option value="">Выберите предмет...</option>
+                                {% for subject in teacher.subjects.all %}
+                                <option value="{{ subject.id }}">{{ subject.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="topic">Тема занятия</label>
+                            <input type="text" class="form-control" id="topic" name="topic">
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="date">Дата занятия <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="date" name="date" required>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="start_time">Время начала <span class="text-danger">*</span></label>
+                                    <input type="time" class="form-control" id="start_time" name="start_time" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="end_time">Время окончания</label>
+                                    <input type="time" class="form-control" id="end_time" name="end_time">
+                                    <small class="text-muted">Если не указано, длительность 60 мин</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="notes">Заметки</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'teacher_dashboard' %}" class="btn btn-secondary">
+                                <i class="fa fa-arrow-left"></i> Назад
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fa fa-save"></i> Создать урок
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Автоматический расчет времени окончания
+    document.getElementById('start_time')?.addEventListener('change', function() {
+        var startTime = this.value;
+        if (startTime) {
+            var parts = startTime.split(':');
+            var hours = parseInt(parts[0]) + 1;
+            var minutes = parts[1];
+
+            if (hours >= 24) {
+                hours = 23;
+                minutes = 59;
+            }
+
+            var endTime = ('0' + hours).slice(-2) + ':' + minutes;
+            document.getElementById('end_time').value = endTime;
+        }
+    });
+</script>
+{% endblock %}

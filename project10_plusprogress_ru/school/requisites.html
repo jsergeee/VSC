@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Реквизиты - Плюс Прогресс{% endblock %}
+
+{% block content %}
+<section class="section-white py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center mb-5">
+                <h1 class="section-title">Реквизиты</h1>
+                <p class="text-muted">Информация об индивидуальном предпринимателе</p>
+            </div>
+        </div>
+        
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h4 class="mb-4">Индивидуальный предприниматель</h4>
+                        
+                        <div class="row mb-3">
+                            <div class="col-4 text-muted">ФИО</div>
+                            <div class="col-8 fw-bold">ЯКОВЕНКО ГУЛЬМИРА БУЛАТОВНА</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-4 text-muted">ИНН</div>
+                            <div class="col-8 fw-bold">165038799248</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-4 text-muted">ОГРНИП</div>
+                            <div class="col-8 fw-bold">320169000132758</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-4 text-muted">Дата регистрации</div>
+                            <div class="col-8">06.11.2020</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-4 text-muted">E-mail</div>
+                            <div class="col-8">GULMIRAYAKOVENKO@YANDEX.RU</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-4 text-muted">Регистрирующий орган</div>
+                            <div class="col-8">Межрайонная инспекция ФНС № 18 по Республике Татарстан</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-4 text-muted">ОКВЭД</div>
+                            <div class="col-8">85.41.9 — Образование дополнительное детей и взрослых, не включенное в другие группировки</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

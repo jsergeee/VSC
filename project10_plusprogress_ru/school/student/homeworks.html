@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Мои домашние задания{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        padding: 20px;
+        color: white;
+        text-align: center;
+    }
+
+    .homework-card {
+        border-left: 4px solid;
+        margin-bottom: 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s;
+    }
+
+    .homework-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .status-pending {
+        border-left-color: #ffc107;
+    }
+
+    .status-submitted {
+        border-left-color: #17a2b8;
+    }
+
+    .status-checked {
+        border-left-color: #28a745;
+    }
+
+    .status-overdue {
+        border-left-color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4"><i class="fa fa-book"></i> Мои домашние задания</h2>
+
+    <!-- Статистика -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="stats-card">
+                <div class="h3 mb-0">{{ stats.total }}</div>
+                <small>Всего</small>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stats-card" style="background: #ffc107;">
+                <div class="h3 mb-0">{{ stats.pending }}</div>
+                <small>Ожидают</small>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stats-card" style="background: #17a2b8;">
+                <div class="h3 mb-0">{{ stats.submitted }}</div>
+                <small>На проверке</small>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stats-card" style="background: #28a745;">
+                <div class="h3 mb-0">{{ stats.checked }}</div>
+                <small>Проверено</small>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stats-card" style="background: #dc3545;">
+                <div class="h3 mb-0">{{ stats.overdue }}</div>
+                <small>Просрочено</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Список заданий -->
+    {% if homeworks %}
+    {% for homework in homeworks %}
+    <div class="homework-card status-{{ homework.get_status }} p-3">
+        <div class="row align-items-center">
+            <div class="col-md-4">
+                <h5 class="mb-1">
+                    <a href="{% url 'student_homework_detail' homework.id %}" class="text-dark">
+                        {{ homework.title }}
+                    </a>
+                </h5>
+                <small class="text-muted">
+                    <i class="fa fa-user"></i> {{ homework.teacher.user.get_full_name }}
+                </small>
+            </div>
+            <div class="col-md-2">
+                <span class="badge badge-{{ homework.get_status }} p-2">
+                    {{ homework.get_status_display }}
+                </span>
+            </div>
+            <div class="col-md-3">
+                <small>
+                    <i class="fa fa-calendar"></i> Срок: {{ homework.deadline|date:"d.m.Y H:i" }}
+                </small>
+            </div>
+            <div class="col-md-3 text-right">
+                {% if homework.submission %}
+                {% if homework.submission.grade %}
+                <span class="badge badge-success p-2 mr-2">
+                    Оценка: {{ homework.submission.grade }}/5
+                </span>
+                {% endif %}
+                {% endif %}
+                <a href="{% url 'student_homework_detail' homework.id %}" class="btn btn-sm btn-outline-primary">
+                    <i class="fa fa-eye"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fa fa-book fa-4x text-muted mb-3"></i>
+        <h5>Нет домашних заданий</h5>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

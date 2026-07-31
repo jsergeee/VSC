@@ -1,0 +1,518 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% load static %}
+
+{% block title %}Плюс Прогресс - английский, русский, математика онлайн. Подготовка к ОГЭ, ЕГЭ.{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Стили для карточек статей (как в list.html) */
+    #articles .card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border-radius: 15px;
+        overflow: hidden;
+    }
+
+    #articles .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    }
+
+    #articles .card-img-top {
+        transition: transform 0.5s ease;
+    }
+
+    #articles .card:hover .card-img-top {
+        transform: scale(1.05);
+    }
+
+    #articles .btn-red {
+        transition: all 0.3s ease;
+    }
+
+    #articles .btn-red:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(229, 47, 55, 0.3);
+    }
+
+    #articles .card-title a {
+        transition: color 0.3s ease;
+    }
+
+    #articles .card-title a:hover {
+        color: #e52f37;
+    }
+</style>
+{% endblock %}
+{% block content %}
+<!--begin home section -->
+<section class="home-section" id="home">
+    <!-- ЦЕНТРИРОВАННЫЙ H1 ВВЕРХУ -->
+    <div class="row">
+        <div class="col-12 text-center mb-4">
+            <h1 class="main-title">Плюс Прогресс: <br> Эксперное сопровождение в учебе.<br> <!--обучение онлайн: <br>--> Английский, русский, математика, информатика и другие предметы — с интересом и результатом
+            </h1>
+        </div>
+    </div>
+    <div class="row">
+        <!-- ЛЕВАЯ ЧАСТЬ - КОНТЕНТ (РАСШИРЕНА) -->
+        <div class="col-md-7">
+            <h2 class="section-subtitle">Английский онлайн</h2>
+            <div class="subjects-grid">
+                <div class="subject-column">
+                    <p class="hero-text">Взрослым:</p>
+                    <ul class="subject-list">
+                        <li>бизнес английский</li>
+                        <li>подготовка к экзаменам (IELTS, TOEFL и др.)</li>
+                        <li>подготовка к собеседованию</li>
+                        <li>английский для путешествий</li>
+                        <li>общий английский</li>
+                        <li>разговорный английский</li>
+                    </ul>
+                </div>
+                <div class="subject-column">
+                    <p class="hero-text">Детям и подросткам:</p>
+                    <ul class="subject-list">
+                        <li>курс чтения</li>
+                        <li>школьный английский</li>
+                        <li>подготовка к экзаменам (ОГЭ, ЕГЭ и др.)</li>
+                        <li>разговорный английский</li>
+                        <li>углубленное изучение английского</li>
+                        <li>английский для путешествий</li>
+                        <li>разбор трудных тем</li>
+                        <li>помощь в выполнении домашнего задания</li>
+                    </ul>
+                </div>
+            </div>
+            <h3 class="section-subtitle">Русский, математика, биология онлайн</h3>
+            <div class="subjects-grid">
+                <div class="subject-column">
+                    <p class="hero-text">Математика онлайн:</p>
+                    <ul class="subject-list">
+                        <li>помощь в освоении школьной программы</li>
+                        <li>углубленное изучение математики</li>
+                        <li>разбор трудных тем</li>
+                        <li>подготовка к ОГЭ, ЕГЭ</li>
+                    </ul>
+                </div>
+                <div class="subject-column">
+                    <p class="hero-text">Русский язык онлайн:</p>
+                    <ul class="subject-list">
+                        <li>помощь в освоении школьной программы</li>
+                        <li>углубленное изучение русского языка</li>
+                        <li>разбор трудных тем</li>
+                        <li>подготовка к ОГЭ, ЕГЭ</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="subjects-grid">
+                <div class="subject-column">
+                    <p class="hero-text">Биология онлайн:</p>
+                    <ul class="subject-list">
+                        <li>помощь в освоении школьной программы</li>
+                        <li>углубленное изучение биологии</li>
+                        <li>разбор трудных тем</li>
+                        <li>подготовка к ОГЭ, ЕГЭ</li>
+                    </ul>
+                </div>
+                <div class="subject-column">
+                    <p class="hero-text">Предметы начальной школы:</p>
+                    <ul class="subject-list">
+                        <li>помощь в освоении школьной программы</li>
+                        <li>углубленное изучение предметов начальной школы</li>
+                        <li>разбор трудных тем</li>
+                    </ul>
+                </div>
+            </div>
+            <a href="#about" class="btn-red scrool">Узнать больше</a>
+        </div>
+    </div>
+    </div>
+    <!--    <a id="blink-wa" href="https://t.me/plusprogress?text=Здравствуйте, пишу Вам с сайта." target="_blank">
+        Написать <i class="fa fa-whatsapp ml-1"></i>
+    </a>-->
+</section>
+
+<!--begin partners-section-->
+<div class="partners-section">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-10 mx-auto text-center partners">
+                <h5 class="partners-title">Наши сертификаты:</h5>
+                <a href="https://sun9-60.userapi.com/impg/KUN2uBYEsTe45kVEm-fLtTaDAN4rs0GgQXRKrA/rv7fKhVKMIQ.jpg?size=948x728&quality=96&proxy=1&sign=dc78dc6c8650f53c23d2a5358c40d548&type=album" target="_blank">
+                    <img src="{% static 'images/certificates/tesol.png' %}" class="partners" alt="image">
+                </a>
+                <a href="https://thumb.cloud.mail.ru/weblink/thumb/xw1/Qcoi/MCkaPoAis" target="_blank">
+                    <img src="{% static 'images/certificates/ihbelfast-logo.png' %}" class="partners" alt="image">
+                </a>
+                <a href="https://sun9-16.userapi.com/impg/v5-RzUsAWTt0mqHAzNQ_i3f0552N7Zk9fbK59g/liEBRZ2f_9c.jpg?size=951x728&quality=96&proxy=1&sign=55c1177873d944a38c9122ac581c4efe&type=album" target="_blank">
+                    <img src="{% static 'images/certificates/coursera.png' %}" style="width: 150px" class="partners" alt="image">
+                </a>
+                <a href="https://sun9-51.userapi.com/impg/KuB81U-xIVdl7wWVC7igN3KnUmimEI5ha1KP-A/1HCvHD0hxJo.jpg?size=608x786&quality=96&proxy=1&sign=f6f04ef7a0dbcb265acd4c3929ff8a7a&type=album" target="_blank">
+                    <img src="{% static 'images/certificates/global-tefl-logo.png' %}" class="partners" alt="image">
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--begin section-white -->
+<section class="section-white" id="about">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12 text-center margin-bottom-10">
+                <h2 class="section-title">Почему выбирают нас</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="services-wrapper">
+        <div class="container">
+            <div class="row" style="cursor: pointer">
+                <div class="col-md-6">
+                    <div class="main-services green">
+                        <i class="fa fa-thumbs-up"></i>
+                        <h4>С нами удобно</h4>
+                        <p>Можешь заниматься дома, а можешь в любимом парке или в уютном кафе.
+                            Единственное, что тебе нужно, это интернет. Не трать силы и время на дорогу, просто включи
+                            гаджет!</p>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="main-services yellow">
+                        <i class="fa fa-credit-card" aria-hidden="true"></i>
+                        <h4>Доступные цены без потери качества</h4>
+                        <p>У нас умеренные цены, и при этом НЕ нужно выкупать большой пакет занятий на 6-9 месяцев
+                            вперед. Цена действительна даже при оплате за 1 месяц.</p>
+                        <p>В наших группах всего от 2 до 5 человек. Это позволяет подобрать наиболее подходящих друг
+                            другу по уровню учеников, так чтобы занятия были максимально результативными для всех. В
+                            таких маленьких группах учитель успевает уделить достаточное для прогресса количество
+                            времени каждому, а ученики чувствуют себя более комфортно.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-12">
+                    <div class="main-services red">
+                        <i class="fa fa-university"></i>
+                        <h4>Наша методика</h4>
+                        <p>Применяемые методы личностно-ориентированного подхода повышают мотивацию к обучению, а
+                            принципы гуманной педагогики создают атмосферу комфорта и доброжелательности на занятиях и
+                            вселяют в наших студентов уверенность в собственные силы. Всё это, а также профессионализм
+                            наших преподавателей и желание студентов развиваться, помогает нам вместе добиться высоких
+                            результатов в обучении.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Начало секции с отзывами - ДОБАВЛЯЕМ СТАТИСТИКУ -->
+<section class="section-grey" id="testimonials">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 d-flex justify-content-between align-items-center mb-4">
+                <h2 class="section-title mb-0">Отзывы клиентов</h2>
+                <button type="button" class="btn btn-outline-feedback open-feedback-modal">
+                    <i class="fa fa-pencil"></i> Оставить отзыв
+                </button>
+            </div>
+        </div>
+
+        <!-- ===== НОВЫЙ БЛОК СО СЧЕТЧИКОМ И СТАТИСТИКОЙ ===== -->
+        {% if total_feedbacks > 0 %}
+        <div class="row mb-3">
+        <div class="col-md-6 col-lg-5 col-xl-4 mx-auto">
+            <!-- Компактная карточка статистики -->
+            <div class="feedback-stats-card" style="background: #f8f9fa; border-radius: 10px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <div class="row align-items-center g-2">
+                    <!-- Общий счетчик (компактный) -->
+                    <div class="col-5 text-center">
+                        <div class="total-feedback-count">
+                            <span class="count-number" style="font-size: 2rem; font-weight: 700; line-height: 1; display: block; color: #2c3e50;">{{ total_feedbacks }}</span>
+                            <span class="count-label" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #7f8c8d;">отзывов</span>
+                        </div>
+                        <div class="average-rating mt-1">
+                            {% with avg=rating_stats.avg %}
+                            <span class="rating-value" style="font-size: 1.1rem; font-weight: 600; color: #f39c12; margin-right: 4px;">{{ avg|floatformat:1 }}</span>
+                            <span class="rating-stars" style="font-size: 0.8rem;">
+                                {% for i in "12345"|make_list %}
+                                    {% if forloop.counter <= avg|floatformat:0|add:0 %}
+                                        <i class="fa fa-star text-warning"></i>
+                                    {% elif forloop.counter == avg|floatformat:0|add:1 and avg|floatformat:1|slice:"-1:" == "5" %}
+                                        <i class="fa fa-star-half-o text-warning"></i>
+                                    {% else %}
+                                        <i class="fa fa-star-o text-muted" style="opacity: 0.5;"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </span>
+                            {% endwith %}
+                        </div>
+                    </div>
+
+                    <!-- Детальная статистика (компактная) -->
+                    <div class="col-7">
+                        <div class="rating-breakdown" style="font-size: 0.8rem;">
+                            {% for rating in "54321"|make_list %}
+                            <div class="rating-row d-flex align-items-center mb-1">
+                                <span class="rating-label" style="min-width: 35px; font-weight: 500;">
+                                    {{ rating }} <i class="fa fa-star" style="font-size: 0.65rem; color: #f39c12;"></i>
+                                </span>
+                                <div class="progress flex-grow-1" style="height: 6px; margin: 0 6px; background-color: #e9ecef; border-radius: 10px;">
+                                    {% with percent_key=rating|add:"_percent" %}
+                                    <div class="progress-bar bg-warning" style="width: {{ rating_stats|get_item:percent_key }}%; height: 6px; border-radius: 10px;" role="progressbar"></div>
+                                    {% endwith %}
+                                </div>
+                                <span class="rating-count" style="min-width: 20px; text-align: right; color: #7f8c8d; font-weight: 500;">
+                                    {% with count_key=rating %}
+                                    {{ rating_stats|get_item:count_key }}
+                                    {% endwith %}
+                                </span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+            {% endif %}
+            <!-- ===== КОНЕЦ НОВОГО БЛОКА ===== -->
+
+            <div class="row">
+                <div class="col-md-12 mx-auto padding-bottom-40">
+                    {% if feedbacks %}
+                    <div class="row">
+                        <div class="col-md-12 mx-auto padding-bottom-40">
+                            {% if feedbacks %}
+                            <div id="carouselIndicators2" class="carousel slide" data-ride="carousel">
+                                <ol class="carousel-indicators testimonials-indicators">
+                                    {% for feedback in feedbacks %}
+                                    <li data-target="#carouselIndicators2" data-slide-to="{{ forloop.counter0 }}" {% if forloop.first %}class="active" {% endif %}></li>
+                                    {% endfor %}
+                                </ol>
+
+                                <div class="carousel-inner">
+                                    {% for feedback in feedbacks %}
+                                    <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                                        <div class="row align-items-center testim-inner">
+                                            <div class="col-md-10 mx-auto">
+                                                <i class="fa fa-quote-left" aria-hidden="true"></i>
+                                                <p>{{ feedback.text|linebreaksbr }}</p>
+                                                <h6>
+                                                    {{ feedback.name }}
+                                                    {% if feedback.role %}
+                                                    <span>, {{ feedback.role }}</span>
+                                                    {% endif %}
+                                                </h6>
+                                                {% if feedback.teacher %}
+                                                <p class="small text-muted">Учитель: {{ feedback.teacher.user.get_full_name }}</p>
+                                                {% endif %}
+                                                {% if feedback.rating %}
+                                                <div class="feedback-rating">
+                                                    {% for i in "12345"|make_list %}
+                                                    {% if forloop.counter <= feedback.rating %} <i class="fa fa-star text-warning"></i>
+                                                        {% else %}
+                                                        <i class="fa fa-star-o text-muted"></i>
+                                                        {% endif %}
+                                                        {% endfor %}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+
+                                <a class="carousel-control-prev" href="#carouselIndicators2" role="button" data-slide="prev">
+                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                    <span class="sr-only">Previous</span>
+                                </a>
+                                <a class="carousel-control-next" href="#carouselIndicators2" role="button" data-slide="next">
+                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                    <span class="sr-only">Next</span>
+                                </a>
+                            </div>
+                            {% else %}
+                            <div class="text-center">
+                                <p class="text-muted">Пока нет отзывов. Будьте первым!</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center">
+                        <p class="text-muted">Пока нет отзывов. Будьте первым!</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+</section>
+
+
+<!--begin pricing section -->
+<section class="section-grey" id="pricing">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-12 col-sm-12" style="text-align: center">
+                <h2>Стоимость занятий</h2>
+                <p>Цена действительна БЕЗ выкупа большого пакета занятий</p>
+                <p>Уроки проводят опытные преподаватели с оконченным образованием</p>
+            </div>
+
+            <div class="col-md-12 col-sm-12 wow bounceIn" data-wow-delay="0.25s">
+                <div class="price-box-white row">
+                    <div class="col-md-6 p-0">
+                        <ul class="pricing-list" style="list-style-type: none;">
+                            <li class="price-title">Английский язык</li>
+                            <li class="price-text">1 урок (60 мин.) в мини-группе из 3-5 человек - 500 руб.</li>
+                            <li class="price-text">1 урок (60 мин.) в парной группе (2 человека) – 700 руб.</li>
+                            <li class="price-text">1 урок (35 мин.) индивидуально - 750 руб.</li>
+                            <li class="price-text">1 урок (45 мин.) индивидуально – 950 руб.</li>
+                            <li class="price-text">1 урок (60 мин.) индивидуально – 1100 руб.</li>
+                            <li class="price-text">ОГЭ 1 урок (60 мин.) индивидуально - 1200 руб.</li>
+                            <li class="price-text">ЕГЭ, IELTS и др. (60 мин.) индивидуально - 1400 руб.</li>
+                        </ul>
+                    </div>
+
+                    <div class="col-md-6 p-0">
+                        <ul class="pricing-list">
+                            <li class="price-title">Французский и немецкий языки</li>
+                            <li class="price-text">1 урок индивидуально 45 мин. 850 руб.</li>
+                            <li class="price-text">1 урок индивидуально 60 мин. 1000 руб.</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex justify-content-center align-items-center width-100 flex-wrap" style="gap: 15px">
+                        <ul class="pricing-list">
+                            <li class="price-tag"><a href="#home" class="scrool">Оставить заявку</a></li>
+                        </ul>
+                        <ul class="pricing-list">
+                            <li class="price-tag__red"><a href="https://t.me/plusprogress?text=Здравствуйте, пишу Вам с сайта." target="_blank" class="d-flex align-items-center">Написать <i class="fa fa-whatsapp ml-1" style="font-size: 26px"></i></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-12 col-sm-12 wow bounceIn" data-wow-delay="0.25s">
+                <div class="price-box-white row">
+                    <div class="col-md-6 p-0">
+                        <ul class="pricing-list" style="list-style-type: none;">
+                            <li class="price-title">Математика</li>
+                            <li class="price-text">1 урок в группе из 2 человек (50 мин.) 550 руб.</li>
+                            <li class="price-text">1 урок в группе из 2 человек (60 мин.) 650 руб.</li>
+                            <li class="price-text">1 урок индивидуально (35 мин.) 700 руб.</li>
+                            <li class="price-text">1 урок индивидуально (45 мин.) 850 руб.</li>
+                            <li class="price-text">1 урок индивидуально (60 мин.) 1000 руб.</li>
+                            <li class="price-text">1 урок (ОГЭ)индивидуально (60 мин.) 1100 руб.</li>
+                            <li class="price-text">1 урок (ЕГЭ)индивидуально (60 мин.) 1350 руб.</li>
+                        </ul>
+                    </div>
+
+                    <div class="col-md-6 p-0">
+                        <ul class="pricing-list">
+                            <li class="price-title">Русский язык</li>
+                            <li class="price-text">1 урок в группе из 2 человек (50 мин.) 550руб.</li>
+                            <li class="price-text">1 урок в группе из 2 человек (60 мин.) 650 руб.</li>
+                            <li class="price-text">1 урок индивидуально (35 мин.) 700 руб.</li>
+                            <li class="price-text">1 урок индивидуально (45 мин.) 850 руб.</li>
+                            <li class="price-text">1 урок индивидуально (60 мин.) 950 руб.</li>
+                            <li class="price-text">1 урок (ОГЭ) индивидуально (60 мин.) 1100 руб.</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex justify-content-center align-items-center width-100 flex-wrap" style="gap: 15px">
+                        <ul class="pricing-list">
+                            <li class="price-tag"><a href="#home" class="scrool">Оставить заявку</a></li>
+                        </ul>
+                        <ul class="pricing-list">
+                            <li class="price-tag__red"><a href="https://t.me/plusprogress?text=Здравствуйте, пишу Вам с сайта." target="_blank" class="d-flex align-items-center">Написать <i class="fa fa-whatsapp ml-1" style="font-size: 26px"></i></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-12 col-sm-12 wow bounceIn" data-wow-delay="0.25s">
+                <div class="price-box-white row">
+                    <div class="col-md-6 p-0">
+                        <ul class="pricing-list">
+                            <li class="price-title">Предметы начальной школы</li>
+                            <li class="price-text">1 урок индивидуально (35 мин.) 750 руб.</li>
+                            <li class="price-text">1 урок индивидуально (45 мин.) 850 руб.</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex justify-content-center align-items-center width-100 flex-wrap" style="gap: 15px">
+                        <ul class="pricing-list">
+                            <li class="price-tag"><a href="#home" class="scrool">Оставить заявку</a></li>
+                        </ul>
+                        <ul class="pricing-list">
+                            <li class="price-tag__red"><a href="https://wa.me/79872736974?text=Здравствуйте, пишу Вам с сайта." target="_blank" class="d-flex align-items-center">Написать <i class="fa fa-whatsapp ml-1" style="font-size: 26px"></i></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!--begin articles section -->
+<section class="section-grey" id="articles">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center margin-bottom-10 wow fadeInUp">
+                <h2 class="section-title">Полезные статьи</h2>
+                <p class="text-muted">Полезные материалы по английскому языку, математике, русскому и другим предметам</p>
+            </div>
+        </div>
+
+        <div class="row">
+            {% if articles %}
+                {% for article in articles %}
+                <div class="col-md-4 mb-4 wow fadeInUp" data-wow-delay="0.{{ forloop.counter }}s">
+                    <div class="main-services" style="background: white; padding: 0; text-align: left;">
+                        {% if article.photo %}
+                        <img src="{{ article.photo.url }}" class="img-fluid w-100" alt="{{ article.title }}" style="height: 200px; object-fit: cover; border-radius: 15px 15px 0 0;">
+                        {% endif %}
+                        <div style="padding: 1.5rem;">
+                            <div class="text-muted small mb-2">
+                                <i class="fa fa-calendar"></i> {{ article.created_at|date:"d.m.Y" }}
+                                <i class="fa fa-eye ms-2"></i> {{ article.views_count }}
+                            </div>
+                            <h4 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem;">
+                                <a href="{% url 'article_detail' article.slug %}" class="text-dark text-decoration-none" style="transition: color 0.3s;">
+                                    {{ article.title|truncatechars:60 }}
+                                </a>
+                            </h4>
+                            <p class="text-muted" style="margin-bottom: 1rem; line-height: 1.5;">
+                                {{ article.excerpt|default:article.content|striptags|truncatechars:100 }}
+                            </p>
+                            <a href="{% url 'article_detail' article.slug %}">
+                                Читать далее
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12 text-center">
+                    <div class="alert alert-info">
+                        <i class="fa fa-info-circle"></i> Статей пока нет. Скоро появятся!
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12 text-center wow fadeInUp">
+                <a href="{% url 'article_list' %}" class="price-tag__red">
+                    Все статьи <i class="fa fa-arrow-right ms-2"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

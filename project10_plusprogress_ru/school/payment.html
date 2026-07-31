@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Оплата{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fa fa-credit-card"></i> Пополнение баланса</h4>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <h5>Текущий баланс: <strong>{{ user.get_balance }} ₽</strong></h5>
+                    </div>
+                    
+                    <form method="post" action="{% url 'initiate_payment' %}">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label>Сумма пополнения, ₽</label>
+                            <input type="number" name="amount" class="form-control form-control-lg" 
+                                   placeholder="1000" min="100" step="100" required>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-4">
+                                <button type="button" class="btn btn-outline-secondary btn-block preset-amount" data-amount="500">500 ₽</button>
+                            </div>
+                            <div class="col-4">
+                                <button type="button" class="btn btn-outline-secondary btn-block preset-amount" data-amount="1000">1 000 ₽</button>
+                            </div>
+                            <div class="col-4">
+                                <button type="button" class="btn btn-outline-secondary btn-block preset-amount" data-amount="2000">2 000 ₽</button>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success btn-lg btn-block">
+                            <i class="fa fa-credit-card"></i> Оплатить
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

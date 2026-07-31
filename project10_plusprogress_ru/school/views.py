@@ -64,6 +64,64 @@ from django.utils import timezone
 from django.db import models
 
 
+def is_spam_name(name):
+    """Проверяет имя на спам-признаки"""
+    if not name:
+        return False
+    
+    name_lower = name.lower()
+    
+    # Подозрительные паттерны
+    spam_patterns = [
+        r'(.)\1{3,}',           # 4+ одинаковых букв подряд (tttt, aaaa)
+        r'[0-9]{5,}',           # 5+ цифр подряд
+        r'(?:^|\s)(?:test|bot|spam|admin|user|guest|visitor)(?:\s|$)',
+    ]
+    
+    for pattern in spam_patterns:
+        if re.search(pattern, name_lower):
+            return True
+    
+    return False
+
+def is_spam_phone(phone):
+    """Проверяет телефон на спам-признаки"""
+    if not phone:
+        return False
+    
+    digits = re.sub(r'\D', '', phone)
+    
+    # Слишком короткий или длинный номер
+    if len(digits) < 7 or len(digits) > 15:
+        return True
+    
+    # Подозрительные коды
+    suspicious_codes = ['757', '666', '000', '111', '999']
+    if len(digits) >= 3 and digits[:3] in suspicious_codes:
+        return True
+    
+    return False
+
+def is_spam_email_detailed(email):
+    """Расширенная проверка email"""
+    if not email:
+        return False
+    
+    email_lower = email.lower()
+    
+    # Спам-домены
+    spam_domains = [
+        'mailinator', 'guerrillamail', 'tempmail',
+        '10minutemail', 'throwaway', 'fakeinbox',
+        'trashmail', 'spambox', 'yopmail',
+    ]
+    
+    for domain in spam_domains:
+        if domain in email_lower:
+            return True
+    
+    return False
+
 # Импорты моделей
 from .models import (
     User, Teacher, Student, Subject, LessonFormat, Lesson,
@@ -5503,66 +5561,6 @@ def article_mestoimeniya(request):
     return render(request, 'school/articles/mestoimeniya-v-anglijskom-yazyke.html')
 
 
-
-
-@require_POST
-def trial_request(request):
-    """Обработка заявки на пробный урок (старая версия, скоро будет удалена)"""
-    """ODO: Удалить после проверки trial_request_ajax"""
-    
-    # Проверяем, AJAX ли это запрос
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        # AJAX запрос - возвращаем JSON
-        name = request.POST.get('name')
-        email = request.POST.get('email')
-        phone = request.POST.get('phone')
-        subject = request.POST.get('subject')
-        
-        TrialRequest.objects.create(
-            name=name,
-            email=email,
-            phone=phone,
-            subject=subject
-        )
-        
-        return JsonResponse({'status': 'ok', 'message': 'Заявка отправлена!'})
-    
-    else:
-        # Обычный POST запрос - редирект (для обратной совместимости)
-        name = request.POST.get('name')
-        email = request.POST.get('email')
-        phone = request.POST.get('phone')
-        subject = request.POST.get('subject')
-        
-        TrialRequest.objects.create(
-            name=name,
-            email=email,
-            phone=phone,
-            subject=subject
-        )
-        
-        messages.success(request, 'Спасибо! Ваша заявка принята. Мы свяжемся с вами в ближайшее время.')
-        return redirect(request.META.get('HTTP_REFERER', 'home'))
-    """Обработка заявки на пробный урок"""
-    name = request.POST.get('name')
-    email = request.POST.get('email')
-    phone = request.POST.get('phone')
-    subject = request.POST.get('subject')
-
-    TrialRequest.objects.create(
-        name=name,
-        email=email,
-        phone=phone,
-        subject=subject
-    )
-
-    messages.success(request, 'Спасибо! Ваша заявка принята. Мы свяжемся с вами в ближайшее время.')
-    return redirect(request.META.get('HTTP_REFERER', 'home'))
-
-
-logger = logging.getLogger(__name__)
-
-
 # Список спам-паттернов
 SPAM_PATTERNS = [
     r'viagra', r'casino', r'porn', r'xxx', 
@@ -5610,8 +5608,111 @@ def is_duplicate_request(phone, email, minutes=5):
     
     return duplicates.exists()
 
+# school/views.py — обновляем функцию trial_request_ajax
+
 @require_POST
 def trial_request_ajax(request):
+    """
+    AJAX обработка заявки на пробный урок с защитой от спама
+    """
+    logger.info("="*50)
+    logger.info("🔥 ПОЛУЧЕН AJAX ЗАПРОС НА ЗАЯВКУ")
+    logger.info(f"POST данные: {request.POST}")
+    
+    try:
+        # Получаем данные
+        name = request.POST.get('name', '').strip()
+        email = request.POST.get('email', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        subject = request.POST.get('subject', '').strip()
+        comment = request.POST.get('comment', '').strip()
+        
+        # ✅ HONEYPOT защита
+        if request.POST.get('honeypot', ''):
+            logger.warning(f"🤖 Бот обнаружен! IP: {request.META.get('REMOTE_ADDR')}")
+            return JsonResponse({'status': 'ok'}, status=200)
+        
+        # Валидация
+        if not name:
+            return JsonResponse({'error': 'Укажите имя'}, status=400)
+        if not phone:
+            return JsonResponse({'error': 'Укажите телефон'}, status=400)
+        if not subject:
+            return JsonResponse({'error': 'Выберите предмет'}, status=400)
+        
+        # ✅ ПРОВЕРКА НА 100% СОВПАДЕНИЕ EMAIL + ИМЯ
+        is_spam = False
+        spam_reasons = []
+        
+        # Проверяем, есть ли уже заявка с таким же email и именем
+        if email:
+            existing_requests = TrialRequest.objects.filter(
+                email=email,
+                name=name
+            )
+            
+            if existing_requests.exists():
+                is_spam = True
+                spam_reasons.append(f"100% совпадение: имя '{name}' + email '{email}' (найдено {existing_requests.count()} заявок)")
+                logger.info(f"🚫 СОВПАДЕНИЕ! Заявка с email={email} и name={name} уже существует")
+        
+        # ✅ ДОПОЛНИТЕЛЬНЫЕ ПРОВЕРКИ (оставляем для ботов)
+        # Проверка имени на спам-паттерны
+        if not is_spam and is_spam_name(name):
+            is_spam = True
+            spam_reasons.append(f"Подозрительное имя: {name}")
+        
+        # Проверка телефона
+        if not is_spam and is_spam_phone(phone):
+            is_spam = True
+            spam_reasons.append(f"Подозрительный телефон: {phone}")
+        
+        # Проверка email на спам-домены
+        if not is_spam and email and is_spam_email_detailed(email):
+            is_spam = True
+            spam_reasons.append(f"Подозрительный email: {email}")
+        
+        # ✅ СОЗДАЕМ ЗАЯВКУ
+        trial = TrialRequest.objects.create(
+            name=name,
+            email=email,
+            phone=phone,
+            subject=subject,
+            status='spam' if is_spam else 'new',
+            is_spam=is_spam,
+            ip_address=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+            notes="; ".join(spam_reasons) if spam_reasons else '',
+        )
+        
+        logger.info(f"✅ Заявка #{trial.id} от {name}, статус: {'СПАМ' if is_spam else 'НОВАЯ'}")
+        
+        # ✅ Если НЕ спам — отправляем уведомления
+        if not trial.is_spam:
+            try:
+                from django.core.mail import send_mail
+                send_mail(
+                    f'🔔 Новая заявка от {name}',
+                    f'Имя: {name}\nEmail: {email}\nТелефон: {phone}\nПредмет: {subject}\nIP: {trial.ip_address}',
+                    'jserge@yandex.ru',
+                    ['jserge@yandex.ru'],
+                    fail_silently=True,
+                )
+                logger.info(f"📧 Email уведомление отправлено для заявки #{trial.id}")
+            except Exception as e:
+                logger.error(f"Ошибка отправки email: {e}")
+        else:
+            logger.info(f"🚫 Заявка #{trial.id} отмечена как спам, уведомление НЕ отправлено")
+        
+        return JsonResponse({'status': 'ok'})
+        
+    except Exception as e:
+        logger.error(f"Ошибка в заявке: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': 'Ошибка сервера'}, status=500)
+
+
     """
     AJAX обработка заявки на пробный урок с защитой от спама
     """
