@@ -1998,26 +1998,80 @@ class ScheduleAdmin(admin.ModelAdmin):
 
 @admin.register(TrialRequest)
 class TrialRequestAdmin(admin.ModelAdmin):
-    list_display = ('name', 'phone', 'email', 'subject', 'created_at', 'is_processed_badge')
-    list_filter = ('is_processed', 'subject', 'created_at')
-    search_fields = ('name', 'phone', 'email')
+    list_display = (
+        'id', 
+        'name', 
+        'phone', 
+        'email', 
+        'subject', 
+        'status_badge',
+        'created_at',
+        'ip_address',
+        'is_spam_badge'
+    )
+    list_filter = ('status', 'is_spam', 'is_processed', 'created_at', 'subject')
+    search_fields = ('name', 'phone', 'email', 'notes', 'ip_address')
     date_hierarchy = 'created_at'
-    actions = ['mark_as_processed']
-
-    def is_processed_badge(self, obj):
-        if obj.is_processed:
-            return format_html('<span style="color: #28a745;">✅ Обработано</span>')
-        return format_html('<span style="color: #ffc107;">⏳ Новое</span>')
-
-    is_processed_badge.short_description = 'Статус'
-
+    list_per_page = 30
+    
+    fieldsets = (
+        ('Основная информация', {
+            'fields': ('name', 'email', 'phone', 'subject')
+        }),
+        ('Статус', {
+            'fields': ('status', 'is_processed', 'is_spam', 'processed_at'),
+        }),
+        ('Техническая информация', {
+            'fields': ('ip_address', 'user_agent', 'honeypot_triggered'),
+            'classes': ('collapse',),
+        }),
+        ('Дополнительно', {
+            'fields': ('notes',),
+        }),
+    )
+    
+    readonly_fields = ('created_at', 'processed_at', 'ip_address', 'user_agent')
+    
+    def status_badge(self, obj):
+        status_colors = {
+            'new': ('#007bff', '🆕 Новая'),
+            'processed': ('#28a745', '✅ Обработана'),
+            'spam': ('#dc3545', '🚫 Спам'),
+            'duplicate': ('#ffc107', '🔄 Дубликат'),
+        }
+        color, text = status_colors.get(obj.status, ('#6c757d', obj.status))
+        return format_html(
+            '<span style="background: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            color, text
+        )
+    status_badge.short_description = 'Статус'
+    
+    def is_spam_badge(self, obj):
+        if obj.is_spam:
+            return format_html('<span style="color: #dc3545;">🚫 Спам</span>')
+        return format_html('<span style="color: #28a745;">✅ Не спам</span>')
+    is_spam_badge.short_description = 'Спам'
+    
+    actions = ['mark_as_processed', 'mark_as_spam', 'mark_as_not_spam']
+    
     def mark_as_processed(self, request, queryset):
-        updated = queryset.update(is_processed=True)
-        self.message_user(request, f'✅ {updated} заявок отмечены как обработанные')
-
+        for req in queryset.filter(status='new'):
+            req.mark_as_processed()
+        self.message_user(request, f'✅ {queryset.count()} заявок отмечены как обработанные')
     mark_as_processed.short_description = "✅ Отметить как обработанные"
-
-
+    
+    def mark_as_spam(self, request, queryset):
+        for req in queryset:
+            req.mark_as_spam('Отмечено администратором')
+        self.message_user(request, f'🚫 {queryset.count()} заявок отмечены как спам')
+    mark_as_spam.short_description = "🚫 Отметить как спам"
+    
+    def mark_as_not_spam(self, request, queryset):
+        updated = queryset.update(is_spam=False, status='new')
+        self.message_user(request, f'✅ {updated} заявок очищены от спам-метки')
+    mark_as_not_spam.short_description = "✅ Снять метку спам"
+    
+    
 # ==================== NOTIFICATION ADMIN ====================
 
 @admin.register(Notification)

@@ -59,7 +59,9 @@ from django.contrib import messages
 import openpyxl
 from datetime import datetime
 import traceback
-
+import re
+from django.utils import timezone
+from django.db import models
 
 
 # Импорты моделей
@@ -5558,26 +5560,79 @@ def trial_request(request):
     return redirect(request.META.get('HTTP_REFERER', 'home'))
 
 
-
 logger = logging.getLogger(__name__)
+
+
+# Список спам-паттернов
+SPAM_PATTERNS = [
+    r'viagra', r'casino', r'porn', r'xxx', 
+    r'\[url=', r'<a href', r'http://', r'https://',
+    r'\d{3,}%', r'free money', r'earn \$', r'bitcoin',
+    r'[cＣ][aＡ][sＳ][iＩ][nＮ][oＯ]',  # casino в разных регистрах
+]
+
+SPAM_EMAIL_DOMAINS = [
+    'mailinator', 'guerrillamail', 'tempmail',
+    '10minutemail', 'throwaway', 'fakeinbox',
+    'trashmail', 'spambox', 'yopmail',
+]
+
+def is_spam_email(email):
+    """Проверяет email на спам-домены"""
+    if not email:
+        return False
+    email_lower = email.lower()
+    for domain in SPAM_EMAIL_DOMAINS:
+        if domain in email_lower:
+            return True
+    return False
+
+def is_spam_text(text):
+    """Проверяет текст на спам-слова"""
+    if not text:
+        return False
+    text_lower = text.lower()
+    for pattern in SPAM_PATTERNS:
+        if re.search(pattern, text_lower):
+            return True
+    return False
+
+def is_duplicate_request(phone, email, minutes=5):
+    """Проверяет дубликаты заявок за последние N минут"""
+    from datetime import timedelta
+    
+    time_threshold = timezone.now() - timedelta(minutes=minutes)
+    
+    duplicates = TrialRequest.objects.filter(
+        models.Q(phone=phone) | models.Q(email=email),
+        created_at__gte=time_threshold
+    ).exclude(status='spam')  # Спам не считаем за дубликат
+    
+    return duplicates.exists()
 
 @require_POST
 def trial_request_ajax(request):
     """
-    AJAX обработка заявки на пробный урок
+    AJAX обработка заявки на пробный урок с защитой от спама
     """
     logger.info("="*50)
     logger.info("🔥 ПОЛУЧЕН AJAX ЗАПРОС НА ЗАЯВКУ")
     logger.info(f"POST данные: {request.POST}")
+    
     try:
         # Получаем данные
         name = request.POST.get('name', '').strip()
         email = request.POST.get('email', '').strip()
         phone = request.POST.get('phone', '').strip()
         subject = request.POST.get('subject', '').strip()
-        #проверка honeypot
+        comment = request.POST.get('comment', '').strip()
+        
+        # ✅ HONEYPOT защита (уже есть, оставляем)
         if request.POST.get('honeypot', ''):
-            return JsonResponse({'status': 'ok'}, status=200) #Молча игнорируем бота
+            # Логируем попытку бота
+            logger.warning(f"🤖 Бот обнаружен! IP: {request.META.get('REMOTE_ADDR')}")
+            return JsonResponse({'status': 'ok'}, status=200)  # Молча игнорируем
+        
         # Валидация
         if not name:
             return JsonResponse({'error': 'Укажите имя'}, status=400)
@@ -5586,35 +5641,71 @@ def trial_request_ajax(request):
         if not subject:
             return JsonResponse({'error': 'Выберите предмет'}, status=400)
         
-        # Сохраняем в базу
+        # ✅ ПРОВЕРКА НА СПАМ
+        spam_reasons = []
+        is_spam = False
+        
+        # Проверка email
+        if email and is_spam_email(email):
+            spam_reasons.append(f"Спам-домен: {email}")
+            is_spam = True
+        
+        # Проверка имени на спам-слова
+        if is_spam_text(name):
+            spam_reasons.append(f"Спам в имени: {name}")
+            is_spam = True
+        
+        # Проверка комментария на спам-слова
+        if comment and is_spam_text(comment):
+            spam_reasons.append("Спам в комментарии")
+            is_spam = True
+        
+        # ✅ ПРОВЕРКА НА ДУБЛИКАТЫ
+        is_duplicate = False
+        if phone and is_duplicate_request(phone, email):
+            is_duplicate = True
+            spam_reasons.append("Дубликат заявки (повторная отправка)")
+        
+        # ✅ СОЗДАЕМ ЗАЯВКУ
         trial = TrialRequest.objects.create(
             name=name,
             email=email,
             phone=phone,
-            subject=subject
+            subject=subject,
+            # Новые поля — если вы их добавили в модель
+            status='spam' if (is_spam or is_duplicate) else 'new',
+            is_spam=is_spam or is_duplicate,
+            ip_address=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],  # Ограничиваем длину
+            notes="; ".join(spam_reasons) if spam_reasons else '',
         )
         
-        logger.info(f"Новая заявка #{trial.id} от {name}")
+        logger.info(f"✅ Заявка #{trial.id} от {name}, статус: {trial.status}")
         
-        # Отправляем email (опционально)
-        try:
-            from django.core.mail import send_mail
-            send_mail(
-                f'🔔 Новая заявка от {name}',
-                f'Имя: {name}\nEmail: {email}\nТелефон: {phone}\nПредмет: {subject}',
-                'jserge@yandex.ru',
-                ['jserge@yandex.ru'],
-                fail_silently=True,
-            )
-        except Exception as e:
-            logger.error(f"Ошибка отправки email: {e}")
+        # ✅ Если НЕ спам — отправляем уведомления
+        if not trial.is_spam:
+            try:
+                from django.core.mail import send_mail
+                send_mail(
+                    f'🔔 Новая заявка от {name}',
+                    f'Имя: {name}\nEmail: {email}\nТелефон: {phone}\nПредмет: {subject}\nIP: {trial.ip_address}',
+                    'jserge@yandex.ru',
+                    ['jserge@yandex.ru'],
+                    fail_silently=True,
+                )
+                logger.info(f"📧 Email уведомление отправлено для заявки #{trial.id}")
+            except Exception as e:
+                logger.error(f"Ошибка отправки email: {e}")
+        else:
+            logger.info(f"🚫 Заявка #{trial.id} отмечена как спам, уведомление НЕ отправлено")
         
         return JsonResponse({'status': 'ok'})
         
     except Exception as e:
         logger.error(f"Ошибка в заявке: {e}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'error': 'Ошибка сервера'}, status=500)
-
 # ============================================
 # REST API VIEWSETS 
 # ============================================

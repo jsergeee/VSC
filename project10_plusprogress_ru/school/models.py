@@ -2023,25 +2023,63 @@ class StudentSubjectPrice(models.Model):
         except cls.DoesNotExist:
             return None, None
 
+# school/models.py - найдите класс TrialRequest и замените его
+
 class TrialRequest(models.Model):
-    """Заявка на пробный урок"""
+    STATUS_CHOICES = (
+        ('new', '🆕 Новая'),
+        ('processed', '✅ Обработана'),
+        ('spam', '🚫 Спам'),
+        ('duplicate', '🔄 Дубликат'),
+    )
+    
     name = models.CharField('Имя', max_length=100)
-    email = models.EmailField('Email')
+    email = models.EmailField('Email', blank=True)  # Сделали необязательным
     phone = models.CharField('Телефон', max_length=20)
     subject = models.CharField('Предмет', max_length=50)
-    created_at = models.DateTimeField('Дата заявки', auto_now_add=True)
+    
+    # Новые поля
+    status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='new')
     is_processed = models.BooleanField('Обработано', default=False)
+    is_spam = models.BooleanField('Спам', default=False)  # Для быстрой фильтрации
+    
+    # Для защиты от ботов
+    ip_address = models.GenericIPAddressField('IP адрес', null=True, blank=True)
+    user_agent = models.TextField('User Agent', blank=True)
+    honeypot_triggered = models.BooleanField('Honeypot сработал', default=False)
+    
+    created_at = models.DateTimeField('Дата заявки', auto_now_add=True)
+    processed_at = models.DateTimeField('Дата обработки', null=True, blank=True)
+    notes = models.TextField('Заметки', blank=True)
 
     class Meta:
         verbose_name = 'Заявка на пробный урок'
         verbose_name_plural = 'Заявки на пробный урок'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['email']),
+            models.Index(fields=['phone']),
+            models.Index(fields=['ip_address']),
+            models.Index(fields=['status']),
+        ]
 
     def __str__(self):
-        return f"{self.name} - {self.subject}"
+        return f"{self.name} - {self.subject} ({self.get_status_display()})"
 
-    # ЛОГИРОВАНИE
+    def mark_as_spam(self, reason=''):
+        """Отметить заявку как спам"""
+        self.status = 'spam'
+        self.is_spam = True
+        if reason:
+            self.notes = f"Спам: {reason}"
+        self.save()
 
+    def mark_as_processed(self):
+        """Отметить заявку как обработанную"""
+        self.status = 'processed'
+        self.is_processed = True
+        self.processed_at = timezone.now()
+        self.save()
 
 class UserActionLog(models.Model):
     """Логирование действий пользователей"""

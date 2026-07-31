@@ -195,3 +195,20 @@ ALFA_BANK_LOGIN = 'r-plusprogress-api'
 ALFA_BANK_PASSWORD = '=8a=QA%4xaJTATs'
 
 ALFA_PAYMENT_URL = 'https://payment.alfabank.ru/sc/uMTDjjSaQHbYLUFH'
+
+
+# settings.py - добавить в конец
+
+# Спам-фильтр для заявок
+SPAM_EMAIL_DOMAINS = [
+    'mailinator.com',
+    'guerrillamail.com',
+    'tempmail.com',
+    '10minutemail.com',
+    'throwaway.com',
+]
+
+SPAM_KEYWORDS = [
+    'viagra', 'casino', 'porn', 'xxx',
+    'free money', 'earn money', 'bitcoin',
+]
