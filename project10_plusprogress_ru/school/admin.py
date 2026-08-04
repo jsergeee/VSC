@@ -23,7 +23,7 @@ from .models import (
     Homework, HomeworkSubmission, GroupLesson, GroupEnrollment,
     LessonAttendance, ScheduleTemplate, ScheduleTemplateStudent,
     StudentSubjectPrice, UserActionLog, PaymentRequest, Feedback,
-    Article, ArticleAttachment
+    Article, ArticleAttachment, BotConfig, BotMessage, BotSubscriber
 )
 from .views import schedule_calendar_data, admin_complete_lesson
 
@@ -115,9 +115,9 @@ class CustomUserAdmin(UserAdmin):
         * Экспорт в Excel
     """
     list_display = ('id', 'username', 'get_full_name', 'email', 'phone', 'role',
-                    'is_email_verified_badge', 'is_staff', 'telegram_notifications')
-    list_filter = ('telegram_notifications', 'role', 'is_email_verified', 'is_staff', 'is_superuser', 'groups')
-    search_fields = ('username', 'last_name', 'first_name',  'email', 'phone', 'telegram_chat_id')
+                    'is_email_verified_badge', 'is_staff', 'telegram_notifications', 'max_notifications',)
+    list_filter = ('telegram_notifications', 'role', 'is_email_verified', 'is_staff', 'is_superuser', 'groups', 'max_notifications',)
+    search_fields = ('username', 'last_name', 'first_name',  'email', 'phone', 'telegram_chat_id', 'max_chat_id',)
     readonly_fields = ('email_verification_sent',)
 
     fieldsets = (
@@ -146,6 +146,12 @@ class CustomUserAdmin(UserAdmin):
             'classes': ('wide',),
             'description': 'Настройки уведомлений в Telegram'
         }),
+           
+        ('MAX уведомления', {
+            'fields': ('max_chat_id', 'max_notifications'),
+            'classes': ('wide',),
+            'description': 'Настройки уведомлений через бота в MAX'
+        }),
     )
 
     add_fieldsets = (
@@ -160,6 +166,10 @@ class CustomUserAdmin(UserAdmin):
                 'telegram_chat_id',
                 'telegram_notifications',
             ),
+        }),
+                
+        ('MAX уведомления', {  # ✅ НОВОЕ!
+            'fields': ('max_chat_id', 'max_notifications'),
         }),
     )
 
@@ -3044,3 +3054,115 @@ class ArticleAttachmentAdmin(admin.ModelAdmin):
     def file_size(self, obj):
         return obj.get_file_size()
     file_size.short_description = 'Размер'
+    
+    
+# school/admin.py — добавьте в конец файла
+
+# school/admin.py — замените класс BotConfigAdmin на этот
+
+@admin.register(BotConfig)
+class BotConfigAdmin(admin.ModelAdmin):
+    list_display = (
+        'platform', 
+        'bot_name', 
+        'bot_id', 
+        'is_active', 
+        'notify_on_trial_request',
+        'notify_on_payment',      # ✅ ДОБАВЛЕНО
+        'notify_on_lesson',       # ✅ ДОБАВЛЕНО
+        'created_at'
+    )
+    list_filter = ('platform', 'is_active', 'notify_on_trial_request', 'notify_on_payment', 'notify_on_lesson')
+    search_fields = ('bot_name', 'bot_id')
+    list_editable = ('is_active', 'notify_on_trial_request', 'notify_on_payment', 'notify_on_lesson')
+    
+    fieldsets = (
+        ('Основное', {
+            'fields': ('platform', 'bot_name', 'bot_id', 'api_key', 'is_active')
+        }),
+        ('Настройки уведомлений', {
+            'fields': ('notify_on_trial_request', 'notify_on_payment', 'notify_on_lesson'),
+            'description': 'Выберите, о каких событиях уведомлять'
+        }),
+        ('Технические настройки', {
+            'fields': ('webhook_url',),
+            'classes': ('collapse',),
+        }),
+    )
+
+@admin.register(BotMessage)
+class BotMessageAdmin(admin.ModelAdmin):
+    list_display = ('id', 'bot', 'direction', 'message_preview', 'status', 'created_at')
+    list_filter = ('direction', 'status', 'bot')
+    search_fields = ('message', 'sender', 'recipient')
+    readonly_fields = ('created_at',)
+    
+    def message_preview(self, obj):
+        return obj.message[:50] + '...' if len(obj.message) > 50 else obj.message
+    message_preview.short_description = 'Сообщение'
+    
+    
+    
+
+@admin.register(BotSubscriber)
+class BotSubscriberAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'user_link',
+        'first_name',
+        'last_name',
+        'username',
+        'chat_id',
+        'is_active',
+        'subscribed_at',
+        'last_activity'
+    )
+    list_filter = ('is_active', 'subscribed_at')
+    search_fields = ('first_name', 'last_name', 'username', 'chat_id')
+    list_editable = ('is_active',)
+    readonly_fields = ('subscribed_at', 'last_activity')
+    raw_id_fields = ('user',)  # ✅ Оставляем для быстрого ввода ID
+    
+    # ✅ ДОБАВЛЯЕМ autocomplete для удобного поиска по имени
+    autocomplete_fields = ('user',)
+    
+    fieldsets = (
+        ('Основная информация', {
+            'fields': ('user', 'first_name', 'last_name', 'username', 'chat_id')
+        }),
+        ('Статус', {
+            'fields': ('is_active', 'subscribed_at', 'last_activity')
+        }),
+    )
+    
+    actions = ['activate_subscribers', 'deactivate_subscribers', 'link_users_by_chat_id']
+        
+    def link_users_by_chat_id(self, request, queryset):
+        """Привязать подписчиков к пользователям по совпадению chat_id и max_chat_id"""
+        linked = 0
+        for subscriber in queryset:
+            # Ищем пользователя с таким же max_chat_id
+            user = User.objects.filter(max_chat_id=subscriber.chat_id).first()
+            if user:
+                subscriber.user = user
+                subscriber.save()
+                linked += 1
+        self.message_user(request, f'✅ Привязано {linked} подписчиков к пользователям')
+    link_users_by_chat_id.short_description = "🔗 Привязать к пользователям по chat_id"
+    
+    def user_link(self, obj):
+        if obj.user:
+            url = f'/admin/school/user/{obj.user.id}/change/'
+            return format_html('<a href="{}">{}</a>', url, obj.user.get_full_name())
+        return format_html('<span style="color: #999;">— Не привязан</span>')
+    user_link.short_description = 'Пользователь'
+    
+    def activate_subscribers(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f'✅ {updated} подписчиков активировано')
+    activate_subscribers.short_description = "✅ Активировать выбранных подписчиков"
+    
+    def deactivate_subscribers(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'❌ {updated} подписчиков деактивировано')
+    deactivate_subscribers.short_description = "❌ Деактивировать выбранных подписчиков"

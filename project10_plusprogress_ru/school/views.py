@@ -62,7 +62,17 @@ import traceback
 import re
 from django.utils import timezone
 from django.db import models
+from .bot_service import MaxBotService
+import hmac
+import hashlib
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 
+
+def get_bot_service():
+    """Возвращает экземпляр сервиса ботов"""
+    return MaxBotService()
 
 def is_spam_name(name):
     """Проверяет имя на спам-признаки"""
@@ -4723,12 +4733,21 @@ def teacher_create_schedule(request):
                 )
                 print(f"✅ Внутреннее уведомление учителю создано")
 
-                # Telegram уведомление
-#                try:
-#                    notify_new_lesson(lesson)
-#                    print(f"✅ Telegram уведомление отправлено для урока {lesson.id}")
-#                except Exception as e:
-#                    print(f"❌ Ошибка отправки Telegram: {e}")
+                # ✅ Telegram уведомление
+                try:
+                    from school.telegram import notify_new_lesson
+                    notify_new_lesson(lesson)
+                    logger.info(f"✅ Telegram уведомление отправлено для урока {lesson.id}")
+                except Exception as e:
+                    logger.error(f"❌ Ошибка отправки Telegram: {e}")
+
+                # ✅ MAX уведомление
+                try:
+                    from school.max_notifier import notify_new_lesson_max
+                    notify_new_lesson_max(lesson)
+                    logger.info(f"✅ MAX уведомление отправлено для урока {lesson.id}")
+                except Exception as e:
+                    logger.error(f"❌ Ошибка отправки MAX: {e}")
 
             print(f"{'=' * 50}\n")
 
@@ -5608,7 +5627,7 @@ def is_duplicate_request(phone, email, minutes=5):
     
     return duplicates.exists()
 
-# school/views.py — обновляем функцию trial_request_ajax
+
 
 @require_POST
 def trial_request_ajax(request):
@@ -5656,18 +5675,15 @@ def trial_request_ajax(request):
                 spam_reasons.append(f"100% совпадение: имя '{name}' + email '{email}' (найдено {existing_requests.count()} заявок)")
                 logger.info(f"🚫 СОВПАДЕНИЕ! Заявка с email={email} и name={name} уже существует")
         
-        # ✅ ДОПОЛНИТЕЛЬНЫЕ ПРОВЕРКИ (оставляем для ботов)
-        # Проверка имени на спам-паттерны
+        # ✅ ДОПОЛНИТЕЛЬНЫЕ ПРОВЕРКИ
         if not is_spam and is_spam_name(name):
             is_spam = True
             spam_reasons.append(f"Подозрительное имя: {name}")
         
-        # Проверка телефона
         if not is_spam and is_spam_phone(phone):
             is_spam = True
             spam_reasons.append(f"Подозрительный телефон: {phone}")
         
-        # Проверка email на спам-домены
         if not is_spam and email and is_spam_email_detailed(email):
             is_spam = True
             spam_reasons.append(f"Подозрительный email: {email}")
@@ -5704,101 +5720,15 @@ def trial_request_ajax(request):
         else:
             logger.info(f"🚫 Заявка #{trial.id} отмечена как спам, уведомление НЕ отправлено")
         
-        return JsonResponse({'status': 'ok'})
-        
-    except Exception as e:
-        logger.error(f"Ошибка в заявке: {e}")
-        import traceback
-        traceback.print_exc()
-        return JsonResponse({'error': 'Ошибка сервера'}, status=500)
-
-
-    """
-    AJAX обработка заявки на пробный урок с защитой от спама
-    """
-    logger.info("="*50)
-    logger.info("🔥 ПОЛУЧЕН AJAX ЗАПРОС НА ЗАЯВКУ")
-    logger.info(f"POST данные: {request.POST}")
-    
-    try:
-        # Получаем данные
-        name = request.POST.get('name', '').strip()
-        email = request.POST.get('email', '').strip()
-        phone = request.POST.get('phone', '').strip()
-        subject = request.POST.get('subject', '').strip()
-        comment = request.POST.get('comment', '').strip()
-        
-        # ✅ HONEYPOT защита (уже есть, оставляем)
-        if request.POST.get('honeypot', ''):
-            # Логируем попытку бота
-            logger.warning(f"🤖 Бот обнаружен! IP: {request.META.get('REMOTE_ADDR')}")
-            return JsonResponse({'status': 'ok'}, status=200)  # Молча игнорируем
-        
-        # Валидация
-        if not name:
-            return JsonResponse({'error': 'Укажите имя'}, status=400)
-        if not phone:
-            return JsonResponse({'error': 'Укажите телефон'}, status=400)
-        if not subject:
-            return JsonResponse({'error': 'Выберите предмет'}, status=400)
-        
-        # ✅ ПРОВЕРКА НА СПАМ
-        spam_reasons = []
-        is_spam = False
-        
-        # Проверка email
-        if email and is_spam_email(email):
-            spam_reasons.append(f"Спам-домен: {email}")
-            is_spam = True
-        
-        # Проверка имени на спам-слова
-        if is_spam_text(name):
-            spam_reasons.append(f"Спам в имени: {name}")
-            is_spam = True
-        
-        # Проверка комментария на спам-слова
-        if comment and is_spam_text(comment):
-            spam_reasons.append("Спам в комментарии")
-            is_spam = True
-        
-        # ✅ ПРОВЕРКА НА ДУБЛИКАТЫ
-        is_duplicate = False
-        if phone and is_duplicate_request(phone, email):
-            is_duplicate = True
-            spam_reasons.append("Дубликат заявки (повторная отправка)")
-        
-        # ✅ СОЗДАЕМ ЗАЯВКУ
-        trial = TrialRequest.objects.create(
-            name=name,
-            email=email,
-            phone=phone,
-            subject=subject,
-            # Новые поля — если вы их добавили в модель
-            status='spam' if (is_spam or is_duplicate) else 'new',
-            is_spam=is_spam or is_duplicate,
-            ip_address=request.META.get('REMOTE_ADDR'),
-            user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],  # Ограничиваем длину
-            notes="; ".join(spam_reasons) if spam_reasons else '',
-        )
-        
-        logger.info(f"✅ Заявка #{trial.id} от {name}, статус: {trial.status}")
-        
-        # ✅ Если НЕ спам — отправляем уведомления
+        # ✅ Отправляем уведомление в Max
         if not trial.is_spam:
             try:
-                from django.core.mail import send_mail
-                send_mail(
-                    f'🔔 Новая заявка от {name}',
-                    f'Имя: {name}\nEmail: {email}\nТелефон: {phone}\nПредмет: {subject}\nIP: {trial.ip_address}',
-                    'jserge@yandex.ru',
-                    ['jserge@yandex.ru'],
-                    fail_silently=True,
-                )
-                logger.info(f"📧 Email уведомление отправлено для заявки #{trial.id}")
+                from .bot_service import MaxBotService
+                bot_service = MaxBotService()
+                bot_service.notify_admin_trial_request(trial)
+                logger.info(f"🤖 Уведомление в Max отправлено для заявки #{trial.id}")
             except Exception as e:
-                logger.error(f"Ошибка отправки email: {e}")
-        else:
-            logger.info(f"🚫 Заявка #{trial.id} отмечена как спам, уведомление НЕ отправлено")
+                logger.error(f"Ошибка отправки уведомления в Max: {e}")
         
         return JsonResponse({'status': 'ok'})
         
@@ -5807,6 +5737,86 @@ def trial_request_ajax(request):
         import traceback
         traceback.print_exc()
         return JsonResponse({'error': 'Ошибка сервера'}, status=500)
+
+# ============================================
+# ЧАСТЬ: ИНТЕГРАЦИЯ С ЧАТ-БОТАМИ MAX
+# ============================================
+@csrf_exempt
+@require_POST
+def max_bot_webhook(request):
+    """
+    Webhook для приема сообщений от Max
+    """
+    logger.info("="*50)
+    logger.info("📨 ПОЛУЧЕН ВЕБХУК ОТ MAX")
+    
+    try:
+        # Проверяем подпись (если настроен секрет)
+        signature = request.headers.get('X-Max-Signature')
+        secret = getattr(settings, 'MAX_BOT_WEBHOOK_SECRET', None)
+        
+        if secret and signature:
+            computed = hmac.new(
+                secret.encode(),
+                request.body,
+                hashlib.sha256
+            ).hexdigest()
+            
+            if not hmac.compare_digest(signature, computed):
+                logger.warning("❌ Неверная подпись вебхука")
+                return JsonResponse({'error': 'Invalid signature'}, status=403)
+        
+        # Парсим данные
+        data = json.loads(request.body)
+        logger.info(f"📨 Данные вебхука: {data}")
+        
+        # Обрабатываем сообщение
+        service = MaxBotService()
+        result = service.handle_webhook(data)
+        
+        logger.info(f"✅ Вебхук обработан: {result}")
+        return JsonResponse(result)
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"❌ Ошибка парсинга JSON: {e}")
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        logger.error(f"❌ Ошибка в вебхуке: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    
+
+
+@login_required
+@staff_member_required
+@require_POST
+def max_bot_test(request):
+    """
+    Отправка тестового сообщения через бота Max (только для админов)
+    """
+    try:
+        chat_id = request.POST.get('chat_id')
+        message = request.POST.get('message', 'Тестовое сообщение от PlusProgress! 🚀')
+        
+        if not chat_id:
+            return JsonResponse({'error': 'Укажите chat_id'}, status=400)
+        
+        service = MaxBotService()
+        result = service.send_message(chat_id, message)
+        
+        if result:
+            return JsonResponse({
+                'status': 'ok',
+                'message': 'Сообщение отправлено',
+                'bot_message_id': result.id
+            })
+        else:
+            return JsonResponse({'error': 'Ошибка отправки'}, status=500)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
 # ============================================
 # REST API VIEWSETS 
 # ============================================

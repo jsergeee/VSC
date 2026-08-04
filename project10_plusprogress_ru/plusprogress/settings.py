@@ -212,3 +212,20 @@ SPAM_KEYWORDS = [
     'viagra', 'casino', 'porn', 'xxx',
     'free money', 'earn money', 'bitcoin',
 ]
+
+# ===== ЧАТ-БОТЫ MAX =====
+
+MAX_BOT_API_URL = "https://platform-api2.max.ru/messages"
+
+# Токен авторизации (из кабинета MAX)
+MAX_BOT_TOKEN = "f9LHodD0cOLE4dqv4LGU89egbEO7MPRDmfUK_4r4zPTkFaUb7a_zxh1fHMy-9JA6Yy1Uo46WENcF13odN74d"
+
+# Секрет для вебхука
+MAX_BOT_WEBHOOK_SECRET = "x9K#mP2$vL5@nQ8!rT3*wE6&"
+
+# ID чата администратора
+MAX_BOT_ADMIN_CHAT_ID = "394353540"
+
+# Включить уведомления
+MAX_BOT_ENABLED = True
+

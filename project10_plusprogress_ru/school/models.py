@@ -46,6 +46,20 @@ class User(AbstractUser):
         verbose_name='Получать уведомления в Telegram',
         help_text='Отправлять уведомления о новых уроках, платежах и т.д.'
     )
+    
+    # ✅ MAX бот (добавляем)
+    max_chat_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='MAX Chat ID',
+        help_text='ID пользователя в MAX для отправки уведомлений'
+    )
+    max_notifications = models.BooleanField(
+        default=False,
+        verbose_name='Получать уведомления в MAX',
+        help_text='Отправлять уведомления через бота в MAX'
+    )
 
     # Исправляем related_name для групп и разрешений (чтобы избежать конфликтов)
     groups = models.ManyToManyField(
@@ -2394,3 +2408,99 @@ class ArticleAttachment(models.Model):
             import os
             return os.path.splitext(self.file.name)[1].lower()[1:]
         return ''
+
+
+# school/models.py — добавьте в конец файла
+
+class BotConfig(models.Model):
+    """
+    Настройки чат-ботов в Max
+    """
+    PLATFORM_CHOICES = [
+        ('max', 'Max (чат-боты)'),
+        ('telegram', 'Telegram'),
+        ('whatsapp', 'WhatsApp'),
+        ('viber', 'Viber'),
+        ('vk', 'VK'),
+    ]
+    
+    platform = models.CharField('Платформа', max_length=20, choices=PLATFORM_CHOICES, default='max')
+    bot_name = models.CharField('Имя бота', max_length=100, help_text='Название бота в Max')
+    bot_id = models.CharField('ID бота', max_length=100, help_text='Уникальный идентификатор бота')
+    api_key = models.CharField('API ключ', max_length=255, blank=True, help_text='API ключ для авторизации')
+    webhook_url = models.URLField('Webhook URL', blank=True, help_text='URL для входящих сообщений')
+    is_active = models.BooleanField('Активен', default=True)
+    
+    # Настройки уведомлений
+    notify_on_trial_request = models.BooleanField('Уведомлять о заявках', default=True)
+    notify_on_payment = models.BooleanField('Уведомлять о платежах', default=True)
+    notify_on_lesson = models.BooleanField('Уведомлять об уроках', default=True)
+    
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлено', auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Настройка бота'
+        verbose_name_plural = 'Настройки ботов'
+    
+    def __str__(self):
+        return f"{self.get_platform_display()}: {self.bot_name}"
+
+
+class BotMessage(models.Model):
+    """
+    Лог сообщений ботов
+    """
+    DIRECTION_CHOICES = [
+        ('incoming', 'Входящее'),
+        ('outgoing', 'Исходящее'),
+    ]
+    
+    bot = models.ForeignKey(BotConfig, on_delete=models.CASCADE, related_name='messages')
+    direction = models.CharField('Направление', max_length=10, choices=DIRECTION_CHOICES)
+    sender = models.CharField('Отправитель', max_length=255, blank=True)
+    recipient = models.CharField('Получатель', max_length=255, blank=True)
+    message = models.TextField('Сообщение')
+    response = models.TextField('Ответ', blank=True)
+    status = models.CharField('Статус', max_length=50, default='sent')
+    metadata = models.JSONField('Метаданные', default=dict, blank=True)
+    
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Сообщение бота'
+        verbose_name_plural = 'Сообщения ботов'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.direction}: {self.message[:50]}"
+    
+    
+
+class BotSubscriber(models.Model):
+    """
+    Подписчики бота (пользователи, которые написали боту)
+    """
+    user = models.OneToOneField(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='bot_subscriber',
+        verbose_name='Пользователь'
+    )
+    chat_id = models.CharField('Chat ID', max_length=100, unique=True)
+    first_name = models.CharField('Имя', max_length=100, blank=True)
+    last_name = models.CharField('Фамилия', max_length=100, blank=True)
+    username = models.CharField('Username', max_length=100, blank=True)
+    is_active = models.BooleanField('Активен', default=True)
+    subscribed_at = models.DateTimeField('Подписался', auto_now_add=True)
+    last_activity = models.DateTimeField('Последняя активность', auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Подписчик бота'
+        verbose_name_plural = 'Подписчики бота'
+        ordering = ['-subscribed_at']
+    
+    def __str__(self):
+        return f"{self.first_name} ({self.chat_id})"

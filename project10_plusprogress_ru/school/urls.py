@@ -190,5 +190,10 @@ urlpatterns = [
     path('privacy-policy/', views.privacy_policy, name='privacy_policy'),
     path('offer/', views.offer, name='offer'),
     path('user-agreement/', views.user_agreement, name='user_agreement'),
+           
+    # Max Bot Webhook
+    path('api/max-webhook/', views.max_bot_webhook, name='max_bot_webhook'),
+    path('api/max-test/', views.max_bot_test, name='max_bot_test'),  # для отладки
+    
 
 ]
